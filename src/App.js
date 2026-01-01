@@ -10,21 +10,19 @@ const colors = {
   dark: '#0a1628',
 };
 
-// Stock images from Unsplash (free to use)
+// Stock images from Unsplash (free to use) - matched to content
 const images = {
   hero: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1920&q=80', // fiber optic blue glow
-  fiberClose: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80', // data center cables
+  fiberClose: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80', // fiber optic strands
   networkSwitch: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80', // network equipment
-  construction: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80', // construction site
-  worker: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80', // tech worker
-  aerial: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80', // utility poles
-  underground: 'https://images.unsplash.com/photo-1590959651373-a3db0f38a961?w=800&q=80', // trenching
-  testing: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80', // technical testing
-  team: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80', // professional team
-  office: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80', // office
-  aboutHero: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1920&q=80', // tech work
+  construction: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80', // construction workers
+  aerial: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80', // utility poles
+  underground: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&q=80', // excavation trench
+  testing: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80', // tech testing
+  team: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80', // professional team meeting
+  aboutHero: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80', // construction work
   servicesHero: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1920&q=80', // fiber
-  contactHero: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1920&q=80', // team
+  contactHero: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1920&q=80', // team
 };
 
 // Mock data for portal (same as before)
@@ -69,14 +67,14 @@ const mockAnnouncements = [
   { id: 2, title: 'New Safety Vests', content: 'Class 3 high-vis vests are now required on all job sites. Pick yours up from the warehouse.', date: '2024-12-20', author: 'Matt Campbell' },
 ];
 
-// Services data with images
+// Services data with images - matched to descriptions
 const services = [
-  { icon: Zap, title: 'Fiber Optic Splicing', description: 'Precision fusion splicing for single-mode and multi-mode fiber. Low-loss connections guaranteed with comprehensive OTDR testing and documentation.', image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=80' },
-  { icon: Play, title: 'Activation Services', description: 'End-to-end fiber activation including equipment installation, signal testing, and network turn-up. Get your infrastructure online fast.', image: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=80' },
-  { icon: Search, title: 'Troubleshooting & Testing', description: 'Expert fault location and repair using advanced OTDR, power meters, and visual fault locators. Full test reports provided.', image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=600&q=80' },
-  { icon: Target, title: 'Aerial Construction', description: 'Complete aerial fiber installation including strand placement, lashing, and cable installation. Pole attachment coordination included.', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80' },
-  { icon: MapPin, title: 'Underground Construction', description: 'Directional boring, trenching, and conduit installation. Minimal surface disruption with professional restoration.', image: 'https://images.unsplash.com/photo-1590959651373-a3db0f38a961?w=600&q=80' },
-  { icon: Shield, title: 'Emergency Response', description: '24/7 emergency fiber repair services. Rapid response to minimize downtime and restore critical communications.', image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80' },
+  { icon: Zap, title: 'Fiber Optic Splicing', description: 'Precision fusion splicing for single-mode and multi-mode fiber. Low-loss connections guaranteed with comprehensive OTDR testing and documentation.', image: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=80' }, // Blue glowing fiber strands
+  { icon: Play, title: 'Activation Services', description: 'End-to-end fiber activation including equipment installation, signal testing, and network turn-up. Get your infrastructure online fast.', image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=80' }, // Server/network rack with cables
+  { icon: Search, title: 'Troubleshooting & Testing', description: 'Expert fault location and repair using advanced OTDR, power meters, and visual fault locators. Full test reports provided.', image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&q=80' }, // Technician with testing equipment
+  { icon: Target, title: 'Aerial Construction', description: 'Complete aerial fiber installation including strand placement, lashing, and cable installation. Pole attachment coordination included.', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&q=80' }, // Utility poles with wires against sky
+  { icon: MapPin, title: 'Underground Construction', description: 'Directional boring, trenching, and conduit installation. Minimal surface disruption with professional restoration.', image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=600&q=80' }, // Excavation/construction trench
+  { icon: Shield, title: 'Emergency Response', description: '24/7 emergency fiber repair services. Rapid response to minimize downtime and restore critical communications.', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80' }, // Construction worker at night/urgent work
 ];
 
 // Logo Component
@@ -699,8 +697,8 @@ export default function App() {
             <section style={{ padding: '80px 24px' }}>
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '60px' }}>
-                  <img src={images.construction} alt="Construction" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px' }} />
-                  <img src={images.team} alt="Team" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px' }} />
+                  <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80" alt="Construction crew at work" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px' }} />
+                  <img src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80" alt="Fiber optic technology" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px' }} />
                 </div>
                 
                 <h2 style={{ fontSize: '34px', fontWeight: '700', marginBottom: '24px', color: '#1e293b' }}>
