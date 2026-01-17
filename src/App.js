@@ -40,7 +40,7 @@ import {
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztxHBWifmWq17Y7C8JB3WwieSbCM83PzWxVJ6RAyig46QrbKYzvC4m_EESRCu8rSM4/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfpYe0FaALAAU7XtgqbDswDCnl47e8LZhTxZSzyKv7FqB5q1gFDPjJTpgbuMARLH3t/exec';
 
 const PDF_URLS = {
   w4: '/Form_W-4_sign.pdf',
@@ -328,40 +328,6 @@ function EINInput({ value, onChange, darkMode, placeholder = "XX-XXXXXXX" }) {
         color: textColor,
         fontSize: '1rem',
         fontFamily: 'monospace'
-      }}
-    />
-  );
-}
-
-// ============================================================================
-// CURRENCY INPUT COMPONENT
-// ============================================================================
-function CurrencyInput({ value, onChange, darkMode, placeholder = "$0" }) {
-  const inputBg = darkMode ? 'rgba(255,255,255,0.08)' : 'white';
-  const borderColor = darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
-  const textColor = darkMode ? '#ffffff' : '#1a1a2e';
-
-  const handleChange = (e) => {
-    const numbers = e.target.value.replace(/[^\d.]/g, '');
-    onChange(numbers);
-  };
-
-  const displayValue = value ? `$${parseFloat(value).toLocaleString()}` : '';
-
-  return (
-    <input
-      type="text"
-      value={displayValue}
-      onChange={handleChange}
-      placeholder={placeholder}
-      style={{
-        width: '100%',
-        padding: '14px',
-        borderRadius: '8px',
-        border: `1px solid ${borderColor}`,
-        backgroundColor: inputBg,
-        color: textColor,
-        fontSize: '1rem'
       }}
     />
   );
