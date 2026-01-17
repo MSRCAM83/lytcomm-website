@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Shield, Award, Users, Zap } from 'lucide-react';
+import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Clock, Briefcase } from 'lucide-react';
 import { colors, images, LYT_INFO, services } from '../config/constants';
 
 const HomePage = ({ setCurrentPage, darkMode }) => {
@@ -13,7 +13,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section
         style={{
           position: 'relative',
-          minHeight: '80vh',
+          minHeight: '85vh',
           display: 'flex',
           alignItems: 'center',
           backgroundImage: `linear-gradient(rgba(10, 22, 40, 0.85), rgba(10, 22, 40, 0.9)), url(${images.hero})`,
@@ -21,8 +21,11 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           backgroundPosition: 'center',
         }}
       >
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', width: '100%' }}>
           <div style={{ maxWidth: '700px' }}>
+            <div style={{ display: 'inline-block', padding: '8px 16px', backgroundColor: `${colors.teal}20`, borderRadius: '20px', marginBottom: '20px' }}>
+              <span style={{ color: colors.teal, fontSize: '0.9rem', fontWeight: '500' }}>🚀 Now Hiring Experienced Fiber Technicians</span>
+            </div>
             <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: '700', marginBottom: '24px', color: '#fff', lineHeight: '1.1' }}>
               Building the <span style={{ color: colors.teal }}>Fiber Network</span> of Tomorrow
             </h1>
@@ -102,8 +105,114 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         </div>
       </section>
 
-      {/* Why Choose Us */}
+      {/* Team Portal Access Section */}
       <section style={{ padding: '80px 20px', backgroundColor: cardBg }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
+            Team <span style={{ color: colors.teal }}>Portal</span>
+          </h2>
+          <p style={{ textAlign: 'center', color: colors.gray, marginBottom: '48px', maxWidth: '600px', margin: '0 auto 48px' }}>
+            Access your dashboard, submit daily reports, and manage your work all in one place.
+          </p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+            {/* Employee/Contractor Login */}
+            <div style={{
+              padding: '40px',
+              backgroundColor: darkMode ? colors.dark : '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              border: `2px solid ${colors.teal}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '12px', backgroundColor: `${colors.teal}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LogIn size={28} color={colors.teal} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Team Login</h3>
+                  <p style={{ color: colors.gray, fontSize: '0.9rem' }}>Employees & Contractors</p>
+                </div>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0' }}>
+                {['Daily production logs', 'Time tracking', 'Equipment inspections', 'Safety briefings', 'OTDR test uploads'].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', color: colors.gray }}>
+                    <CheckCircle size={18} color={colors.green} /> {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => setCurrentPage('portal-login')}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  backgroundColor: colors.teal,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <LogIn size={20} /> Sign In to Portal
+              </button>
+            </div>
+
+            {/* New Employee/Contractor Onboarding */}
+            <div style={{
+              padding: '40px',
+              backgroundColor: darkMode ? colors.dark : '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              border: `2px solid ${colors.coral}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '12px', backgroundColor: `${colors.coral}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserPlus size={28} color={colors.coral} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>New Hire Onboarding</h3>
+                  <p style={{ color: colors.gray, fontSize: '0.9rem' }}>Join the LYT team</p>
+                </div>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0' }}>
+                {['Complete tax forms (W-4/W-9)', 'Submit certifications', 'Direct deposit setup', 'Safety acknowledgment', 'COI upload (contractors)'].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', color: colors.gray }}>
+                    <CheckCircle size={18} color={colors.green} /> {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => setCurrentPage('onboarding')}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  backgroundColor: colors.coral,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <UserPlus size={20} /> Start Onboarding
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2.5rem', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
             Why Choose <span style={{ color: colors.teal }}>LYT</span>
@@ -122,7 +231,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 key={idx}
                 style={{
                   padding: '32px',
-                  backgroundColor: darkMode ? colors.dark : '#fff',
+                  backgroundColor: cardBg,
                   borderRadius: '12px',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
                   textAlign: 'center',
@@ -151,7 +260,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       </section>
 
       {/* Services Preview */}
-      <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
+      <section style={{ padding: '80px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2.5rem', fontWeight: '700', textAlign: 'center', marginBottom: '48px' }}>
             Our <span style={{ color: colors.teal }}>Services</span>
@@ -163,7 +272,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 style={{
                   borderRadius: '12px',
                   overflow: 'hidden',
-                  backgroundColor: cardBg,
+                  backgroundColor: darkMode ? colors.dark : '#fff',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                 }}
               >
@@ -198,6 +307,23 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             >
               View All Services <ChevronRight size={18} />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Service Areas */}
+      <section style={{ padding: '60px 20px', backgroundColor: bgColor }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '24px' }}>
+            <MapPin size={24} color={colors.teal} />
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Serving the Greater Houston Area</h3>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
+            {['Houston', 'Webster', 'League City', 'Pearland', 'Sugar Land', 'Katy', 'The Woodlands', 'Galveston', 'Pasadena', 'Baytown'].map((city, i) => (
+              <span key={i} style={{ padding: '8px 16px', backgroundColor: cardBg, borderRadius: '20px', fontSize: '0.9rem', color: colors.gray }}>
+                {city}
+              </span>
+            ))}
           </div>
         </div>
       </section>
