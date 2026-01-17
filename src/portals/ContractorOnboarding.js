@@ -14,6 +14,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [showMsaPdf, setShowMsaPdf] = useState(false);
+  const [showW9Pdf, setShowW9Pdf] = useState(false);
 
   const [formData, setFormData] = useState({
     // Company Info
@@ -284,10 +286,46 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Master Subcontractor Agreement</h3>
-        <a href={URLS.msaPdf} target="_blank" rel="noopener noreferrer" style={{ color: colors.teal, fontSize: '0.9rem' }}>
-          View Full Agreement (PDF)
-        </a>
+        <button
+          onClick={() => setShowMsaPdf(!showMsaPdf)}
+          style={{ 
+            padding: '8px 16px',
+            backgroundColor: showMsaPdf ? colors.teal : 'transparent',
+            border: `1px solid ${colors.teal}`,
+            borderRadius: '6px',
+            color: showMsaPdf ? '#fff' : colors.teal,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+          }}
+        >
+          {showMsaPdf ? 'Hide Agreement' : 'View Full Agreement (PDF)'}
+        </button>
       </div>
+
+      {/* Embedded PDF Viewer */}
+      {showMsaPdf && (
+        <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${darkMode ? '#374151' : '#ddd'}` }}>
+          <iframe
+            src={`${URLS.msaPdf}#toolbar=0&navpanes=0&scrollbar=1`}
+            style={{
+              width: '100%',
+              height: '500px',
+              border: 'none',
+              backgroundColor: '#fff',
+            }}
+            title="Master Subcontractor Agreement"
+          />
+          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+            <a
+              href={URLS.msaPdf}
+              download="LYT_MSA.pdf"
+              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+            >
+              Download PDF
+            </a>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px', maxHeight: '300px', overflow: 'auto' }}>
         <h4 style={{ fontWeight: '600', marginBottom: '12px' }}>Agreement Summary</h4>
@@ -337,10 +375,46 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>W-9 Request for Taxpayer Identification</h3>
-        <a href={URLS.w9Pdf} target="_blank" rel="noopener noreferrer" style={{ color: colors.teal, fontSize: '0.9rem' }}>
-          View PDF Form
-        </a>
+        <button
+          onClick={() => setShowW9Pdf(!showW9Pdf)}
+          style={{ 
+            padding: '8px 16px',
+            backgroundColor: showW9Pdf ? colors.teal : 'transparent',
+            border: `1px solid ${colors.teal}`,
+            borderRadius: '6px',
+            color: showW9Pdf ? '#fff' : colors.teal,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+          }}
+        >
+          {showW9Pdf ? 'Hide PDF' : 'View PDF Form'}
+        </button>
       </div>
+
+      {/* Embedded PDF Viewer */}
+      {showW9Pdf && (
+        <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${darkMode ? '#374151' : '#ddd'}` }}>
+          <iframe
+            src={`${URLS.w9Pdf}#toolbar=0&navpanes=0&scrollbar=1`}
+            style={{
+              width: '100%',
+              height: '600px',
+              border: 'none',
+              backgroundColor: '#fff',
+            }}
+            title="W-9 Form"
+          />
+          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+            <a
+              href={URLS.w9Pdf}
+              download="W-9_Form.pdf"
+              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+            >
+              Download PDF
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Tax ID Type */}
       <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>

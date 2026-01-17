@@ -13,6 +13,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [showW4Pdf, setShowW4Pdf] = useState(false);
 
   const [formData, setFormData] = useState({
     // Personal Info
@@ -204,15 +205,46 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>W-4 Employee's Withholding Certificate</h3>
-        <a
-          href={URLS.w4Pdf}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: colors.teal, fontSize: '0.9rem' }}
+        <button
+          onClick={() => setShowW4Pdf(!showW4Pdf)}
+          style={{ 
+            padding: '8px 16px',
+            backgroundColor: showW4Pdf ? colors.teal : 'transparent',
+            border: `1px solid ${colors.teal}`,
+            borderRadius: '6px',
+            color: showW4Pdf ? '#fff' : colors.teal,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+          }}
         >
-          View PDF Form
-        </a>
+          {showW4Pdf ? 'Hide PDF' : 'View PDF Form'}
+        </button>
       </div>
+
+      {/* Embedded PDF Viewer */}
+      {showW4Pdf && (
+        <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${darkMode ? '#374151' : '#ddd'}` }}>
+          <iframe
+            src={`${URLS.w4Pdf}#toolbar=0&navpanes=0&scrollbar=1`}
+            style={{
+              width: '100%',
+              height: '600px',
+              border: 'none',
+              backgroundColor: '#fff',
+            }}
+            title="W-4 Form"
+          />
+          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+            <a
+              href={URLS.w4Pdf}
+              download="W-4_Form.pdf"
+              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+            >
+              Download PDF
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Filing Status */}
       <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
