@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Users, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Clipboard, Camera, HardHat, Activity, CheckSquare, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, Trash2 } from 'lucide-react';
+import { LogOut, Clock, Briefcase, FileText, Users, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Clipboard, Camera, HardHat, Activity, CheckSquare, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, Trash2, ShieldAlert } from 'lucide-react';
 import { colors, LYT_INFO, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
 
 const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -55,6 +55,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
     { id: 'tickets', label: '811 Tickets', icon: Phone },
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
     { id: 'safety', label: 'Safety / Toolbox', icon: HardHat },
+    { id: 'certs', label: 'Certifications', icon: Award },
+    { id: 'incidents', label: 'Incident Reports', icon: ShieldAlert },
     { id: 'projects', label: 'Projects', icon: Briefcase },
     { id: 'files', label: 'Documents', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -1077,6 +1079,338 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
     );
   };
 
+  // Certifications Tracking
+  const [certifications, setCertifications] = useState([
+    { id: 1, name: 'OSHA 10-Hour Construction', issueDate: '2024-03-15', expiryDate: '2027-03-15', status: 'active' },
+    { id: 2, name: 'CPR/First Aid', issueDate: '2024-06-01', expiryDate: '2025-06-01', status: 'expiring' },
+    { id: 3, name: 'Fiber Optic Installer (FOI)', issueDate: '2023-09-20', expiryDate: '2025-09-20', status: 'active' },
+    { id: 4, name: 'Confined Space Entry', issueDate: '2024-01-10', expiryDate: '2025-01-25', status: 'expiring' },
+    { id: 5, name: 'Flagger Certification', issueDate: '2023-04-12', expiryDate: '2024-04-12', status: 'expired' },
+  ]);
+
+  const renderCerts = () => {
+    const today = new Date();
+    const expiringSoon = certifications.filter(c => {
+      const expiry = new Date(c.expiryDate);
+      const daysUntil = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+      return daysUntil <= 30 && daysUntil > 0;
+    });
+    const expired = certifications.filter(c => new Date(c.expiryDate) < today);
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Certifications</h2>
+            <p style={{ color: colors.gray }}>Track your training and certification status</p>
+          </div>
+          <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+            <Plus size={18} /> Add Certification
+          </button>
+        </div>
+
+        {/* Alerts */}
+        {(expiringSoon.length > 0 || expired.length > 0) && (
+          <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+            {expired.length > 0 && (
+              <div style={{ backgroundColor: `${colors.coral}15`, border: `1px solid ${colors.coral}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertTriangle size={24} color={colors.coral} />
+                <div>
+                  <p style={{ fontWeight: '600', color: colors.coral }}>{expired.length} certification(s) EXPIRED!</p>
+                  <p style={{ fontSize: '0.9rem', color: colors.gray }}>Renew immediately to maintain compliance.</p>
+                </div>
+              </div>
+            )}
+            {expiringSoon.length > 0 && (
+              <div style={{ backgroundColor: `${colors.orange}15`, border: `1px solid ${colors.orange}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertTriangle size={24} color={colors.orange} />
+                <div>
+                  <p style={{ fontWeight: '600', color: colors.orange }}>{expiringSoon.length} certification(s) expiring within 30 days</p>
+                  <p style={{ fontSize: '0.9rem', color: colors.gray }}>Schedule renewal training soon.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Certifications List */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {certifications.map(cert => {
+              const expiry = new Date(cert.expiryDate);
+              const daysUntil = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+              const isExpired = daysUntil < 0;
+              const isExpiringSoon = daysUntil <= 30 && daysUntil > 0;
+
+              return (
+                <div
+                  key={cert.id}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: darkMode ? colors.dark : '#f8fafc',
+                    borderRadius: '8px',
+                    borderLeft: `4px solid ${isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <Award size={18} color={colors.teal} />
+                        <span style={{ fontWeight: '600' }}>{cert.name}</span>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          backgroundColor: isExpired ? `${colors.coral}20` : isExpiringSoon ? `${colors.orange}20` : `${colors.green}20`,
+                          color: isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green,
+                        }}>
+                          {isExpired ? 'EXPIRED' : isExpiringSoon ? 'EXPIRING SOON' : 'Active'}
+                        </span>
+                      </div>
+                      <p style={{ color: colors.gray, fontSize: '0.85rem' }}>
+                        Issued: {cert.issueDate}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: '0.9rem', fontWeight: '500', color: isExpired ? colors.coral : isExpiringSoon ? colors.orange : textColor }}>
+                        {isExpired ? 'Expired' : `Expires: ${cert.expiryDate}`}
+                      </p>
+                      {isExpiringSoon && (
+                        <p style={{ fontSize: '0.8rem', color: colors.orange }}>⚠️ {daysUntil} days left</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Incident Reports
+  const [incidents, setIncidents] = useState([
+    { id: 1, date: '2025-01-10', type: 'Near Miss', description: 'Unsecured load nearly fell during transport', project: 'Metro Fiber Ring', status: 'closed' },
+  ]);
+
+  const [newIncident, setNewIncident] = useState({
+    date: new Date().toISOString().split('T')[0],
+    time: '',
+    type: '',
+    project: '',
+    location: '',
+    description: '',
+    injuries: 'no',
+    injuryDescription: '',
+    witnesses: '',
+    immediateActions: '',
+    photos: [],
+  });
+
+  const incidentTypes = [
+    'Near Miss',
+    'First Aid Injury',
+    'Recordable Injury',
+    'Property Damage',
+    'Vehicle Incident',
+    'Environmental Spill',
+    'Utility Strike',
+    'Third Party Incident',
+  ];
+
+  const renderIncidents = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Incident Reports</h2>
+          <p style={{ color: colors.gray }}>Report and track safety incidents</p>
+        </div>
+      </div>
+
+      {/* Report New Incident */}
+      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: colors.coral }}>
+          <ShieldAlert size={20} style={{ display: 'inline', marginRight: '8px' }} />
+          Report New Incident
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
+            <input
+              type="date"
+              value={newIncident.date}
+              onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Time *</label>
+            <input
+              type="time"
+              value={newIncident.time}
+              onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Incident Type *</label>
+            <select
+              value={newIncident.type}
+              onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            >
+              <option value="">Select type...</option>
+              {incidentTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Project *</label>
+            <select
+              value={newIncident.project}
+              onChange={(e) => setNewIncident({ ...newIncident, project: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            >
+              <option value="">Select project...</option>
+              {mockProjects.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Location / Address *</label>
+          <input
+            type="text"
+            value={newIncident.location}
+            onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
+            placeholder="Specific location where incident occurred"
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Description of Incident *</label>
+          <textarea
+            value={newIncident.description}
+            onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
+            placeholder="Describe what happened in detail..."
+            rows={4}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '10px' }}>Were there any injuries? *</label>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="injuries"
+                value="no"
+                checked={newIncident.injuries === 'no'}
+                onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })}
+              />
+              No injuries
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="injuries"
+                value="yes"
+                checked={newIncident.injuries === 'yes'}
+                onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })}
+              />
+              Yes, injuries occurred
+            </label>
+          </div>
+          {newIncident.injuries === 'yes' && (
+            <textarea
+              value={newIncident.injuryDescription}
+              onChange={(e) => setNewIncident({ ...newIncident, injuryDescription: e.target.value })}
+              placeholder="Describe injuries and treatment provided..."
+              rows={2}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, marginTop: '12px' }}
+            />
+          )}
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Immediate Actions Taken</label>
+          <textarea
+            value={newIncident.immediateActions}
+            onChange={(e) => setNewIncident({ ...newIncident, immediateActions: e.target.value })}
+            placeholder="What actions were taken immediately following the incident?"
+            rows={2}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>
+            <Camera size={16} style={{ display: 'inline', marginRight: '6px' }} />
+            Photo Documentation
+          </label>
+          <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+            <input type="file" accept="image/*" multiple style={{ display: 'none' }} id="incident-photos" />
+            <label htmlFor="incident-photos" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+              Add Photos
+            </label>
+          </div>
+        </div>
+
+        <button
+          onClick={() => alert('Incident report submitted! Supervisor will be notified.')}
+          style={{ width: '100%', padding: '14px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+        >
+          Submit Incident Report
+        </button>
+      </div>
+
+      {/* Previous Incidents */}
+      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Previous Reports</h3>
+        {incidents.length === 0 ? (
+          <p style={{ color: colors.gray, textAlign: 'center', padding: '24px' }}>No incident reports on file.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {incidents.map(incident => (
+              <div key={incident.id} style={{ padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '600' }}>{incident.type}</span>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        backgroundColor: incident.status === 'closed' ? `${colors.green}20` : `${colors.orange}20`,
+                        color: incident.status === 'closed' ? colors.green : colors.orange,
+                        textTransform: 'capitalize',
+                      }}>
+                        {incident.status}
+                      </span>
+                    </div>
+                    <p style={{ color: colors.gray, fontSize: '0.9rem', marginBottom: '4px' }}>{incident.description}</p>
+                    <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{incident.project} • {incident.date}</p>
+                  </div>
+                  <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '6px', color: colors.teal, cursor: 'pointer', fontSize: '0.85rem' }}>
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderSettings = () => (
     <div>
       <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Settings</h2>
@@ -1108,6 +1442,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       case 'tickets': return renderTickets();
       case 'equipment': return renderEquipment();
       case 'safety': return renderSafety();
+      case 'certs': return renderCerts();
+      case 'incidents': return renderIncidents();
       case 'projects': return renderProjects();
       case 'files': return renderFiles();
       case 'settings': return renderSettings();

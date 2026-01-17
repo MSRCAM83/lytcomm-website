@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, HardHat, Zap, Phone, Eye, AlertTriangle } from 'lucide-react';
+import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, HardHat, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award } from 'lucide-react';
 import { colors, LYT_INFO, URLS, mockProjects, mockInvoices, mockFiles } from '../config/constants';
 
 const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -23,6 +23,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     { id: 'otdr', label: 'OTDR Results', icon: Zap },
     { id: 'tickets', label: '811 Tickets', icon: Phone },
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
+    { id: 'compliance', label: 'COI / Compliance', icon: Shield },
+    { id: 'incidents', label: 'Incident Reports', icon: ShieldAlert },
     { id: 'jobs', label: 'Jobs/SOWs', icon: FileText },
     { id: 'invoices', label: 'Invoices', icon: DollarSign },
     { id: 'documents', label: 'Documents', icon: Upload },
@@ -928,6 +930,303 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     );
   };
 
+  // COI / Compliance Tracking
+  const [compliance, setCompliance] = useState({
+    coi: { expiry: '2025-04-15', carrier: 'Hartford Insurance', policyNumber: 'GL-12345678', liability: '$1,000,000', workersComp: '$500,000' },
+    vehicleInsurance: { expiry: '2025-06-01', carrier: 'Progressive', policyNumber: 'AUTO-87654321' },
+    businessLicense: { expiry: '2025-12-31', number: 'TX-BL-2024-5678' },
+  });
+
+  const renderCompliance = () => {
+    const today = new Date();
+    const coiExpiry = new Date(compliance.coi.expiry);
+    const coiDaysUntil = Math.ceil((coiExpiry - today) / (1000 * 60 * 60 * 24));
+    const coiExpired = coiDaysUntil < 0;
+    const coiExpiringSoon = coiDaysUntil <= 30 && coiDaysUntil > 0;
+
+    const vehicleExpiry = new Date(compliance.vehicleInsurance.expiry);
+    const vehicleDaysUntil = Math.ceil((vehicleExpiry - today) / (1000 * 60 * 60 * 24));
+    const vehicleExpiringSoon = vehicleDaysUntil <= 30 && vehicleDaysUntil > 0;
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>COI / Compliance</h2>
+            <p style={{ color: colors.gray }}>Track insurance certificates and compliance documents</p>
+          </div>
+        </div>
+
+        {/* COI Alert */}
+        {(coiExpired || coiExpiringSoon) && (
+          <div style={{ backgroundColor: coiExpired ? `${colors.coral}15` : `${colors.orange}15`, border: `1px solid ${coiExpired ? colors.coral : colors.orange}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={24} color={coiExpired ? colors.coral : colors.orange} />
+            <div>
+              <p style={{ fontWeight: '600', color: coiExpired ? colors.coral : colors.orange }}>
+                {coiExpired ? 'Certificate of Insurance EXPIRED!' : `COI expires in ${coiDaysUntil} days`}
+              </p>
+              <p style={{ fontSize: '0.9rem', color: colors.gray }}>
+                {coiExpired ? 'Upload new COI immediately to continue work.' : 'Contact your insurance carrier for renewal.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* General Liability COI */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Shield size={24} color={colors.teal} />
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Certificate of Insurance (COI)</h3>
+                <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{compliance.coi.carrier}</p>
+              </div>
+            </div>
+            <span style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              backgroundColor: coiExpired ? `${colors.coral}20` : coiExpiringSoon ? `${colors.orange}20` : `${colors.green}20`,
+              color: coiExpired ? colors.coral : coiExpiringSoon ? colors.orange : colors.green,
+            }}>
+              {coiExpired ? 'EXPIRED' : coiExpiringSoon ? 'EXPIRING SOON' : 'Active'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Policy Number</label>
+              <p style={{ fontWeight: '500' }}>{compliance.coi.policyNumber}</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>General Liability</label>
+              <p style={{ fontWeight: '500' }}>{compliance.coi.liability}</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Workers Comp</label>
+              <p style={{ fontWeight: '500' }}>{compliance.coi.workersComp}</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Expiration</label>
+              <p style={{ fontWeight: '500', color: coiExpired ? colors.coral : coiExpiringSoon ? colors.orange : textColor }}>
+                {compliance.coi.expiry}
+                {coiExpiringSoon && <span style={{ display: 'block', fontSize: '0.8rem', color: colors.orange }}>({coiDaysUntil} days)</span>}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Upload size={18} /> Upload New COI
+            </button>
+            <button style={{ padding: '10px 20px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '8px', color: colors.teal, cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Download size={18} /> Download Current
+            </button>
+          </div>
+        </div>
+
+        {/* Vehicle Insurance */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Truck size={24} color={colors.teal} />
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Vehicle Insurance</h3>
+                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.vehicleInsurance.carrier} • {compliance.vehicleInsurance.policyNumber}</p>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontWeight: '500', color: vehicleExpiringSoon ? colors.orange : textColor }}>Expires: {compliance.vehicleInsurance.expiry}</p>
+              {vehicleExpiringSoon && <p style={{ fontSize: '0.8rem', color: colors.orange }}>⚠️ {vehicleDaysUntil} days</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Business License */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Award size={24} color={colors.teal} />
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Business License</h3>
+                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.businessLicense.number}</p>
+              </div>
+            </div>
+            <p style={{ fontWeight: '500' }}>Expires: {compliance.businessLicense.expiry}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Incident Reports
+  const [incidents, setIncidents] = useState([
+    { id: 1, date: '2025-01-08', type: 'Property Damage', description: 'Minor scratch on customer fence during cable installation', project: 'Metro Fiber Ring', status: 'closed' },
+  ]);
+
+  const [newIncident, setNewIncident] = useState({
+    date: new Date().toISOString().split('T')[0],
+    time: '',
+    type: '',
+    project: '',
+    location: '',
+    description: '',
+    injuries: 'no',
+    injuryDescription: '',
+    immediateActions: '',
+  });
+
+  const incidentTypes = [
+    'Near Miss',
+    'First Aid Injury',
+    'Recordable Injury',
+    'Property Damage',
+    'Vehicle Incident',
+    'Environmental Spill',
+    'Utility Strike',
+    'Third Party Incident',
+  ];
+
+  const renderIncidents = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Incident Reports</h2>
+          <p style={{ color: colors.gray }}>Report and track safety incidents for your crew</p>
+        </div>
+      </div>
+
+      {/* Report New Incident */}
+      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: colors.coral }}>
+          <ShieldAlert size={20} style={{ display: 'inline', marginRight: '8px' }} />
+          Report New Incident
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
+            <input
+              type="date"
+              value={newIncident.date}
+              onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Time *</label>
+            <input
+              type="time"
+              value={newIncident.time}
+              onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Incident Type *</label>
+            <select
+              value={newIncident.type}
+              onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            >
+              <option value="">Select type...</option>
+              {incidentTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Project *</label>
+            <select
+              value={newIncident.project}
+              onChange={(e) => setNewIncident({ ...newIncident, project: e.target.value })}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            >
+              <option value="">Select project...</option>
+              {mockProjects.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Location *</label>
+          <input
+            type="text"
+            value={newIncident.location}
+            onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
+            placeholder="Specific location"
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Description *</label>
+          <textarea
+            value={newIncident.description}
+            onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
+            placeholder="Describe what happened..."
+            rows={3}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '10px' }}>Were there any injuries?</label>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input type="radio" name="contractor-injuries" value="no" checked={newIncident.injuries === 'no'} onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })} />
+              No
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input type="radio" name="contractor-injuries" value="yes" checked={newIncident.injuries === 'yes'} onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })} />
+              Yes
+            </label>
+          </div>
+        </div>
+
+        <button
+          onClick={() => alert('Incident report submitted!')}
+          style={{ width: '100%', padding: '14px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+        >
+          Submit Incident Report
+        </button>
+      </div>
+
+      {/* Previous Incidents */}
+      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Previous Reports</h3>
+        {incidents.map(incident => (
+          <div key={incident.id} style={{ padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: '600' }}>{incident.type}</span>
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    backgroundColor: incident.status === 'closed' ? `${colors.green}20` : `${colors.orange}20`,
+                    color: incident.status === 'closed' ? colors.green : colors.orange,
+                  }}>
+                    {incident.status}
+                  </span>
+                </div>
+                <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{incident.description}</p>
+                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{incident.project} • {incident.date}</p>
+              </div>
+              <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '6px', color: colors.teal, cursor: 'pointer', fontSize: '0.85rem' }}>
+                View
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderSettings = () => (
     <div>
       <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Settings</h2>
@@ -964,6 +1263,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       case 'otdr': return renderOtdr();
       case 'tickets': return renderTickets();
       case 'equipment': return renderEquipment();
+      case 'compliance': return renderCompliance();
+      case 'incidents': return renderIncidents();
       case 'jobs': return renderJobs();
       case 'invoices': return renderInvoices();
       case 'documents': return renderDocuments();
