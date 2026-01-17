@@ -16,6 +16,9 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
+  const [localPending, setLocalPending] = useState(mockPendingOnboarding);
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   const handleLogout = () => {
     setLoggedInUser(null);
@@ -477,8 +480,6 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
   );
 
   const renderOnboarding = () => {
-    const [localPending, setLocalPending] = React.useState(mockPendingOnboarding);
-    
     const handleApprove = (id) => {
       // In production, this would call backend API and send email
       alert(`Approved! Password setup email will be sent to the user.`);
@@ -583,8 +584,6 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     const adminUsers = [
       { id: 1, name: 'Matt Campbell', email: 'matt@lytcomm.com', role: 'Primary Admin', status: 'active' },
     ];
-    const [showAddAdmin, setShowAddAdmin] = React.useState(false);
-    const [newAdminEmail, setNewAdminEmail] = React.useState('');
 
     const handleAddAdmin = () => {
       if (newAdminEmail) {
