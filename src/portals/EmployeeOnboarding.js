@@ -55,6 +55,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     emergencyRelation: '',
     emergencyPhone: '',
     emergencyEmail: '',
+    // Background & Drug Test Consents
+    backgroundCheckConsent: false,
+    backgroundCheckSignature: null,
+    drugTestConsent: false,
+    drugTestSignature: null,
+    consentsDate: new Date().toISOString().split('T')[0],
     // Safety
     safetyAcknowledged: false,
     safetySignature: null,
@@ -67,6 +73,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     { id: 'direct-deposit', title: 'Direct Deposit', icon: CreditCard },
     { id: 'id-verification', title: 'ID Verification', icon: FileText },
     { id: 'emergency', title: 'Emergency Contact', icon: Heart },
+    { id: 'consents', title: 'Consents', icon: Shield },
     { id: 'safety', title: 'Safety Training', icon: Shield },
   ];
 
@@ -182,6 +189,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           emergencyRelationship: formData.emergencyRelation,
           emergencyPhone: formData.emergencyPhone,
           emergencyEmail: formData.emergencyEmail,
+          // Consents
+          backgroundCheckConsent: formData.backgroundCheckConsent,
+          drugTestConsent: formData.drugTestConsent,
         },
         documents: {
           w4: { 
@@ -195,6 +205,14 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           directDeposit: {
             signed: !!(formData.bankName && formData.routingNumber),
             signedAt: formData.bankName ? new Date().toISOString() : null
+          },
+          backgroundCheck: {
+            signed: !!formData.backgroundCheckSignature,
+            signedAt: formData.backgroundCheckSignature ? new Date().toISOString() : null
+          },
+          drugTest: {
+            signed: !!formData.drugTestSignature,
+            signedAt: formData.drugTestSignature ? new Date().toISOString() : null
           }
         },
         voidedCheck: voidedCheckData,
@@ -709,6 +727,117 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     </div>
   );
 
+  const renderConsents = () => (
+    <div>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Employment Consents</h3>
+      
+      {/* Background Check Consent */}
+      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: colors.blue }}>Background Check Authorization</h4>
+        <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
+          <p style={{ marginBottom: '12px' }}>
+            I hereby authorize {LYT_INFO.name} and its designated agents to conduct a comprehensive background investigation as part of my employment application. I understand this investigation may include, but is not limited to:
+          </p>
+          <ul style={{ paddingLeft: '20px', marginBottom: '16px' }}>
+            <li>Criminal history records check</li>
+            <li>Employment verification</li>
+            <li>Education verification</li>
+            <li>Professional license verification</li>
+            <li>Driving record check (if applicable to the position)</li>
+            <li>Reference checks</li>
+          </ul>
+          <p style={{ marginBottom: '12px' }}>
+            I understand that I am entitled to receive a copy of any consumer report obtained and a summary of my rights under the Fair Credit Reporting Act upon request.
+          </p>
+          <p>
+            I release {LYT_INFO.name} and all persons, agencies, and entities providing information from any liability arising from requesting, obtaining, or using this information.
+          </p>
+        </div>
+        
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="backgroundCheckConsent"
+              checked={formData.backgroundCheckConsent}
+              onChange={handleChange}
+              style={{ width: '20px', height: '20px', marginTop: '2px' }}
+            />
+            <span style={{ lineHeight: '1.5' }}>
+              I have read, understand, and consent to the background check investigation described above. I certify that all information I have provided is true and complete.
+            </span>
+          </label>
+        </div>
+
+        {formData.backgroundCheckConsent && (
+          <div style={{ marginTop: '16px' }}>
+            <label style={labelStyle}>Electronic Signature *</label>
+            <SignaturePad
+              signature={formData.backgroundCheckSignature}
+              onSignature={(sig) => setFormData({ ...formData, backgroundCheckSignature: sig })}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Drug Test Consent */}
+      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: colors.blue }}>Drug & Alcohol Testing Consent</h4>
+        <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
+          <p style={{ marginBottom: '12px' }}>
+            As a condition of employment with {LYT_INFO.name}, I understand and agree to the following drug and alcohol testing policy:
+          </p>
+          <ul style={{ paddingLeft: '20px', marginBottom: '16px' }}>
+            <li><strong>Pre-Employment Testing:</strong> I consent to a drug and/or alcohol test as part of the hiring process</li>
+            <li><strong>Random Testing:</strong> I consent to unannounced random drug and/or alcohol testing during employment</li>
+            <li><strong>Reasonable Suspicion:</strong> I consent to testing when there is reasonable suspicion of impairment</li>
+            <li><strong>Post-Accident Testing:</strong> I consent to testing following workplace accidents or injuries</li>
+            <li><strong>Return-to-Duty Testing:</strong> I consent to testing after any violation of the substance abuse policy</li>
+          </ul>
+          <p style={{ marginBottom: '12px' }}>
+            I understand that a positive test result or refusal to submit to testing may result in withdrawal of a job offer, disciplinary action, or termination of employment.
+          </p>
+          <p>
+            I authorize the release of test results to {LYT_INFO.name} and understand that results will be kept confidential in accordance with applicable laws.
+          </p>
+        </div>
+        
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="drugTestConsent"
+              checked={formData.drugTestConsent}
+              onChange={handleChange}
+              style={{ width: '20px', height: '20px', marginTop: '2px' }}
+            />
+            <span style={{ lineHeight: '1.5' }}>
+              I have read, understand, and consent to the drug and alcohol testing policy described above. I agree to comply with all testing requirements as a condition of my employment.
+            </span>
+          </label>
+        </div>
+
+        {formData.drugTestConsent && (
+          <div style={{ marginTop: '16px' }}>
+            <label style={labelStyle}>Electronic Signature *</label>
+            <SignaturePad
+              signature={formData.drugTestSignature}
+              onSignature={(sig) => setFormData({ ...formData, drugTestSignature: sig })}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px', marginTop: '24px' }}>
+        <p style={{ fontSize: '0.9rem', color: colors.gray }}>
+          <strong>Note:</strong> Both consents are required to proceed with your employment application. Your signatures confirm that you understand and agree to these policies.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderSafetyTraining = () => (
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Safety Training Acknowledgment</h3>
@@ -760,7 +889,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       case 2: return renderDirectDeposit();
       case 3: return renderIdVerification();
       case 4: return renderEmergencyContact();
-      case 5: return renderSafetyTraining();
+      case 5: return renderConsents();
+      case 6: return renderSafetyTraining();
       default: return null;
     }
   };
@@ -778,6 +908,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       case 4:
         return formData.emergencyName && formData.emergencyRelation && formData.emergencyPhone;
       case 5:
+        return formData.backgroundCheckConsent && formData.backgroundCheckSignature && formData.drugTestConsent && formData.drugTestSignature;
+      case 6:
         return formData.safetyAcknowledged && formData.safetySignature;
       default:
         return false;
