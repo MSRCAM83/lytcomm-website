@@ -859,7 +859,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           This manual covers PPE requirements, trenching safety, HDD operations, aerial work, emergency procedures, and more.
         </p>
         <a 
-          href="/LYT_HSE_Manual_v2.2.pdf" 
+          href="/LYT_HSE_Manual_v2.3.pdf" 
           target="_blank" 
           rel="noopener noreferrer"
           style={{
@@ -876,7 +876,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           }}
         >
           <FileText size={18} />
-          Download HSE Manual v2.2 (PDF)
+          Download HSE Manual v2.3 (PDF)
         </a>
       </div>
 
@@ -886,7 +886,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           As an employee of {LYT_INFO.name}, I understand and agree to the following:
         </p>
         <ul style={{ color: colors.gray, lineHeight: '1.8', paddingLeft: '20px' }}>
-          <li>I have read and understand the LYT HSE Manual v2.2</li>
+          <li>I have read and understand the LYT HSE Manual v2.3</li>
           <li>I will follow all safety procedures and protocols at all times</li>
           <li>I will wear required Personal Protective Equipment (PPE) on job sites</li>
           <li>I will report any unsafe conditions or incidents immediately</li>
@@ -907,7 +907,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             style={{ width: '20px', height: '20px', marginTop: '2px' }}
           />
           <span style={{ lineHeight: '1.5' }}>
-            I have read the LYT HSE Manual v2.2 and agree to comply with all {LYT_INFO.name} safety policies and procedures. 
+            I have read the LYT HSE Manual v2.3 and agree to comply with all {LYT_INFO.name} safety policies and procedures. 
             I understand that failure to follow these policies may result in disciplinary action up to and including termination.
           </span>
         </label>
