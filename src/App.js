@@ -39,6 +39,7 @@ function App() {
     { id: 'contact', label: 'Contact' },
   ];
 
+  // eslint-disable-next-line no-unused-vars
   const portalLinks = [
     { id: 'portal-login', label: 'Portal' },
     { id: 'onboarding', label: 'Onboarding' },

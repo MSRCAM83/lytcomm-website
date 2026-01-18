@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Mail, Building2, Eye } from 'lucide-react';
-import { colors, LYT_INFO, mockUsers, mockContractors, mockProjects, mockTimeEntries, mockInvoices, ADMIN_CONFIG } from '../config/constants';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye } from 'lucide-react';
+import { colors, mockUsers, mockContractors, mockProjects, mockTimeEntries, mockInvoices } from '../config/constants';
 
 // Mock pending onboarding data
 const mockPendingOnboarding = [

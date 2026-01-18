@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, HardHat, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award } from 'lucide-react';
+import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award } from 'lucide-react';
 import { colors, LYT_INFO, URLS, mockProjects, mockInvoices, mockFiles } from '../config/constants';
 
 const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -964,6 +964,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
   };
 
   // COI / Compliance Tracking
+  // eslint-disable-next-line no-unused-vars
   const [compliance, setCompliance] = useState({
     coi: { expiry: '2025-04-15', carrier: 'Hartford Insurance', policyNumber: 'GL-12345678', liability: '$1,000,000', workersComp: '$500,000' },
     vehicleInsurance: { expiry: '2025-06-01', carrier: 'Progressive', policyNumber: 'AUTO-87654321' },

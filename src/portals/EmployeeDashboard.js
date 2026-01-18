@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Users, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Clipboard, Camera, HardHat, Activity, CheckSquare, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, Trash2, ShieldAlert } from 'lucide-react';
-import { colors, LYT_INFO, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
+import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert } from 'lucide-react';
+import { colors, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
 
 const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
   const bgColor = darkMode ? colors.dark : '#f8fafc';
@@ -311,6 +311,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
     </div>
   );
 
+  // eslint-disable-next-line no-unused-vars
   const renderTeam = () => (
     <div>
       <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Team Directory</h2>
@@ -971,6 +972,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
   });
 
   const renderTickets = () => {
+    // eslint-disable-next-line no-unused-vars
     const today = new Date().toISOString().split('T')[0];
     const expiringSoon = tickets.filter(t => {
       const daysUntil = Math.ceil((new Date(t.expires) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1113,6 +1115,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
   };
 
   // Certifications Tracking
+  // eslint-disable-next-line no-unused-vars
   const [certifications, setCertifications] = useState([
     { id: 1, name: 'OSHA 10-Hour Construction', issueDate: '2024-03-15', expiryDate: '2027-03-15', status: 'active' },
     { id: 2, name: 'CPR/First Aid', issueDate: '2024-06-01', expiryDate: '2025-06-01', status: 'expiring' },

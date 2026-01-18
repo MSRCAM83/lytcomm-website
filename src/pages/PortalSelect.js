@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserPlus, Briefcase, LogIn, Shield, Users, FileText, ArrowLeft } from 'lucide-react';
+import { UserPlus, Briefcase, LogIn, Shield, FileText, ArrowLeft } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
 
 const PortalSelect = ({ setCurrentPage, darkMode }) => {
