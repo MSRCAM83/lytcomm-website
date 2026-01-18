@@ -842,17 +842,57 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Safety Training Acknowledgment</h3>
       
+      {/* HSE Manual Download */}
+      <div style={{ 
+        padding: '20px', 
+        backgroundColor: darkMode ? '#0a2540' : '#dbeafe', 
+        borderRadius: '8px', 
+        marginBottom: '24px',
+        border: `2px solid ${colors.blue}`
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <FileText size={24} style={{ color: colors.blue }} />
+          <h4 style={{ fontWeight: '600', color: colors.blue, margin: 0 }}>Required Reading: LYT HSE Safety Manual</h4>
+        </div>
+        <p style={{ color: darkMode ? '#94a3b8' : '#475569', marginBottom: '16px', lineHeight: '1.6' }}>
+          Before signing below, you must download and read the complete LYT Communications Health, Safety & Environment (HSE) Manual. 
+          This manual covers PPE requirements, trenching safety, HDD operations, aerial work, emergency procedures, and more.
+        </p>
+        <a 
+          href="/LYT_HSE_Manual_v2.2.pdf" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 24px',
+            backgroundColor: colors.blue,
+            color: 'white',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: '600',
+            fontSize: '0.95rem'
+          }}
+        >
+          <FileText size={18} />
+          Download HSE Manual v2.2 (PDF)
+        </a>
+      </div>
+
       <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
         <h4 style={{ fontWeight: '600', marginBottom: '16px' }}>Safety Commitment</h4>
         <p style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px' }}>
           As an employee of {LYT_INFO.name}, I understand and agree to the following:
         </p>
         <ul style={{ color: colors.gray, lineHeight: '1.8', paddingLeft: '20px' }}>
+          <li>I have read and understand the LYT HSE Manual v2.2</li>
           <li>I will follow all safety procedures and protocols at all times</li>
           <li>I will wear required Personal Protective Equipment (PPE) on job sites</li>
           <li>I will report any unsafe conditions or incidents immediately</li>
           <li>I will attend all required safety training sessions</li>
-          <li>I will not perform any task that I feel is unsafe without first consulting my supervisor</li>
+          <li>I have Stop Work Authority and will use it when conditions are unsafe</li>
+          <li>I will call 811 before any ground disturbance</li>
           <li>I understand that safety violations may result in disciplinary action</li>
         </ul>
       </div>
@@ -867,7 +907,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             style={{ width: '20px', height: '20px', marginTop: '2px' }}
           />
           <span style={{ lineHeight: '1.5' }}>
-            I have read, understand, and agree to comply with all {LYT_INFO.name} safety policies and procedures. 
+            I have read the LYT HSE Manual v2.2 and agree to comply with all {LYT_INFO.name} safety policies and procedures. 
             I understand that failure to follow these policies may result in disciplinary action up to and including termination.
           </span>
         </label>
