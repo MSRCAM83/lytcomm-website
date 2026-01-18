@@ -880,7 +880,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         </div>
 
         <button
-          onClick={() => alert('OTDR test uploaded!')}
+          onClick={() => setOtdrTests([...otdrTests, newOtdr])}
           style={{ padding: '12px 24px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
         >
           Upload Test Result
