@@ -30,9 +30,9 @@ export const URLS = {
   appsScript: 'https://script.google.com/macros/s/AKfycbyfpYe0FaALAAU7XtgqbDswDCnl47e8LZhTxZSzyKv7FqB5q1gFDPjJTpgbuMARLH3t/exec',
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
-  w4Pdf: '/Form_W4_sign.pdf',
-  w9Pdf: '/Form_W9_sign.pdf',
-  msaPdf: '/LYT_MSA_2006__v3_4.pdf',
+  w4Pdf: '/Form%20W-4%20sign.pdf',
+  w9Pdf: '/Form%20W-9%20sign.pdf',
+  msaPdf: '/LYT%20MSA%202006%20-%20v3.4.pdf',
 };
 
 // Onboarding invite code

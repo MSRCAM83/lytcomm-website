@@ -1,0 +1,58 @@
+/* Global styles for LYT Communications */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix for select/option elements in dark mode */
+select option {
+  background-color: inherit;
+  color: inherit;
+}
+
+/* Dark mode select options - browser specific fixes */
+@media (prefers-color-scheme: dark) {
+  select option {
+    background-color: #1f2937;
+    color: #ffffff;
+  }
+}
+
+/* Force option styling in dark mode contexts */
+select[style*="background-color: rgb(13, 27, 42)"] option,
+select[style*="background-color: #0d1b2a"] option,
+select[style*="background-color:#0d1b2a"] option {
+  background-color: #0d1b2a;
+  color: #ffffff;
+}
+
+/* Ensure inputs and selects have proper text color */
+input, select, textarea {
+  color: inherit;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-menu-button {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-button {
+    display: none !important;
+  }
+}

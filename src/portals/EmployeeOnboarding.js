@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle, Upload } from 'lucide-react';
 import { colors, LYT_INFO, URLS } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import SSNInput from '../components/SSNInput';
@@ -44,6 +44,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     routingNumber: '',
     accountNumber: '',
     accountType: 'checking',
+    voidedCheck: null,
+    voidedCheckName: '',
+    // ID Verification
+    idType: 'drivers-license',
+    idFile: null,
+    idFileName: '',
     // Emergency Contact
     emergencyName: '',
     emergencyRelation: '',
@@ -59,6 +65,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     { id: 'personal', title: 'Personal Info', icon: User },
     { id: 'w4', title: 'W-4 Tax Form', icon: FileText },
     { id: 'direct-deposit', title: 'Direct Deposit', icon: CreditCard },
+    { id: 'id-verification', title: 'ID Verification', icon: FileText },
     { id: 'emergency', title: 'Emergency Contact', icon: Heart },
     { id: 'safety', title: 'Safety Training', icon: Shield },
   ];
@@ -102,6 +109,41 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
+      // Prepare file uploads as base64
+      let voidedCheckData = null;
+      if (formData.voidedCheck) {
+        const reader = new FileReader();
+        voidedCheckData = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve({
+              name: formData.voidedCheckName,
+              data: base64,
+              mimeType: formData.voidedCheck.type
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(formData.voidedCheck);
+        });
+      }
+
+      let idFileData = null;
+      if (formData.idFile) {
+        const reader = new FileReader();
+        idFileData = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve({
+              name: formData.idFileName,
+              data: base64,
+              mimeType: formData.idFile.type
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(formData.idFile);
+        });
+      }
+
       // Prepare data for Google Apps Script
       const payload = {
         type: 'employee',
@@ -131,6 +173,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           routingNumber: formData.routingNumber,
           accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
           accountType: formData.accountType,
+          voidedCheckUploaded: !!formData.voidedCheck,
+          // ID Verification
+          idType: formData.idType,
+          idUploaded: !!formData.idFile,
           // Emergency Contact
           emergencyName: formData.emergencyName,
           emergencyRelationship: formData.emergencyRelation,
@@ -150,7 +196,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             signed: !!(formData.bankName && formData.routingNumber),
             signedAt: formData.bankName ? new Date().toISOString() : null
           }
-        }
+        },
+        voidedCheck: voidedCheckData,
+        idFile: idFileData
       };
 
       console.log('Submitting employee onboarding:', payload);
@@ -505,6 +553,131 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           Incorrect information may delay your paycheck.
         </p>
       </div>
+
+      <div style={{ marginTop: '24px' }}>
+        <label style={labelStyle}>Upload Voided Check (Optional)</label>
+        <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '12px' }}>
+          A voided check helps verify your bank account information.
+        </p>
+        <div style={{ 
+          border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, 
+          borderRadius: '8px', 
+          padding: '24px', 
+          textAlign: 'center',
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : '#f9fafb'
+        }}>
+          {formData.voidedCheckName ? (
+            <div>
+              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckName}</p>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, voidedCheck: null, voidedCheckName: '' })}
+                style={{ padding: '8px 16px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                type="file"
+                id="voidedCheck"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setFormData({ ...formData, voidedCheck: file, voidedCheckName: file.name });
+                  }
+                }}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="voidedCheck" style={{ cursor: 'pointer' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <Upload size={32} color={colors.teal} />
+                </div>
+                <p style={{ color: colors.teal, fontWeight: '500' }}>Click to upload voided check</p>
+                <p style={{ fontSize: '0.8rem', color: colors.gray }}>PDF, JPG, or PNG (max 5MB)</p>
+              </label>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderIdVerification = () => (
+    <div>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>ID Verification</h3>
+      <p style={{ color: colors.gray, marginBottom: '24px' }}>
+        Please upload a valid government-issued photo ID for identity verification.
+      </p>
+
+      <div style={{ marginBottom: '24px' }}>
+        <label style={labelStyle}>ID Type *</label>
+        <select
+          name="idType"
+          value={formData.idType}
+          onChange={handleChange}
+          style={{ ...inputStyle, color: darkMode ? '#fff' : colors.dark }}
+        >
+          <option value="drivers-license" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Driver's License</option>
+          <option value="state-id" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>State ID</option>
+          <option value="passport" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Passport</option>
+          <option value="passport-card" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Passport Card</option>
+        </select>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Upload ID *</label>
+        <div style={{ 
+          border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, 
+          borderRadius: '8px', 
+          padding: '24px', 
+          textAlign: 'center',
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : '#f9fafb'
+        }}>
+          {formData.idFileName ? (
+            <div>
+              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.idFileName}</p>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, idFile: null, idFileName: '' })}
+                style={{ padding: '8px 16px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                type="file"
+                id="idFile"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setFormData({ ...formData, idFile: file, idFileName: file.name });
+                  }
+                }}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="idFile" style={{ cursor: 'pointer' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <Upload size={32} color={colors.teal} />
+                </div>
+                <p style={{ color: colors.teal, fontWeight: '500' }}>Click to upload your ID</p>
+                <p style={{ fontSize: '0.8rem', color: colors.gray }}>PDF, JPG, or PNG (max 5MB)</p>
+              </label>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px', marginTop: '24px' }}>
+        <p style={{ fontSize: '0.9rem', color: colors.gray }}>
+          <strong>Privacy Note:</strong> Your ID is securely stored and only used for employment verification purposes.
+        </p>
+      </div>
     </div>
   );
 
@@ -585,8 +758,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       case 0: return renderPersonalInfo();
       case 1: return renderW4Form();
       case 2: return renderDirectDeposit();
-      case 3: return renderEmergencyContact();
-      case 4: return renderSafetyTraining();
+      case 3: return renderIdVerification();
+      case 4: return renderEmergencyContact();
+      case 5: return renderSafetyTraining();
       default: return null;
     }
   };
@@ -600,8 +774,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       case 2:
         return formData.bankName && formData.routingNumber && formData.accountNumber;
       case 3:
-        return formData.emergencyName && formData.emergencyRelation && formData.emergencyPhone;
+        return formData.idFile;
       case 4:
+        return formData.emergencyName && formData.emergencyRelation && formData.emergencyPhone;
+      case 5:
         return formData.safetyAcknowledged && formData.safetySignature;
       default:
         return false;
