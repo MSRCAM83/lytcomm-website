@@ -27,7 +27,7 @@ export const LYT_INFO = {
 };
 
 export const URLS = {
-  appsScript: 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE',
+  appsScript: 'https://script.google.com/macros/s/AKfycbyfpYe0FaALAAU7XtgqbDswDCnl47e8LZhTxZSzyKv7FqB5q1gFDPjJTpgbuMARLH3t/exec',
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   w4Pdf: '/Form_W4_sign.pdf',
@@ -133,7 +133,7 @@ export const mockContractors = [
 ];
 
 export const mockTimeEntries = [
-  { id: 1, oduserId: 4, date: '2025-01-15', clockIn: '07:00', clockOut: '16:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
+  { id: 1, userId: 4, date: '2025-01-15', clockIn: '07:00', clockOut: '16:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
   { id: 2, userId: 4, date: '2025-01-16', clockIn: '07:00', clockOut: '17:00', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
   { id: 3, userId: 4, date: '2025-01-17', clockIn: '07:00', clockOut: null, breakTime: 0, project: 'Bayshore Business Park', status: 'active' },
   { id: 4, userId: 5, date: '2025-01-15', clockIn: '06:30', clockOut: '15:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },

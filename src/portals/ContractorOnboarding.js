@@ -171,18 +171,99 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
+      // Prepare COI file as base64 if uploaded
+      let coiFileData = null;
+      if (formData.coiFile) {
+        const reader = new FileReader();
+        coiFileData = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve({
+              name: formData.coiFileName,
+              data: base64,
+              mimeType: formData.coiFile.type
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(formData.coiFile);
+        });
+      }
+
+      // Prepare data for Google Apps Script
       const payload = {
         type: 'contractor',
-        ...formData,
-        submittedAt: new Date().toISOString(),
+        formData: {
+          companyName: formData.companyName,
+          dba: formData.dba,
+          entityType: formData.entityType,
+          contactName: formData.contactName,
+          contactTitle: formData.contactTitle,
+          contactEmail: formData.email,
+          contactPhone: formData.phone,
+          companyAddress: formData.address,
+          companyCity: formData.city,
+          companyState: formData.state,
+          companyZip: formData.zip,
+          // Tax ID
+          ein: formData.taxIdType === 'ein' ? formData.ein : '',
+          ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
+          taxClassification: formData.taxClassification,
+          // Insurance
+          insuranceExpiration: formData.coiExpiration,
+          liabilityAmount: formData.liabilityAmount,
+          workersCompAmount: formData.workersCompAmount,
+          coiUploaded: !!formData.coiFile,
+          // Fleet & Personnel
+          fleet: formData.fleet.filter(f => f.type || f.description),
+          personnel: formData.personnel.filter(p => p.name || p.role),
+          // Skills
+          skills: formData.skills,
+          otherSkills: formData.otherSkills,
+          // Banking
+          bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
+          accountType: formData.accountType,
+        },
+        documents: {
+          msa: { 
+            signed: !!formData.msaSignature, 
+            signedAt: formData.msaSignature ? new Date().toISOString() : null 
+          },
+          w9: { 
+            signed: !!formData.w9Signature, 
+            signedAt: formData.w9Signature ? new Date().toISOString() : null 
+          },
+          rateCard: {
+            signed: formData.rateCardAccepted,
+            signedAt: formData.rateCardAccepted ? new Date().toISOString() : null
+          }
+        },
+        coiFile: coiFileData
       };
 
-      console.log('Contractor onboarding submission:', payload);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setSubmitted(true);
+      console.log('Submitting contractor onboarding:', payload);
+
+      // Submit to Google Apps Script
+      const response = await fetch(URLS.appsScript, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain', // Apps Script requires this for CORS
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      console.log('Submission result:', result);
+
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        setError(result.error || 'Submission failed. Please try again.');
+      }
     } catch (err) {
-      setError('Failed to submit. Please try again.');
       console.error('Submission error:', err);
+      setError('Failed to submit. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }

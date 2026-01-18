@@ -102,22 +102,79 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
-      // In production, this would submit to Google Apps Script
+      // Prepare data for Google Apps Script
       const payload = {
         type: 'employee',
-        ...formData,
-        submittedAt: new Date().toISOString(),
+        formData: {
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          dateOfBirth: formData.dateOfBirth,
+          ssnLast4: formData.ssn ? formData.ssn.slice(-4) : '',
+          // W-4 info
+          filingStatus: formData.filingStatus,
+          multipleJobs: formData.multipleJobs,
+          qualifyingChildren: formData.qualifyingChildren,
+          otherDependents: formData.otherDependents,
+          otherIncome: formData.otherIncome,
+          deductions: formData.deductions,
+          extraWithholding: formData.extraWithholding,
+          exempt: formData.exempt,
+          // Direct Deposit
+          bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
+          accountType: formData.accountType,
+          // Emergency Contact
+          emergencyName: formData.emergencyName,
+          emergencyRelationship: formData.emergencyRelation,
+          emergencyPhone: formData.emergencyPhone,
+          emergencyEmail: formData.emergencyEmail,
+        },
+        documents: {
+          w4: { 
+            signed: !!formData.w4Signature, 
+            signedAt: formData.w4Signature ? new Date().toISOString() : null 
+          },
+          safety: { 
+            signed: !!formData.safetySignature, 
+            signedAt: formData.safetySignature ? new Date().toISOString() : null 
+          },
+          directDeposit: {
+            signed: !!(formData.bankName && formData.routingNumber),
+            signedAt: formData.bankName ? new Date().toISOString() : null
+          }
+        }
       };
 
-      console.log('Employee onboarding submission:', payload);
+      console.log('Submitting employee onboarding:', payload);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Submit to Google Apps Script
+      const response = await fetch(URLS.appsScript, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain', // Apps Script requires this for CORS
+        },
+        body: JSON.stringify(payload),
+      });
 
-      setSubmitted(true);
+      const result = await response.json();
+      console.log('Submission result:', result);
+
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        setError(result.error || 'Submission failed. Please try again.');
+      }
     } catch (err) {
-      setError('Failed to submit. Please try again.');
       console.error('Submission error:', err);
+      setError('Failed to submit. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }

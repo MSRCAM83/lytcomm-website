@@ -740,7 +740,24 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         </div>
 
         <button
-          onClick={() => alert('OTDR test uploaded!')}
+          onClick={() => {
+            if (newOtdr.project && newOtdr.segment) {
+              const newTest = {
+                id: otdrTests.length + 1,
+                date: newOtdr.date,
+                project: newOtdr.project,
+                segment: newOtdr.segment,
+                result: newOtdr.result,
+                loss: newOtdr.loss || 'N/A',
+                file: 'uploaded.sor'
+              };
+              setOtdrTests([newTest, ...otdrTests]);
+              setNewOtdr({ date: new Date().toISOString().split('T')[0], project: '', segment: '', result: 'pass', loss: '' });
+              alert('OTDR test uploaded successfully!');
+            } else {
+              alert('Please fill in Project and Fiber Segment fields.');
+            }
+          }}
           style={{ padding: '12px 24px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
         >
           Upload Test Result
@@ -870,7 +887,23 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             </div>
           </div>
           <button
-            onClick={() => alert('Ticket added!')}
+            onClick={() => {
+              if (newTicket.ticketNumber && newTicket.address && newTicket.expires) {
+                const ticket = {
+                  id: tickets.length + 1,
+                  ticketNumber: newTicket.ticketNumber,
+                  status: 'active',
+                  address: newTicket.address,
+                  expires: newTicket.expires,
+                  created: new Date().toISOString().split('T')[0]
+                };
+                setTickets([ticket, ...tickets]);
+                setNewTicket({ ticketNumber: '', address: '', expires: '' });
+                alert('Ticket added successfully!');
+              } else {
+                alert('Please fill in all required fields.');
+              }
+            }}
             style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
           >
             Add Ticket
@@ -1188,7 +1221,33 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         </div>
 
         <button
-          onClick={() => alert('Incident report submitted!')}
+          onClick={() => {
+            if (newIncident.type && newIncident.project && newIncident.description) {
+              const incident = {
+                id: incidents.length + 1,
+                date: newIncident.date,
+                type: newIncident.type,
+                description: newIncident.description,
+                project: newIncident.project,
+                status: 'open'
+              };
+              setIncidents([incident, ...incidents]);
+              setNewIncident({
+                date: new Date().toISOString().split('T')[0],
+                time: '',
+                type: '',
+                project: '',
+                location: '',
+                description: '',
+                injuries: 'no',
+                injuryDescription: '',
+                immediateActions: '',
+              });
+              alert('Incident report submitted! Supervisor will be notified.');
+            } else {
+              alert('Please fill in Type, Project, and Description fields.');
+            }
+          }}
           style={{ width: '100%', padding: '14px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Incident Report
