@@ -1,6 +1,6 @@
 import React from 'react';
-import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Cpu, Radio, HardDrive, Activity } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
+import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Radio, HardDrive, Activity } from 'lucide-react';
+import { colors } from '../config/constants';
 
 const HomePage = ({ setCurrentPage, darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
