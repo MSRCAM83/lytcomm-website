@@ -187,7 +187,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Active Projects</h3>
         <div style={{ display: 'grid', gap: '12px' }}>
           {activeProjects.map((project) => (
-            <div key={project.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+            <div key={project.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: '500', marginBottom: '4px' }}>{project.name}</p>
                 <p style={{ fontSize: '0.85rem', color: colors.gray }}>{project.client}</p>
@@ -227,7 +227,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 padding: '10px 12px 10px 40px',
                 border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
                 borderRadius: '8px',
-                backgroundColor: darkMode ? colors.dark : '#fff',
+                backgroundColor: darkMode ? '#1f2937' : '#ffffff',
                 color: textColor,
                 width: '250px',
               }}
@@ -243,7 +243,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Employee</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Email</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Phone</th>
@@ -334,7 +334,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Employee</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Date</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Project</th>
@@ -394,7 +394,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Invoice #</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Contractor</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Project</th>
@@ -629,7 +629,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     padding: '12px',
                     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
                     borderRadius: '8px',
-                    backgroundColor: darkMode ? colors.dark : '#fff',
+                    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
                     color: textColor,
                   }}
                 />
@@ -656,7 +656,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ backgroundColor: cardBg, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Admin</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Email</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Role</th>
