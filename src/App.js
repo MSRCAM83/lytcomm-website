@@ -368,8 +368,8 @@ function App() {
               <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px' }}>
                 Professional fiber optic construction across the Gulf Coast.
               </p>
-              <p style={{ fontSize: '0.8rem', marginTop: '12px', color: 'rgba(255,255,255,0.5)' }}>
-                TX • LA • MS • FL • AL
+              <p style={{ fontSize: '0.75rem', marginTop: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
+                Texas • Louisiana • Mississippi<br />Florida • Alabama
               </p>
             </div>
 

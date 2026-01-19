@@ -107,45 +107,15 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             display: 'flex',
             justifyContent: 'center',
           }}>
-            {darkMode ? (
-              <img 
-                src={logoSrc} 
-                alt="LYT Communications" 
-                style={{ 
-                  maxWidth: '450px', 
-                  width: '100%',
-                  height: 'auto',
-                }} 
-              />
-            ) : (
-              /* Text logo for light mode - avoids checker pattern issue */
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ 
-                  fontSize: 'clamp(3rem, 8vw, 5rem)', 
-                  fontWeight: '800', 
-                  letterSpacing: '-0.02em',
-                  lineHeight: '1',
-                }}>
-                  <span style={{ 
-                    background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}>lyt</span>
-                  <span style={{ color: '#1e293b' }}> Communications</span>
-                </div>
-                <div style={{ 
-                  fontSize: 'clamp(0.8rem, 2vw, 1rem)', 
-                  color: '#64748b',
-                  letterSpacing: '0.3em',
-                  textTransform: 'uppercase',
-                  marginTop: '8px',
-                  fontWeight: '500',
-                }}>
-                  Building Digital Futures
-                </div>
-              </div>
-            )}
+            <img 
+              src={logoSrc} 
+              alt="LYT Communications" 
+              style={{ 
+                maxWidth: '450px', 
+                width: '100%',
+                height: 'auto',
+              }} 
+            />
           </div>
 
           {/* Tagline */}
