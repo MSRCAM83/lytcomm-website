@@ -116,7 +116,8 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           <div style={{ 
             marginBottom: '30px',
             display: 'flex',
-            justifyContent: 'center',
+            flexDirection: 'column',
+            alignItems: 'center',
           }}>
             <img 
               src={logoSrc} 
@@ -127,6 +128,17 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 height: 'auto',
               }} 
             />
+            {/* Tagline - shown for both modes in case logo doesn't include it */}
+            <p style={{
+              marginTop: '16px',
+              fontSize: 'clamp(0.9rem, 2vw, 1.1rem)',
+              fontWeight: '500',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+            }}>
+              Building Digital Futures
+            </p>
           </div>
 
           {/* Tagline */}
