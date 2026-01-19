@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X, Sun, Moon, Phone, Mail } from 'lucide-react';
 import { colors, LYT_INFO } from './config/constants';
 
@@ -29,8 +29,8 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
 
-  const bgColor = darkMode ? colors.dark : '#ffffff';
-  const textColor = darkMode ? '#ffffff' : colors.dark;
+  const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
+  const textColor = darkMode ? '#ffffff' : '#1e293b';
 
   const navLinks = [
     { id: 'home', label: 'Home' },
@@ -45,7 +45,29 @@ function App() {
     { id: 'onboarding', label: 'Onboarding' },
   ];
 
+  // Browser history integration - back button support
+  useEffect(() => {
+    // Handle browser back/forward buttons
+    const handlePopState = (event) => {
+      if (event.state && event.state.page) {
+        setCurrentPage(event.state.page);
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // Set initial state
+    if (!window.history.state) {
+      window.history.replaceState({ page: 'home' }, '', window.location.pathname);
+    }
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleNavClick = (page) => {
+    // Push new state to browser history
+    window.history.pushState({ page }, '', `#${page}`);
     setCurrentPage(page);
     setMobileMenuOpen(false);
     window.scrollTo(0, 0);
@@ -114,7 +136,7 @@ function App() {
   // For portal pages, render without header/footer
   if (isPortalPage) {
     return (
-      <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
         {renderPage()}
       </div>
     );
@@ -122,42 +144,65 @@ function App() {
 
   // Main website with header/footer
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", backgroundColor: bgColor, color: textColor, minHeight: '100vh' }}>
+    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", backgroundColor: bgColor, color: textColor, minHeight: '100vh' }}>
       {/* Top Bar */}
-      <div style={{ backgroundColor: colors.darkLight, padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-        <div style={{ display: 'flex', gap: '20px', color: 'rgba(255,255,255,0.8)' }}>
+      <div style={{ 
+        backgroundColor: darkMode ? '#112240' : '#f1f5f9', 
+        padding: '8px 20px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        fontSize: '0.85rem' 
+      }}>
+        <div className="top-bar-contact" style={{ display: 'flex', gap: '20px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b' }}>
           <a href={`tel:${LYT_INFO.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
-            <Phone size={14} /> {LYT_INFO.phone}
+            <Phone size={14} /> <span className="hide-mobile">{LYT_INFO.phone}</span>
           </a>
-          <a href={`mailto:${LYT_INFO.email}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
+          <a href={`mailto:${LYT_INFO.email}`} className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
             <Mail size={14} /> {LYT_INFO.email}
           </a>
         </div>
         <button
           onClick={() => setDarkMode(!darkMode)}
-          style={{ backgroundColor: 'transparent', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ 
+            backgroundColor: 'transparent', 
+            border: 'none', 
+            color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', 
+            cursor: 'pointer', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            fontSize: '0.85rem',
+          }}
         >
           {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          {darkMode ? 'Light' : 'Dark'} Mode
+          <span className="hide-mobile">{darkMode ? 'Light' : 'Dark'} Mode</span>
         </button>
       </div>
 
       {/* Header */}
-      <header style={{ backgroundColor: colors.dark, padding: '16px 20px', position: 'sticky', top: 0, zIndex: 1000 }}>
+      <header style={{ 
+        backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', 
+        padding: '16px 20px', 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 1000,
+        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+      }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {/* Logo */}
           <button
             onClick={() => handleNavClick('home')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fff' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>
               <span style={{ color: colors.teal }}>LYT</span>
+              <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px' }}>Communications</span>
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', display: 'none' }}>Communications</span>
           </button>
 
           {/* Desktop Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <nav className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ display: 'flex', gap: '4px' }}>
               {navLinks.map((link) => (
                 <button
@@ -168,14 +213,14 @@ function App() {
                     backgroundColor: currentPage === link.id ? `${colors.teal}20` : 'transparent',
                     border: 'none',
                     borderRadius: '8px',
-                    color: currentPage === link.id ? colors.teal : '#fff',
+                    color: currentPage === link.id ? colors.teal : textColor,
                     fontSize: '0.95rem',
                     fontWeight: '500',
                     cursor: 'pointer',
                     transition: 'background-color 0.2s',
                   }}
                   onMouseOver={(e) => {
-                    if (currentPage !== link.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    if (currentPage !== link.id) e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
                   }}
                   onMouseOut={(e) => {
                     if (currentPage !== link.id) e.currentTarget.style.backgroundColor = 'transparent';
@@ -221,8 +266,15 @@ function App() {
 
           {/* Mobile Menu Button */}
           <button
+            className="mobile-menu-btn"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{ display: 'none', backgroundColor: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}
+            style={{ 
+              backgroundColor: 'transparent', 
+              border: 'none', 
+              color: textColor, 
+              cursor: 'pointer',
+              padding: '8px',
+            }}
           >
             {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
@@ -230,7 +282,12 @@ function App() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div style={{ padding: '20px', backgroundColor: colors.darkLight, marginTop: '16px', borderRadius: '8px' }}>
+          <div className="mobile-menu" style={{ 
+            padding: '20px', 
+            backgroundColor: darkMode ? '#112240' : '#f8fafc', 
+            marginTop: '16px', 
+            borderRadius: '12px' 
+          }}>
             {navLinks.map((link) => (
               <button
                 key={link.id}
@@ -238,11 +295,11 @@ function App() {
                 style={{
                   display: 'block',
                   width: '100%',
-                  padding: '12px',
+                  padding: '14px 16px',
                   backgroundColor: currentPage === link.id ? `${colors.teal}20` : 'transparent',
                   border: 'none',
                   borderRadius: '8px',
-                  color: currentPage === link.id ? colors.teal : '#fff',
+                  color: currentPage === link.id ? colors.teal : textColor,
                   fontSize: '1rem',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -257,7 +314,7 @@ function App() {
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '12px',
+                padding: '14px 16px',
                 backgroundColor: colors.teal,
                 color: '#fff',
                 border: 'none',
@@ -275,7 +332,7 @@ function App() {
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '12px',
+                padding: '14px 16px',
                 backgroundColor: colors.coral,
                 color: '#fff',
                 border: 'none',
@@ -296,19 +353,23 @@ function App() {
       <main>{renderPage()}</main>
 
       {/* Footer */}
-      <footer style={{ backgroundColor: colors.dark, padding: '60px 20px 24px', color: 'rgba(255,255,255,0.8)' }}>
+      <footer style={{ 
+        backgroundColor: darkMode ? '#0d1b2a' : '#1e293b', 
+        padding: '60px 20px 24px', 
+        color: 'rgba(255,255,255,0.8)' 
+      }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px', marginBottom: '40px' }}>
             {/* Company Info */}
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff', marginBottom: '16px' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '16px' }}>
                 <span style={{ color: colors.teal }}>LYT</span> Communications
               </div>
-              <p style={{ lineHeight: '1.7', marginBottom: '16px' }}>
+              <p style={{ lineHeight: '1.7', marginBottom: '16px', fontSize: '0.9rem' }}>
                 Professional fiber optic construction services across the Greater Houston area.
               </p>
-              <p>{LYT_INFO.address}</p>
-              <p>{LYT_INFO.city}, {LYT_INFO.state} {LYT_INFO.zip}</p>
+              <p style={{ fontSize: '0.9rem' }}>{LYT_INFO.address}</p>
+              <p style={{ fontSize: '0.9rem' }}>{LYT_INFO.city}, {LYT_INFO.state} {LYT_INFO.zip}</p>
             </div>
 
             {/* Quick Links */}
@@ -319,7 +380,15 @@ function App() {
                   <button
                     key={link.id}
                     onClick={() => handleNavClick(link.id)}
-                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'rgba(255,255,255,0.8)', 
+                      cursor: 'pointer', 
+                      textAlign: 'left', 
+                      padding: 0,
+                      fontSize: '0.9rem',
+                    }}
                   >
                     {link.label}
                   </button>
@@ -330,7 +399,7 @@ function App() {
             {/* Services */}
             <div>
               <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '16px' }}>Services</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem' }}>
                 <span>HDD Drilling</span>
                 <span>Fiber Splicing</span>
                 <span>Aerial Construction</span>
@@ -341,15 +410,23 @@ function App() {
             {/* Contact */}
             <div>
               <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '16px' }}>Contact</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem' }}>
                 <a href={`tel:${LYT_INFO.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{LYT_INFO.phone}</a>
                 <a href={`mailto:${LYT_INFO.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>{LYT_INFO.email}</a>
               </div>
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <p style={{ fontSize: '0.9rem' }}>© {new Date().getFullYear()} {LYT_INFO.name}. All rights reserved.</p>
+          <div style={{ 
+            borderTop: '1px solid rgba(255,255,255,0.1)', 
+            paddingTop: '24px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '16px' 
+          }}>
+            <p style={{ fontSize: '0.85rem' }}>© {new Date().getFullYear()} {LYT_INFO.name}. All rights reserved.</p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => handleNavClick('portal-login')}
@@ -383,6 +460,20 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Responsive Styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-menu-btn { display: block !important; }
+          .hide-mobile { display: none !important; }
+        }
+        @media (min-width: 769px) {
+          .desktop-nav { display: flex !important; }
+          .mobile-menu-btn { display: none !important; }
+          .mobile-menu { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -101,20 +101,6 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           padding: '0 20px',
           maxWidth: '900px',
         }}>
-          {/* Hiring Badge */}
-          <div style={{ 
-            display: 'inline-block', 
-            padding: '10px 20px', 
-            backgroundColor: darkMode ? 'rgba(0,180,216,0.15)' : 'rgba(0,119,182,0.1)', 
-            borderRadius: '30px', 
-            marginBottom: '30px',
-            border: `1px solid ${darkMode ? 'rgba(0,180,216,0.3)' : 'rgba(0,119,182,0.2)'}`,
-          }}>
-            <span style={{ color: colors.teal, fontSize: '0.95rem', fontWeight: '600' }}>
-              🚀 Now Hiring Experienced Fiber Technicians
-            </span>
-          </div>
-
           {/* Logo */}
           <div style={{ 
             marginBottom: '30px',
