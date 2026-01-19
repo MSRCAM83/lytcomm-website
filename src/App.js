@@ -31,6 +31,11 @@ function App() {
 
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
+  
+  // Dynamic accent colors matching the theme
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';    // Purple/Pink vs Ocean Blue
+  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';  // Orange vs Teal
+  const accentTertiary = darkMode ? '#e85a4f' : '#28a745';   // Coral vs Green
 
   const navLinks = [
     { id: 'home', label: 'Home' },
@@ -226,7 +231,7 @@ function App() {
               onClick={() => handleNavClick('portal-login')}
               style={{
                 padding: '10px 20px',
-                backgroundColor: colors.teal,
+                backgroundColor: accentSecondary,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -242,7 +247,7 @@ function App() {
               onClick={() => handleNavClick('onboarding')}
               style={{
                 padding: '10px 20px',
-                backgroundColor: colors.coral,
+                backgroundColor: accentTertiary,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -288,10 +293,10 @@ function App() {
                   display: 'block',
                   width: '100%',
                   padding: '14px 16px',
-                  backgroundColor: currentPage === link.id ? `${colors.teal}20` : 'transparent',
+                  backgroundColor: currentPage === link.id ? `${accentSecondary}20` : 'transparent',
                   border: 'none',
                   borderRadius: '8px',
-                  color: currentPage === link.id ? colors.teal : textColor,
+                  color: currentPage === link.id ? accentSecondary : textColor,
                   fontSize: '1rem',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -307,7 +312,7 @@ function App() {
                 display: 'block',
                 width: '100%',
                 padding: '14px 16px',
-                backgroundColor: colors.teal,
+                backgroundColor: accentSecondary,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -325,7 +330,7 @@ function App() {
                 display: 'block',
                 width: '100%',
                 padding: '14px 16px',
-                backgroundColor: colors.coral,
+                backgroundColor: accentTertiary,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -363,7 +368,7 @@ function App() {
             {/* Logo & Tagline */}
             <div style={{ flex: '1 1 280px' }}>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: darkMode ? '#fff' : '#1e293b', marginBottom: '12px' }}>
-                <span style={{ color: colors.teal }}>LYT</span> Communications
+                <span style={{ color: accentSecondary }}>LYT</span> Communications
               </div>
               <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px' }}>
                 Professional fiber optic construction across the Gulf Coast.
@@ -392,7 +397,7 @@ function App() {
                         fontSize: '0.85rem',
                         transition: 'color 0.2s',
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.color = colors.teal}
+                      onMouseOver={(e) => e.currentTarget.style.color = accentSecondary}
                       onMouseOut={(e) => e.currentTarget.style.color = darkMode ? 'rgba(255,255,255,0.7)' : '#64748b'}
                     >
                       {link.label}
@@ -464,7 +469,9 @@ function App() {
               onClick={() => handleNavClick('contact')}
               style={{
                 padding: '8px 20px',
-                background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
+                background: darkMode 
+                  ? `linear-gradient(135deg, ${accentPrimary} 0%, ${accentSecondary} 100%)`
+                  : `linear-gradient(135deg, ${accentSecondary} 0%, ${accentPrimary} 100%)`,
                 border: 'none',
                 borderRadius: '6px',
                 color: '#fff',
