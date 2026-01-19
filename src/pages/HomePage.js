@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Construction, Unplug, Radio } from 'lucide-react';
-import { colors } from '../config/constants';
 
 const HomePage = ({ setCurrentPage, darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
@@ -13,11 +12,21 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
   // Light mode: blue/teal/green logo (no box needed)
   const logoSrc = darkMode ? '/lyt_logo_dark.png' : '/lyt_logo_light.png';
 
-  // Service icons - matched to services
+  // Dynamic accent colors to match logos
+  // Light mode: blue/teal/green (matches light logo)
+  // Dark mode: pink/purple/orange (matches dark logo)
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';    // Purple/Pink vs Ocean Blue
+  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';  // Orange vs Teal
+  const accentTertiary = darkMode ? '#e85a4f' : '#28a745';   // Coral vs Green
+  const gradientColors = darkMode 
+    ? 'linear-gradient(135deg, #667eea 0%, #c850c0 50%, #ff6b35 100%)'  // Purple to pink to orange
+    : 'linear-gradient(135deg, #0077B6 0%, #00b4d8 50%, #28a745 100%)'; // Blue to teal to green
+
+  // Service icons - matched to services with dynamic colors
   const serviceIcons = [
-    { icon: Construction, title: 'HDD Drilling', desc: 'Horizontal Directional Drilling for underground fiber installation with minimal surface disruption.', color: colors.blue },
-    { icon: Unplug, title: 'Fiber Splicing', desc: 'Precision fusion splicing and OTDR testing for optimal network performance.', color: colors.teal },
-    { icon: Radio, title: 'Aerial Construction', desc: 'Pole-to-pole fiber installation, strand mapping, and aerial network builds.', color: colors.green },
+    { icon: Construction, title: 'HDD Drilling', desc: 'Horizontal Directional Drilling for underground fiber installation with minimal surface disruption.', color: accentPrimary },
+    { icon: Unplug, title: 'Fiber Splicing', desc: 'Precision fusion splicing and OTDR testing for optimal network performance.', color: accentSecondary },
+    { icon: Radio, title: 'Aerial Construction', desc: 'Pole-to-pole fiber installation, strand mapping, and aerial network builds.', color: accentTertiary },
   ];
 
   return (
@@ -141,7 +150,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 padding: '16px 36px',
                 fontSize: '1.1rem',
                 fontWeight: '600',
-                background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
+                background: gradientColors,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '12px',
@@ -150,15 +159,15 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 alignItems: 'center',
                 gap: '8px',
                 transition: 'transform 0.2s, box-shadow 0.2s',
-                boxShadow: '0 4px 20px rgba(0,180,216,0.3)',
+                boxShadow: `0 4px 20px ${accentPrimary}40`,
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,180,216,0.4)';
+                e.currentTarget.style.boxShadow = `0 8px 30px ${accentPrimary}50`;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,180,216,0.3)';
+                e.currentTarget.style.boxShadow = `0 4px 20px ${accentPrimary}40`;
               }}
             >
               Get a Quote <ChevronRight size={20} />
@@ -177,8 +186,8 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = colors.teal;
-                e.currentTarget.style.color = colors.teal;
+                e.currentTarget.style.borderColor = accentPrimary;
+                e.currentTarget.style.color = accentPrimary;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.borderColor = darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)';
@@ -207,7 +216,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           <div style={{
             width: '2px',
             height: '30px',
-            background: `linear-gradient(to bottom, ${colors.teal}, transparent)`,
+            background: `linear-gradient(to bottom, ${accentSecondary}, transparent)`,
             animation: 'scrollPulse 2s ease-in-out infinite',
           }} />
         </div>
@@ -215,7 +224,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
 
       {/* Stats Section */}
       <section style={{ 
-        background: `linear-gradient(135deg, ${colors.blue} 0%, ${colors.darkBlue} 100%)`,
+        background: gradientColors,
         padding: '50px 20px',
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px', textAlign: 'center' }}>
@@ -237,7 +246,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section style={{ padding: '100px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
-            Team <span style={{ color: colors.teal }}>Portal</span>
+            Team <span style={{ color: accentSecondary }}>Portal</span>
           </h2>
           <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '60px', maxWidth: '600px', margin: '0 auto 60px' }}>
             Access your dashboard, submit daily reports, and manage your work all in one place.
@@ -250,12 +259,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               backgroundColor: cardBgAlt,
               borderRadius: '20px',
               boxShadow: darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)',
-              border: `2px solid ${colors.teal}`,
+              border: `2px solid ${accentSecondary}`,
               transition: 'transform 0.3s, box-shadow 0.3s',
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = darkMode ? '0 8px 40px rgba(0,180,216,0.2)' : '0 8px 40px rgba(0,180,216,0.15)';
+              e.currentTarget.style.boxShadow = `0 8px 40px ${accentSecondary}30`;
             }}
             onMouseOut={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
@@ -267,12 +276,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                   width: '60px', 
                   height: '60px', 
                   borderRadius: '16px', 
-                  background: `linear-gradient(135deg, ${colors.teal}30, ${colors.blue}20)`,
+                  background: `linear-gradient(135deg, ${accentSecondary}30, ${accentPrimary}20)`,
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <LogIn size={28} color={colors.teal} />
+                  <LogIn size={28} color={accentSecondary} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Team Login</h3>
@@ -282,7 +291,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0' }}>
                 {['Daily production logs', 'Time tracking', 'Equipment inspections', 'Safety briefings', 'OTDR test uploads'].map((item, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', color: darkMode ? '#94a3b8' : '#64748b' }}>
-                    <CheckCircle size={18} color={colors.green} /> {item}
+                    <CheckCircle size={18} color={accentTertiary} /> {item}
                   </li>
                 ))}
               </ul>
@@ -293,7 +302,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                   padding: '16px',
                   fontSize: '1rem',
                   fontWeight: '600',
-                  background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
+                  background: gradientColors,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '12px',
@@ -317,12 +326,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               backgroundColor: cardBgAlt,
               borderRadius: '20px',
               boxShadow: darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)',
-              border: `2px solid ${colors.coral}`,
+              border: `2px solid ${accentTertiary}`,
               transition: 'transform 0.3s, box-shadow 0.3s',
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = darkMode ? '0 8px 40px rgba(232,90,79,0.2)' : '0 8px 40px rgba(232,90,79,0.15)';
+              e.currentTarget.style.boxShadow = `0 8px 40px ${accentTertiary}30`;
             }}
             onMouseOut={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
@@ -334,12 +343,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                   width: '60px', 
                   height: '60px', 
                   borderRadius: '16px', 
-                  background: `linear-gradient(135deg, ${colors.coral}30, ${colors.orange}20)`,
+                  background: `linear-gradient(135deg, ${accentTertiary}30, ${accentSecondary}20)`,
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <UserPlus size={28} color={colors.coral} />
+                  <UserPlus size={28} color={accentTertiary} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>New Hire Onboarding</h3>
@@ -349,7 +358,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0' }}>
                 {['Complete tax forms (W-4/W-9)', 'Submit certifications', 'Direct deposit setup', 'Safety acknowledgment', 'COI upload (contractors)'].map((item, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', color: darkMode ? '#94a3b8' : '#64748b' }}>
-                    <CheckCircle size={18} color={colors.green} /> {item}
+                    <CheckCircle size={18} color={accentTertiary} /> {item}
                   </li>
                 ))}
               </ul>
@@ -360,7 +369,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                   padding: '16px',
                   fontSize: '1rem',
                   fontWeight: '600',
-                  background: `linear-gradient(135deg, ${colors.coral} 0%, ${colors.orange} 100%)`,
+                  background: gradientColors,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '12px',
@@ -385,17 +394,17 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section style={{ padding: '100px 20px', backgroundColor: bgColor }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
-            Why Choose <span style={{ color: colors.teal }}>LYT</span>
+            Why Choose <span style={{ color: accentSecondary }}>LYT</span>
           </h2>
           <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '60px', maxWidth: '600px', margin: '0 auto 60px' }}>
             We combine industry expertise with a commitment to safety and quality that sets us apart.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
             {[
-              { icon: Shield, title: 'Safety First', desc: 'Zero-incident culture with comprehensive HSE programs and daily safety briefings.', color: colors.green },
-              { icon: Award, title: 'Certified Experts', desc: 'Fully licensed and insured crews with manufacturer certifications.', color: colors.teal },
-              { icon: Users, title: 'Experienced Team', desc: 'Skilled technicians with decades of combined field experience.', color: colors.blue },
-              { icon: Zap, title: 'Fast Turnaround', desc: 'Efficient project execution without compromising quality.', color: colors.coral },
+              { icon: Shield, title: 'Safety First', desc: 'Zero-incident culture with comprehensive HSE programs and daily safety briefings.', color: accentTertiary },
+              { icon: Award, title: 'Certified Experts', desc: 'Fully licensed and insured crews with manufacturer certifications.', color: accentSecondary },
+              { icon: Users, title: 'Experienced Team', desc: 'Skilled technicians with decades of combined field experience.', color: accentPrimary },
+              { icon: Zap, title: 'Fast Turnaround', desc: 'Efficient project execution without compromising quality.', color: accentTertiary },
             ].map((item, idx) => (
               <div
                 key={idx}
@@ -436,7 +445,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section style={{ padding: '100px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '60px' }}>
-            Our <span style={{ color: colors.teal }}>Services</span>
+            Our <span style={{ color: accentSecondary }}>Services</span>
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
             {serviceIcons.map((service, idx) => (
@@ -485,7 +494,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 padding: '16px 32px',
                 fontSize: '1rem',
                 fontWeight: '600',
-                background: `linear-gradient(135deg, ${colors.blue} 0%, ${colors.darkBlue} 100%)`,
+                background: gradientColors,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '12px',
@@ -493,7 +502,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 20px rgba(0,119,182,0.3)',
+                boxShadow: `0 4px 20px ${accentPrimary}40`,
                 transition: 'transform 0.2s',
               }}
               onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -509,7 +518,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
-            <MapPin size={28} color={colors.teal} />
+            <MapPin size={28} color={accentSecondary} />
             <h3 style={{ fontSize: '1.6rem', fontWeight: '600' }}>Serving the Gulf Coast</h3>
           </div>
           <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '30px' }}>
@@ -534,7 +543,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
                   minWidth: '180px',
                 }}
               >
-                <div style={{ fontWeight: '600', color: colors.teal, marginBottom: '4px' }}>{region.state}</div>
+                <div style={{ fontWeight: '600', color: accentSecondary, marginBottom: '4px' }}>{region.state}</div>
                 <div style={{ fontSize: '0.85rem', color: darkMode ? '#64748b' : '#94a3b8' }}>{region.cities}</div>
               </div>
             ))}
@@ -546,7 +555,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       <section
         style={{
           padding: '100px 20px',
-          background: `linear-gradient(135deg, ${colors.dark} 0%, ${colors.darkBlue} 100%)`,
+          background: gradientColors,
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
@@ -556,7 +565,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         <div style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `radial-gradient(rgba(0,180,216,0.1) 1px, transparent 1px)`,
+          backgroundImage: `radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
         }} />
         
@@ -573,12 +582,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               padding: '18px 48px',
               fontSize: '1.1rem',
               fontWeight: '600',
-              background: `linear-gradient(135deg, ${colors.coral} 0%, ${colors.orange} 100%)`,
-              color: '#fff',
+              background: '#fff',
+              color: darkMode ? '#c850c0' : '#0077B6',
               border: 'none',
               borderRadius: '12px',
               cursor: 'pointer',
-              boxShadow: '0 4px 25px rgba(232,90,79,0.4)',
+              boxShadow: '0 4px 25px rgba(0,0,0,0.2)',
               transition: 'transform 0.2s',
             }}
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
