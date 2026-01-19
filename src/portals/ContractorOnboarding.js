@@ -278,22 +278,22 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     width: '100%',
     padding: '12px',
     fontSize: '1rem',
-    border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
+    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? colors.dark : '#fff',
-    color: textColor,
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+    color: darkMode ? '#f9fafb' : '#1f2937',
     boxSizing: 'border-box',
   };
 
   const selectStyle = {
     ...inputStyle,
-    color: darkMode ? '#ffffff' : '#1e293b',
-    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+    cursor: 'pointer',
   };
 
+  // Note: option styling is limited in browsers, but we set background on select
   const optionStyle = {
-    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
-    color: darkMode ? '#ffffff' : '#1e293b',
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+    color: darkMode ? '#f9fafb' : '#1f2937',
   };
 
   const labelStyle = {
@@ -407,7 +407,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             }}
             title="Master Subcontractor Agreement"
           />
-          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+          <div style={{ padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
             <a
               href={URLS.msaPdf}
               download="LYT_MSA.pdf"
@@ -419,7 +419,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
       )}
 
-      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px', maxHeight: '300px', overflow: 'auto' }}>
+      <div style={{ padding: '24px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px', marginBottom: '24px', maxHeight: '300px', overflow: 'auto' }}>
         <h4 style={{ fontWeight: '600', marginBottom: '12px' }}>Agreement Summary</h4>
         <p style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '12px' }}>
           This Master Subcontractor Agreement ("Agreement") is entered into between {LYT_INFO.name} ("Company") 
@@ -496,7 +496,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             }}
             title="W-9 Form"
           />
-          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+          <div style={{ padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
             <a
               href={URLS.w9Pdf}
               download="W-9_Form.pdf"
@@ -509,7 +509,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       )}
 
       {/* Tax ID Type */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Tax Identification Type *</label>
         <div style={{ display: 'flex', gap: '20px', marginBottom: '16px' }}>
           {[
@@ -538,7 +538,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Tax Classification */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Federal Tax Classification *</label>
         <select
           name="taxClassification"
@@ -561,7 +561,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Exemptions */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Exemptions (if applicable)</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div>
@@ -608,7 +608,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             borderRadius: '8px',
             padding: '32px',
             textAlign: 'center',
-            backgroundColor: darkMode ? colors.dark : '#f8fafc',
+            backgroundColor: darkMode ? '#111827' : '#f8fafc',
             cursor: 'pointer',
           }}
           onClick={() => document.getElementById('coi-upload').click()}
@@ -853,11 +853,31 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Rate Card Acceptance</h3>
       
-      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
-        <p style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px' }}>
+      <div style={{ padding: '24px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+        <p style={{ color: darkMode ? '#9ca3af' : '#6b7280', lineHeight: '1.7', marginBottom: '16px' }}>
           {LYT_INFO.name} maintains a standard rate card for subcontractor services. Rates are negotiable on a per-project basis 
           and will be specified in individual Scope of Work (SOW) documents.
         </p>
+        
+        {/* Embedded Rate Card */}
+        <div style={{ 
+          border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, 
+          borderRadius: '8px', 
+          overflow: 'hidden',
+          marginBottom: '16px'
+        }}>
+          <iframe
+            src={`https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}/pubhtml?widget=true&headers=false`}
+            style={{
+              width: '100%',
+              height: '400px',
+              border: 'none',
+              backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+            }}
+            title="LYT Communications Rate Card"
+          />
+        </div>
+        
         <a
           href={`https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}`}
           target="_blank"
@@ -866,15 +886,17 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '12px 20px',
-            backgroundColor: accentPrimary,
-            color: '#fff',
+            padding: '10px 16px',
+            backgroundColor: 'transparent',
+            color: accentPrimary,
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '8px',
             textDecoration: 'none',
             fontWeight: '500',
+            fontSize: '0.9rem',
           }}
         >
-          View Rate Card (Google Sheets)
+          Open in Google Sheets
         </a>
       </div>
 
@@ -884,9 +906,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           name="rateCardAccepted"
           checked={formData.rateCardAccepted}
           onChange={handleChange}
-          style={{ width: '20px', height: '20px', marginTop: '2px' }}
+          style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: accentPrimary }}
         />
-        <span style={{ lineHeight: '1.5' }}>
+        <span style={{ lineHeight: '1.5', color: textColor }}>
           I have reviewed the rate card and understand that specific rates will be agreed upon in individual 
           project SOWs. I agree to the general payment terms of Net 30 from invoice approval with 10% retainage 
           held until project completion and final acceptance.
