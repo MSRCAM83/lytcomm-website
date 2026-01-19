@@ -3,6 +3,11 @@ import { UserPlus, Briefcase, LogIn, Shield, FileText, ArrowLeft } from 'lucide-
 import { colors, LYT_INFO } from '../config/constants';
 
 const PortalSelect = ({ setCurrentPage, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -14,7 +19,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
       subtitle: 'Existing employees',
       description: 'Access your dashboard, time clock, projects, and documents.',
       icon: LogIn,
-      color: colors.blue,
+      color: accentPrimary,
       page: 'employee-login',
       features: ['Time Clock', 'Projects', 'Documents', 'Team Directory'],
     },
@@ -24,7 +29,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
       subtitle: 'Join our team',
       description: 'Complete your onboarding paperwork including W-4, direct deposit, and safety training.',
       icon: UserPlus,
-      color: colors.green,
+      color: accentSecondary,
       page: 'employee-onboarding',
       features: ['W-4 Tax Form', 'Direct Deposit', 'Emergency Contact', 'Safety Training'],
     },
@@ -34,7 +39,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
       subtitle: 'Existing contractors',
       description: 'Manage your jobs, submit invoices, and track payments.',
       icon: Briefcase,
-      color: colors.teal,
+      color: accentPrimary,
       page: 'contractor-login',
       features: ['Job Assignments', 'Submit Invoices', 'Payment Status', 'Documents'],
     },
@@ -44,7 +49,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
       subtitle: 'Partner with us',
       description: 'Register your company and complete subcontractor onboarding.',
       icon: FileText,
-      color: colors.coral,
+      color: accentError,
       page: 'contractor-onboarding',
       features: ['Company Registration', 'MSA Agreement', 'W-9 Tax Form', 'Insurance & Rates'],
     },
@@ -78,7 +83,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
           <ArrowLeft size={20} /> Back to Website
         </button>
         <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff' }}>
-          <span style={{ color: colors.teal }}>LYT</span> Portal
+          <span style={{ color: accentPrimary }}>LYT</span> Portal
         </div>
         <div style={{ width: '120px' }} /> {/* Spacer for centering */}
       </header>
@@ -89,7 +94,7 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: '700', marginBottom: '12px' }}>
-              Welcome to the <span style={{ color: colors.teal }}>LYT Portal</span>
+              Welcome to the <span style={{ color: accentPrimary }}>LYT Portal</span>
             </h1>
             <p style={{ color: colors.gray, fontSize: '1.1rem' }}>
               Select your portal below to get started.
