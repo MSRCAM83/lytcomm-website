@@ -11,6 +11,11 @@ function SetPassword({ setCurrentPage, darkMode }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -73,7 +78,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-                <span style={{ color: colors.teal }}>LYT</span>
+                <span style={{ color: accentPrimary }}>LYT</span>
               </div>
             </button>
           </div>
@@ -82,8 +87,8 @@ function SetPassword({ setCurrentPage, darkMode }) {
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
           <div style={{ width: '100%', maxWidth: '420px' }}>
             <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${colors.green}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <CheckCircle size={40} color={colors.green} />
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <CheckCircle size={40} color={accentSecondary} />
               </div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
                 Password Set Successfully!
@@ -96,7 +101,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: colors.teal,
+                  backgroundColor: accentPrimary,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
@@ -124,7 +129,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-              <span style={{ color: colors.teal }}>LYT</span>
+              <span style={{ color: accentPrimary }}>LYT</span>
             </div>
           </button>
           <button
@@ -141,8 +146,8 @@ function SetPassword({ setCurrentPage, darkMode }) {
         <div style={{ width: '100%', maxWidth: '420px' }}>
           <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${colors.teal}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <Lock size={32} color={colors.teal} />
+              <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Lock size={32} color={accentPrimary} />
               </div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
                 Set Your Password
@@ -193,11 +198,11 @@ function SetPassword({ setCurrentPage, darkMode }) {
                 {requirements.map((req, index) => (
                   <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     {req.test(password) ? (
-                      <CheckCircle size={14} color={colors.green} />
+                      <CheckCircle size={14} color={accentSecondary} />
                     ) : (
                       <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `1px solid ${mutedColor}` }} />
                     )}
-                    <span style={{ fontSize: '0.8rem', color: req.test(password) ? colors.green : mutedColor }}>
+                    <span style={{ fontSize: '0.8rem', color: req.test(password) ? accentSecondary : mutedColor }}>
                       {req.label}
                     </span>
                   </div>
@@ -235,16 +240,16 @@ function SetPassword({ setCurrentPage, darkMode }) {
                   </button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
-                  <p style={{ color: colors.coral, fontSize: '0.8rem', marginTop: '6px' }}>
+                  <p style={{ color: accentError, fontSize: '0.8rem', marginTop: '6px' }}>
                     Passwords do not match
                   </p>
                 )}
               </div>
 
               {error && (
-                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${colors.coral}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={18} color={colors.coral} />
-                  <span style={{ color: colors.coral, fontSize: '0.9rem' }}>{error}</span>
+                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={18} color={accentError} />
+                  <span style={{ color: accentError, fontSize: '0.9rem' }}>{error}</span>
                 </div>
               )}
 
@@ -254,7 +259,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: (loading || !allRequirementsMet || password !== confirmPassword) ? colors.gray : colors.teal,
+                  backgroundColor: (loading || !allRequirementsMet || password !== confirmPassword) ? colors.gray : accentPrimary,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
