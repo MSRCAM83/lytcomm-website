@@ -6,6 +6,11 @@ import EINInput from '../components/EINInput';
 import SSNInput from '../components/SSNInput';
 
 const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -371,10 +376,10 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           onClick={() => setShowMsaPdf(!showMsaPdf)}
           style={{ 
             padding: '8px 16px',
-            backgroundColor: showMsaPdf ? colors.teal : 'transparent',
-            border: `1px solid ${colors.teal}`,
+            backgroundColor: showMsaPdf ? accentPrimary : 'transparent',
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '6px',
-            color: showMsaPdf ? '#fff' : colors.teal,
+            color: showMsaPdf ? '#fff' : accentPrimary,
             cursor: 'pointer',
             fontSize: '0.9rem',
           }}
@@ -400,7 +405,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             <a
               href={URLS.msaPdf}
               download="LYT_MSA.pdf"
-              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+              style={{ color: accentPrimary, fontSize: '0.85rem', textDecoration: 'none' }}
             >
               Download PDF
             </a>
@@ -460,10 +465,10 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           onClick={() => setShowW9Pdf(!showW9Pdf)}
           style={{ 
             padding: '8px 16px',
-            backgroundColor: showW9Pdf ? colors.teal : 'transparent',
-            border: `1px solid ${colors.teal}`,
+            backgroundColor: showW9Pdf ? accentPrimary : 'transparent',
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '6px',
-            color: showW9Pdf ? '#fff' : colors.teal,
+            color: showW9Pdf ? '#fff' : accentPrimary,
             cursor: 'pointer',
             fontSize: '0.9rem',
           }}
@@ -489,7 +494,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             <a
               href={URLS.w9Pdf}
               download="W-9_Form.pdf"
-              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+              style={{ color: accentPrimary, fontSize: '0.85rem', textDecoration: 'none' }}
             >
               Download PDF
             </a>
@@ -565,7 +570,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Certification */}
-      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px' }}>
         <p style={{ fontSize: '0.9rem', color: colors.gray, lineHeight: '1.6' }}>
           <strong>Certification:</strong> Under penalties of perjury, I certify that the number shown on this form is my correct taxpayer 
           identification number, I am not subject to backup withholding, and I am a U.S. citizen or other U.S. person.
@@ -593,7 +598,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         <label style={labelStyle}>Upload Certificate of Insurance (COI) *</label>
         <div
           style={{
-            border: `2px dashed ${formData.coiFile ? colors.green : colors.gray}`,
+            border: `2px dashed ${formData.coiFile ? accentSecondary : colors.gray}`,
             borderRadius: '8px',
             padding: '32px',
             textAlign: 'center',
@@ -609,9 +614,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             onChange={handleFileUpload}
             style={{ display: 'none' }}
           />
-          <Upload size={40} color={formData.coiFile ? colors.green : colors.gray} style={{ marginBottom: '12px' }} />
+          <Upload size={40} color={formData.coiFile ? accentSecondary : colors.gray} style={{ marginBottom: '12px' }} />
           {formData.coiFileName ? (
-            <p style={{ color: colors.green, fontWeight: '500' }}>✓ {formData.coiFileName}</p>
+            <p style={{ color: accentSecondary, fontWeight: '500' }}>✓ {formData.coiFileName}</p>
           ) : (
             <>
               <p style={{ color: colors.gray, marginBottom: '8px' }}>Click to upload or drag and drop</p>
@@ -637,7 +642,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
       </div>
 
-      <div style={{ marginTop: '24px', padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px' }}>
+      <div style={{ marginTop: '24px', padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px' }}>
         <p style={{ fontSize: '0.9rem', color: colors.gray }}>
           <strong>Requirements:</strong> Minimum $1M general liability, current workers' compensation coverage, 
           and {LYT_INFO.name} must be listed as additionally insured.
@@ -690,7 +695,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
               onClick={() => removeFleetItem(idx)}
               style={{
                 padding: '12px',
-                backgroundColor: colors.coral,
+                backgroundColor: accentError,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -709,8 +714,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           style={{
             padding: '10px 16px',
             backgroundColor: 'transparent',
-            color: colors.teal,
-            border: `1px solid ${colors.teal}`,
+            color: accentPrimary,
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '8px',
             cursor: 'pointer',
             fontSize: '0.9rem',
@@ -759,7 +764,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
               onClick={() => removePersonnelItem(idx)}
               style={{
                 padding: '12px',
-                backgroundColor: colors.coral,
+                backgroundColor: accentError,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -778,8 +783,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           style={{
             padding: '10px 16px',
             backgroundColor: 'transparent',
-            color: colors.teal,
-            border: `1px solid ${colors.teal}`,
+            color: accentPrimary,
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '8px',
             cursor: 'pointer',
             fontSize: '0.9rem',
@@ -806,8 +811,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
               alignItems: 'center',
               gap: '10px',
               padding: '12px 16px',
-              backgroundColor: formData.skills.includes(skill) ? `${colors.teal}20` : (darkMode ? colors.dark : '#f8fafc'),
-              border: `2px solid ${formData.skills.includes(skill) ? colors.teal : 'transparent'}`,
+              backgroundColor: formData.skills.includes(skill) ? `${accentPrimary}20` : (darkMode ? colors.dark : '#f8fafc'),
+              border: `2px solid ${formData.skills.includes(skill) ? accentPrimary : 'transparent'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'all 0.2s',
@@ -856,7 +861,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             alignItems: 'center',
             gap: '8px',
             padding: '12px 20px',
-            backgroundColor: colors.teal,
+            backgroundColor: accentPrimary,
             color: '#fff',
             borderRadius: '8px',
             textDecoration: 'none',
@@ -976,7 +981,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-          <CheckCircle size={80} color={colors.green} style={{ marginBottom: '24px' }} />
+          <CheckCircle size={80} color={accentSecondary} style={{ marginBottom: '24px' }} />
           <h2 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '16px', color: textColor }}>
             Registration Complete!
           </h2>
@@ -990,7 +995,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
               padding: '14px 28px',
               fontSize: '1rem',
               fontWeight: '600',
-              backgroundColor: colors.teal,
+              backgroundColor: accentPrimary,
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -1015,7 +1020,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           <ArrowLeft size={20} /> Back to Portal
         </button>
         <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff' }}>
-          <span style={{ color: colors.teal }}>Contractor</span> Registration
+          <span style={{ color: accentPrimary }}>Contractor</span> Registration
         </div>
         <div style={{ width: '120px' }} />
       </header>
@@ -1030,7 +1035,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  backgroundColor: idx <= currentStep ? colors.teal : (darkMode ? colors.dark : '#e5e7eb'),
+                  backgroundColor: idx <= currentStep ? accentPrimary : (darkMode ? colors.dark : '#e5e7eb'),
                   color: idx <= currentStep ? '#fff' : colors.gray,
                   display: 'flex',
                   alignItems: 'center',
@@ -1057,7 +1062,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             {renderStepContent()}
 
             {error && (
-              <div style={{ marginTop: '24px', padding: '12px', backgroundColor: `${colors.coral}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: colors.coral }}>
+              <div style={{ marginTop: '24px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: accentError }}>
                 <AlertCircle size={20} /> {error}
               </div>
             )}
@@ -1090,7 +1095,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
                   style={{
                     padding: '12px 24px',
                     fontSize: '1rem',
-                    backgroundColor: canProceed() ? colors.teal : '#ccc',
+                    backgroundColor: canProceed() ? accentPrimary : '#ccc',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -1109,7 +1114,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
                   style={{
                     padding: '12px 24px',
                     fontSize: '1rem',
-                    backgroundColor: canProceed() ? colors.green : '#ccc',
+                    backgroundColor: canProceed() ? accentSecondary : '#ccc',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
