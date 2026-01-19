@@ -1,6 +1,6 @@
 import React from 'react';
 import { Target, Eye, Heart, Award, Users, Clock, Shield, Zap, MapPin } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
+import { colors } from '../config/constants';
 
 const AboutPage = ({ darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
@@ -73,7 +73,7 @@ const AboutPage = ({ darkMode }) => {
             maxWidth: '600px',
             margin: '0 auto',
           }}>
-            Building reliable fiber networks across the Greater Houston area with excellence, safety, and integrity.
+            Building reliable fiber networks across the Gulf Coast with excellence, safety, and integrity.
           </p>
         </div>
       </section>
@@ -102,7 +102,7 @@ const AboutPage = ({ darkMode }) => {
                 fiber splicing, aerial construction, and underground builds.
               </p>
               <p style={{ color: mutedColor, lineHeight: '1.8' }}>
-                Today, LYT Communications continues to connect communities throughout the Greater Houston area, 
+                Today, LYT Communications continues to connect communities throughout the Gulf Coast, 
                 one fiber strand at a time.
               </p>
             </div>
@@ -273,7 +273,7 @@ const AboutPage = ({ darkMode }) => {
         </div>
       </section>
 
-      {/* Location */}
+      {/* Service Region */}
       <section style={{ padding: '60px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
           <div style={{
@@ -288,9 +288,8 @@ const AboutPage = ({ darkMode }) => {
           }}>
             <MapPin size={24} color={colors.teal} />
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '12px' }}>Our Location</h2>
-          <p style={{ color: mutedColor, marginBottom: '4px' }}>{LYT_INFO.address}</p>
-          <p style={{ color: mutedColor }}>{LYT_INFO.city}, {LYT_INFO.state} {LYT_INFO.zip}</p>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '12px' }}>Serving the Gulf Coast</h2>
+          <p style={{ color: mutedColor }}>Texas • Louisiana • Mississippi • Alabama • Florida</p>
         </div>
       </section>
 

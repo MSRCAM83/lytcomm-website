@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Radio, HardDrive, Activity } from 'lucide-react';
+import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Construction, Unplug, Radio } from 'lucide-react';
 import { colors } from '../config/constants';
 
 const HomePage = ({ setCurrentPage, darkMode }) => {
@@ -11,11 +11,11 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
   // Logo paths - dark mode gets the pink/orange version, light mode gets blue/green
   const logoSrc = darkMode ? '/lyt_logo_dark.jpg' : '/lyt_logo_light.jpg';
 
-  // Service icons instead of stock photos
+  // Service icons - matched to services
   const serviceIcons = [
-    { icon: HardDrive, title: 'HDD Drilling', desc: 'Horizontal Directional Drilling for underground fiber installation with minimal surface disruption.', color: colors.blue },
-    { icon: Radio, title: 'Fiber Splicing', desc: 'Precision fusion splicing and OTDR testing for optimal network performance.', color: colors.teal },
-    { icon: Activity, title: 'Aerial Construction', desc: 'Pole-to-pole fiber installation, strand mapping, and aerial network builds.', color: colors.green },
+    { icon: Construction, title: 'HDD Drilling', desc: 'Horizontal Directional Drilling for underground fiber installation with minimal surface disruption.', color: colors.blue },
+    { icon: Unplug, title: 'Fiber Splicing', desc: 'Precision fusion splicing and OTDR testing for optimal network performance.', color: colors.teal },
+    { icon: Radio, title: 'Aerial Construction', desc: 'Pole-to-pole fiber installation, strand mapping, and aerial network builds.', color: colors.green },
   ];
 
   return (
@@ -107,16 +107,45 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             display: 'flex',
             justifyContent: 'center',
           }}>
-            <img 
-              src={logoSrc} 
-              alt="LYT Communications" 
-              style={{ 
-                maxWidth: '450px', 
-                width: '100%',
-                height: 'auto',
-                filter: darkMode ? 'none' : 'none',
-              }} 
-            />
+            {darkMode ? (
+              <img 
+                src={logoSrc} 
+                alt="LYT Communications" 
+                style={{ 
+                  maxWidth: '450px', 
+                  width: '100%',
+                  height: 'auto',
+                }} 
+              />
+            ) : (
+              /* Text logo for light mode - avoids checker pattern issue */
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  fontSize: 'clamp(3rem, 8vw, 5rem)', 
+                  fontWeight: '800', 
+                  letterSpacing: '-0.02em',
+                  lineHeight: '1',
+                }}>
+                  <span style={{ 
+                    background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}>lyt</span>
+                  <span style={{ color: '#1e293b' }}> Communications</span>
+                </div>
+                <div style={{ 
+                  fontSize: 'clamp(0.8rem, 2vw, 1rem)', 
+                  color: '#64748b',
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  marginTop: '8px',
+                  fontWeight: '500',
+                }}>
+                  Building Digital Futures
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tagline */}
@@ -128,8 +157,8 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             maxWidth: '650px',
             margin: '0 auto 40px',
           }}>
-            Expert fiber optic construction services across the Greater Houston area.
-            From HDD drilling to aerial builds, we connect communities with precision and safety.
+            Expert fiber optic construction across the Gulf Coast.
+            From Texas to Florida, we connect communities with precision and safety.
           </p>
 
           {/* CTA Buttons */}
@@ -507,26 +536,35 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       {/* Service Areas */}
       <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '30px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
             <MapPin size={28} color={colors.teal} />
-            <h3 style={{ fontSize: '1.6rem', fontWeight: '600' }}>Serving the Greater Houston Area</h3>
+            <h3 style={{ fontSize: '1.6rem', fontWeight: '600' }}>Serving the Gulf Coast</h3>
           </div>
+          <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '30px' }}>
+            Professional fiber construction across five states
+          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
-            {['Houston', 'Webster', 'League City', 'Pearland', 'Sugar Land', 'Katy', 'The Woodlands', 'Galveston', 'Pasadena', 'Baytown'].map((city, i) => (
-              <span 
+            {[
+              { state: 'Texas', cities: 'Houston • Webster • Galveston' },
+              { state: 'Louisiana', cities: 'New Orleans • Baton Rouge • Lafayette' },
+              { state: 'Mississippi', cities: 'Gulfport • Biloxi • Jackson' },
+              { state: 'Alabama', cities: 'Mobile • Gulf Shores' },
+              { state: 'Florida', cities: 'Pensacola • Panama City' },
+            ].map((region, i) => (
+              <div 
                 key={i} 
                 style={{ 
-                  padding: '10px 20px', 
+                  padding: '16px 24px', 
                   backgroundColor: cardBgAlt, 
-                  borderRadius: '30px', 
-                  fontSize: '0.95rem', 
-                  color: darkMode ? '#94a3b8' : '#64748b',
+                  borderRadius: '12px', 
                   border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
-                  transition: 'all 0.2s',
+                  textAlign: 'center',
+                  minWidth: '180px',
                 }}
               >
-                {city}
-              </span>
+                <div style={{ fontWeight: '600', color: colors.teal, marginBottom: '4px' }}>{region.state}</div>
+                <div style={{ fontSize: '0.85rem', color: darkMode ? '#64748b' : '#94a3b8' }}>{region.cities}</div>
+              </div>
             ))}
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Sun, Moon, Phone, Mail } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO } from './config/constants';
 
 // Pages
@@ -145,23 +145,15 @@ function App() {
   // Main website with header/footer
   return (
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", backgroundColor: bgColor, color: textColor, minHeight: '100vh' }}>
-      {/* Top Bar */}
+      {/* Top Bar - Minimal */}
       <div style={{ 
         backgroundColor: darkMode ? '#112240' : '#f1f5f9', 
-        padding: '8px 20px', 
+        padding: '6px 20px', 
         display: 'flex', 
-        justifyContent: 'space-between', 
+        justifyContent: 'flex-end', 
         alignItems: 'center', 
         fontSize: '0.85rem' 
       }}>
-        <div className="top-bar-contact" style={{ display: 'flex', gap: '20px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b' }}>
-          <a href={`tel:${LYT_INFO.phone}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
-            <Phone size={14} /> <span className="hide-mobile">{LYT_INFO.phone}</span>
-          </a>
-          <a href={`mailto:${LYT_INFO.email}`} className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
-            <Mail size={14} /> {LYT_INFO.email}
-          </a>
-        </div>
         <button
           onClick={() => setDarkMode(!darkMode)}
           style={{ 
@@ -352,111 +344,137 @@ function App() {
       {/* Main Content */}
       <main>{renderPage()}</main>
 
-      {/* Footer */}
+      {/* Footer - Clean & Minimal */}
       <footer style={{ 
-        backgroundColor: darkMode ? '#0d1b2a' : '#1e293b', 
-        padding: '60px 20px 24px', 
-        color: 'rgba(255,255,255,0.8)' 
+        backgroundColor: darkMode ? '#0a1628' : '#1e293b', 
+        padding: '48px 20px 24px', 
+        color: 'rgba(255,255,255,0.7)' 
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px', marginBottom: '40px' }}>
-            {/* Company Info */}
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '16px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          {/* Main Footer Content */}
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '32px',
+            marginBottom: '32px',
+          }}>
+            {/* Logo & Tagline */}
+            <div style={{ flex: '1 1 280px' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '12px' }}>
                 <span style={{ color: colors.teal }}>LYT</span> Communications
               </div>
-              <p style={{ lineHeight: '1.7', marginBottom: '16px', fontSize: '0.9rem' }}>
-                Professional fiber optic construction services across the Greater Houston area.
+              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px' }}>
+                Professional fiber optic construction across the Gulf Coast.
               </p>
-              <p style={{ fontSize: '0.9rem' }}>{LYT_INFO.address}</p>
-              <p style={{ fontSize: '0.9rem' }}>{LYT_INFO.city}, {LYT_INFO.state} {LYT_INFO.zip}</p>
+              <p style={{ fontSize: '0.8rem', marginTop: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                TX • LA • MS • FL • AL
+              </p>
             </div>
 
-            {/* Quick Links */}
-            <div>
-              <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '16px' }}>Quick Links</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {navLinks.map((link) => (
+            {/* Navigation */}
+            <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
+              <div>
+                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Navigate</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {navLinks.map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => handleNavClick(link.id)}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'rgba(255,255,255,0.7)', 
+                        cursor: 'pointer', 
+                        textAlign: 'left', 
+                        padding: 0,
+                        fontSize: '0.85rem',
+                        transition: 'color 0.2s',
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = colors.teal}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Services</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+                  <span>HDD Drilling</span>
+                  <span>Fiber Splicing</span>
+                  <span>Aerial Construction</span>
+                  <span>Underground</span>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Team</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
-                    key={link.id}
-                    onClick={() => handleNavClick(link.id)}
+                    onClick={() => handleNavClick('portal-login')}
                     style={{ 
                       background: 'none', 
                       border: 'none', 
-                      color: 'rgba(255,255,255,0.8)', 
+                      color: 'rgba(255,255,255,0.7)', 
                       cursor: 'pointer', 
                       textAlign: 'left', 
                       padding: 0,
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                     }}
                   >
-                    {link.label}
+                    Team Portal
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Services */}
-            <div>
-              <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '16px' }}>Services</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem' }}>
-                <span>HDD Drilling</span>
-                <span>Fiber Splicing</span>
-                <span>Aerial Construction</span>
-                <span>Network Testing</span>
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '16px' }}>Contact</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem' }}>
-                <a href={`tel:${LYT_INFO.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{LYT_INFO.phone}</a>
-                <a href={`mailto:${LYT_INFO.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>{LYT_INFO.email}</a>
+                  <button
+                    onClick={() => handleNavClick('onboarding')}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'rgba(255,255,255,0.7)', 
+                      cursor: 'pointer', 
+                      textAlign: 'left', 
+                      padding: 0,
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    Onboarding
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* Bottom Bar */}
           <div style={{ 
             borderTop: '1px solid rgba(255,255,255,0.1)', 
-            paddingTop: '24px', 
+            paddingTop: '20px', 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
             flexWrap: 'wrap', 
-            gap: '16px' 
+            gap: '12px' 
           }}>
-            <p style={{ fontSize: '0.85rem' }}>© {new Date().getFullYear()} {LYT_INFO.name}. All rights reserved.</p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => handleNavClick('portal-login')}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${colors.teal}`,
-                  borderRadius: '6px',
-                  color: colors.teal,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                }}
-              >
-                Portal
-              </button>
-              <button
-                onClick={() => handleNavClick('onboarding')}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${colors.coral}`,
-                  borderRadius: '6px',
-                  color: colors.coral,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                }}
-              >
-                Onboarding
-              </button>
-            </div>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+              © {new Date().getFullYear()} {LYT_INFO.name}
+            </p>
+            <button
+              onClick={() => handleNavClick('contact')}
+              style={{
+                padding: '8px 20px',
+                background: `linear-gradient(135deg, ${colors.teal} 0%, ${colors.blue} 100%)`,
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+              }}
+            >
+              Get in Touch
+            </button>
           </div>
         </div>
       </footer>
