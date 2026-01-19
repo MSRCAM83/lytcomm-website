@@ -3,6 +3,11 @@ import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Setting
 import { colors, LYT_INFO, URLS, mockProjects, mockInvoices, mockFiles } from '../config/constants';
 
 const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -35,9 +40,9 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'paid': return colors.green;
-      case 'pending': return colors.coral;
-      case 'submitted': return colors.teal;
+      case 'paid': return accentSecondary;
+      case 'pending': return accentError;
+      case 'submitted': return accentPrimary;
       default: return colors.gray;
     }
   };
@@ -54,10 +59,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'Active Jobs', value: assignedJobs.length, icon: Briefcase, color: colors.teal },
-          { label: 'Pending Invoices', value: contractorInvoices.filter((i) => i.status === 'pending').length, icon: Clock, color: colors.coral },
-          { label: 'Total Outstanding', value: `$${contractorInvoices.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: DollarSign, color: colors.blue },
-          { label: 'Paid This Month', value: `$${contractorInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: CheckCircle, color: colors.green },
+          { label: 'Active Jobs', value: assignedJobs.length, icon: Briefcase, color: accentPrimary },
+          { label: 'Pending Invoices', value: contractorInvoices.filter((i) => i.status === 'pending').length, icon: Clock, color: accentError },
+          { label: 'Total Outstanding', value: `$${contractorInvoices.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: DollarSign, color: accentPrimary },
+          { label: 'Paid This Month', value: `$${contractorInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: CheckCircle, color: accentSecondary },
         ].map((stat, idx) => (
           <div key={idx} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -85,14 +90,14 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 </div>
                 <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '8px' }}>{job.client}</p>
                 <div style={{ height: '6px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: colors.teal, borderRadius: '3px' }} />
+                  <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: accentPrimary, borderRadius: '3px' }} />
                 </div>
               </div>
             ))
           )}
           <button
             onClick={() => setActiveTab('jobs')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: colors.teal, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
           >
             View All Jobs <ChevronRight size={16} />
           </button>
@@ -121,7 +126,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           )}
           <button
             onClick={() => setActiveTab('invoices')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: colors.teal, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
           >
             View All Invoices <ChevronRight size={16} />
           </button>
@@ -133,9 +138,9 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Quick Actions</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
           {[
-            { label: 'Submit Invoice', icon: Plus, color: colors.green, action: () => setActiveTab('invoices') },
-            { label: 'Upload COI', icon: Upload, color: colors.teal, action: () => setActiveTab('documents') },
-            { label: 'View Rate Card', icon: DollarSign, color: colors.blue, action: () => setActiveTab('rates') },
+            { label: 'Submit Invoice', icon: Plus, color: accentSecondary, action: () => setActiveTab('invoices') },
+            { label: 'Upload COI', icon: Upload, color: accentPrimary, action: () => setActiveTab('documents') },
+            { label: 'View Rate Card', icon: DollarSign, color: accentPrimary, action: () => setActiveTab('rates') },
           ].map((action, idx) => (
             <button
               key={idx}
@@ -172,7 +177,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '4px' }}>{job.name}</h3>
                 <p style={{ color: colors.gray }}>{job.client}</p>
               </div>
-              <span style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', backgroundColor: `${colors.green}20`, color: colors.green }}>
+              <span style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', backgroundColor: `${accentSecondary}20`, color: accentSecondary }}>
                 {job.status}
               </span>
             </div>
@@ -186,14 +191,14 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{job.progress}%</span>
               </div>
               <div style={{ height: '8px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: colors.teal, borderRadius: '4px' }} />
+                <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: accentPrimary, borderRadius: '4px' }} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <button style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
                 View SOW
               </button>
-              <button style={{ padding: '8px 16px', backgroundColor: 'transparent', color: colors.teal, border: `1px solid ${colors.teal}`, borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <button style={{ padding: '8px 16px', backgroundColor: 'transparent', color: accentPrimary, border: `1px solid ${accentPrimary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
                 Submit Work Log
               </button>
             </div>
@@ -207,7 +212,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Invoices</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+        <button style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
           <Plus size={18} /> Submit Invoice
         </button>
       </div>
@@ -259,9 +264,9 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           <p style={{ color: colors.gray, marginBottom: '8px' }}>Drop your COI here or click to upload</p>
           <p style={{ color: colors.gray, fontSize: '0.85rem' }}>PDF, JPG, or PNG (max 10MB)</p>
         </div>
-        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: `${colors.coral}15`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertCircle size={18} color={colors.coral} />
-          <span style={{ color: colors.coral, fontSize: '0.9rem' }}>Your COI expires on 2025-03-01. Please upload a renewed certificate.</span>
+        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: `${accentError}15`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={18} color={accentError} />
+          <span style={{ color: accentError, fontSize: '0.9rem' }}>Your COI expires on 2025-03-01. Please upload a renewed certificate.</span>
         </div>
       </div>
 
@@ -271,13 +276,13 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         {mockFiles.slice(0, 4).map((file, idx) => (
           <div key={file.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: idx < 3 ? `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <FileText size={20} color={colors.teal} />
+              <FileText size={20} color={accentPrimary} />
               <div>
                 <p style={{ fontWeight: '500', marginBottom: '2px' }}>{file.name}</p>
                 <p style={{ fontSize: '0.8rem', color: colors.gray }}>{file.size} • {file.date}</p>
               </div>
             </div>
-            <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.teal }}>
+            <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: accentPrimary }}>
               <Download size={18} />
             </button>
           </div>
@@ -290,7 +295,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Personnel & Fleet</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+        <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
           <Plus size={18} /> Add Personnel
         </button>
       </div>
@@ -318,7 +323,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             alignItems: 'center',
             gap: '8px',
             padding: '12px 24px',
-            backgroundColor: colors.teal,
+            backgroundColor: accentPrimary,
             color: '#fff',
             borderRadius: '8px',
             textDecoration: 'none',
@@ -379,7 +384,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           </div>
         </div>
 
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: colors.teal }}>Production Quantities</h4>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Production Quantities</h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Fiber Installed (ft)</label>
@@ -453,7 +458,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <Camera size={32} color={colors.gray} style={{ marginBottom: '8px' }} />
             <p style={{ color: colors.gray, marginBottom: '8px' }}>Drag photos here or click to upload</p>
             <input type="file" accept="image/*" multiple style={{ display: 'none' }} id="contractor-photo-upload" />
-            <label htmlFor="contractor-photo-upload" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <label htmlFor="contractor-photo-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
               Select Photos
             </label>
           </div>
@@ -461,7 +466,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
         <button
           onClick={() => alert('Production log submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Production Log
         </button>
@@ -565,7 +570,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           </div>
         </div>
 
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: colors.teal }}>Inspection Checklist</h4>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Inspection Checklist</h4>
         <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
           {inspectionItems.map(item => (
             <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
@@ -575,10 +580,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                   onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'pass' } })}
                   style={{
                     padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'pass' ? colors.green : 'transparent',
-                    border: `1px solid ${colors.green}`,
+                    backgroundColor: equipmentCheck.items[item.key] === 'pass' ? accentSecondary : 'transparent',
+                    border: `1px solid ${accentSecondary}`,
                     borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'pass' ? '#fff' : colors.green,
+                    color: equipmentCheck.items[item.key] === 'pass' ? '#fff' : accentSecondary,
                     cursor: 'pointer',
                     fontSize: '0.85rem',
                   }}
@@ -589,10 +594,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                   onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'fail' } })}
                   style={{
                     padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'fail' ? colors.coral : 'transparent',
-                    border: `1px solid ${colors.coral}`,
+                    backgroundColor: equipmentCheck.items[item.key] === 'fail' ? accentError : 'transparent',
+                    border: `1px solid ${accentError}`,
                     borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'fail' ? '#fff' : colors.coral,
+                    color: equipmentCheck.items[item.key] === 'fail' ? '#fff' : accentError,
                     cursor: 'pointer',
                     fontSize: '0.85rem',
                   }}
@@ -634,7 +639,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
         <button
           onClick={() => alert('Equipment inspection submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Inspection
         </button>
@@ -733,7 +738,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           </label>
           <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
             <input type="file" accept=".sor,.trc,.pdf" style={{ display: 'none' }} id="contractor-otdr-upload" />
-            <label htmlFor="contractor-otdr-upload" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <label htmlFor="contractor-otdr-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
               Select File
             </label>
           </div>
@@ -758,7 +763,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               alert('Please fill in Project and Fiber Segment fields.');
             }
           }}
-          style={{ padding: '12px 24px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
+          style={{ padding: '12px 24px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
         >
           Upload Test Result
         </button>
@@ -792,8 +797,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                       borderRadius: '4px',
                       fontSize: '0.8rem',
                       fontWeight: '500',
-                      backgroundColor: test.result === 'pass' ? `${colors.green}20` : `${colors.coral}20`,
-                      color: test.result === 'pass' ? colors.green : colors.coral,
+                      backgroundColor: test.result === 'pass' ? `${accentSecondary}20` : `${accentError}20`,
+                      color: test.result === 'pass' ? accentSecondary : accentError,
                       textTransform: 'capitalize',
                     }}>
                       {test.result}
@@ -801,7 +806,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
-                      <Eye size={18} color={colors.teal} />
+                      <Eye size={18} color={accentPrimary} />
                     </button>
                     <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
                       <Download size={18} color={colors.gray} />
@@ -844,10 +849,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         </div>
 
         {expiringSoon.length > 0 && (
-          <div style={{ backgroundColor: `${colors.coral}15`, border: `1px solid ${colors.coral}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={24} color={colors.coral} />
+          <div style={{ backgroundColor: `${accentError}15`, border: `1px solid ${accentError}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={24} color={accentError} />
             <div>
-              <p style={{ fontWeight: '600', color: colors.coral }}>{expiringSoon.length} ticket(s) expiring within 3 days!</p>
+              <p style={{ fontWeight: '600', color: accentError }}>{expiringSoon.length} ticket(s) expiring within 3 days!</p>
               <p style={{ fontSize: '0.9rem', color: colors.gray }}>Renew tickets before starting work.</p>
             </div>
           </div>
@@ -904,7 +909,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 alert('Please fill in all required fields.');
               }
             }}
-            style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
+            style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
           >
             Add Ticket
           </button>
@@ -925,20 +930,20 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                     padding: '16px',
                     backgroundColor: darkMode ? colors.dark : '#f8fafc',
                     borderRadius: '8px',
-                    borderLeft: `4px solid ${isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green}`,
+                    borderLeft: `4px solid ${isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary}`,
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <Phone size={16} color={colors.teal} />
+                        <Phone size={16} color={accentPrimary} />
                         <span style={{ fontWeight: '600' }}>#{ticket.ticketNumber}</span>
                         <span style={{
                           padding: '2px 8px',
                           borderRadius: '4px',
                           fontSize: '0.75rem',
-                          backgroundColor: isExpired ? `${colors.coral}20` : `${colors.green}20`,
-                          color: isExpired ? colors.coral : colors.green,
+                          backgroundColor: isExpired ? `${accentError}20` : `${accentSecondary}20`,
+                          color: isExpired ? accentError : accentSecondary,
                         }}>
                           {isExpired ? 'EXPIRED' : 'Active'}
                         </span>
@@ -946,11 +951,11 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                       <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{ticket.address}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '0.85rem', color: isExpiringSoon ? colors.orange : colors.gray }}>
+                      <p style={{ fontSize: '0.85rem', color: isExpiringSoon ? accentSecondary : colors.gray }}>
                         Expires: {ticket.expires}
                       </p>
                       {isExpiringSoon && !isExpired && (
-                        <p style={{ fontSize: '0.8rem', color: colors.orange, fontWeight: '500' }}>⚠️ {daysUntil} day(s)</p>
+                        <p style={{ fontSize: '0.8rem', color: accentSecondary, fontWeight: '500' }}>⚠️ {daysUntil} day(s)</p>
                       )}
                     </div>
                   </div>
@@ -993,10 +998,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
         {/* COI Alert */}
         {(coiExpired || coiExpiringSoon) && (
-          <div style={{ backgroundColor: coiExpired ? `${colors.coral}15` : `${colors.orange}15`, border: `1px solid ${coiExpired ? colors.coral : colors.orange}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={24} color={coiExpired ? colors.coral : colors.orange} />
+          <div style={{ backgroundColor: coiExpired ? `${accentError}15` : `${accentSecondary}15`, border: `1px solid ${coiExpired ? accentError : accentSecondary}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={24} color={coiExpired ? accentError : accentSecondary} />
             <div>
-              <p style={{ fontWeight: '600', color: coiExpired ? colors.coral : colors.orange }}>
+              <p style={{ fontWeight: '600', color: coiExpired ? accentError : accentSecondary }}>
                 {coiExpired ? 'Certificate of Insurance EXPIRED!' : `COI expires in ${coiDaysUntil} days`}
               </p>
               <p style={{ fontSize: '0.9rem', color: colors.gray }}>
@@ -1010,7 +1015,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Shield size={24} color={colors.teal} />
+              <Shield size={24} color={accentPrimary} />
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Certificate of Insurance (COI)</h3>
                 <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{compliance.coi.carrier}</p>
@@ -1021,8 +1026,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               borderRadius: '6px',
               fontSize: '0.85rem',
               fontWeight: '500',
-              backgroundColor: coiExpired ? `${colors.coral}20` : coiExpiringSoon ? `${colors.orange}20` : `${colors.green}20`,
-              color: coiExpired ? colors.coral : coiExpiringSoon ? colors.orange : colors.green,
+              backgroundColor: coiExpired ? `${accentError}20` : coiExpiringSoon ? `${accentSecondary}20` : `${accentSecondary}20`,
+              color: coiExpired ? accentError : coiExpiringSoon ? accentSecondary : accentSecondary,
             }}>
               {coiExpired ? 'EXPIRED' : coiExpiringSoon ? 'EXPIRING SOON' : 'Active'}
             </span>
@@ -1043,18 +1048,18 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Expiration</label>
-              <p style={{ fontWeight: '500', color: coiExpired ? colors.coral : coiExpiringSoon ? colors.orange : textColor }}>
+              <p style={{ fontWeight: '500', color: coiExpired ? accentError : coiExpiringSoon ? accentSecondary : textColor }}>
                 {compliance.coi.expiry}
-                {coiExpiringSoon && <span style={{ display: 'block', fontSize: '0.8rem', color: colors.orange }}>({coiDaysUntil} days)</span>}
+                {coiExpiringSoon && <span style={{ display: 'block', fontSize: '0.8rem', color: accentSecondary }}>({coiDaysUntil} days)</span>}
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Upload size={18} /> Upload New COI
             </button>
-            <button style={{ padding: '10px 20px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '8px', color: colors.teal, cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button style={{ padding: '10px 20px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '8px', color: accentPrimary, cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Download size={18} /> Download Current
             </button>
           </div>
@@ -1064,15 +1069,15 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Truck size={24} color={colors.teal} />
+              <Truck size={24} color={accentPrimary} />
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Vehicle Insurance</h3>
                 <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.vehicleInsurance.carrier} • {compliance.vehicleInsurance.policyNumber}</p>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontWeight: '500', color: vehicleExpiringSoon ? colors.orange : textColor }}>Expires: {compliance.vehicleInsurance.expiry}</p>
-              {vehicleExpiringSoon && <p style={{ fontSize: '0.8rem', color: colors.orange }}>⚠️ {vehicleDaysUntil} days</p>}
+              <p style={{ fontWeight: '500', color: vehicleExpiringSoon ? accentSecondary : textColor }}>Expires: {compliance.vehicleInsurance.expiry}</p>
+              {vehicleExpiringSoon && <p style={{ fontSize: '0.8rem', color: accentSecondary }}>⚠️ {vehicleDaysUntil} days</p>}
             </div>
           </div>
         </div>
@@ -1081,7 +1086,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Award size={24} color={colors.teal} />
+              <Award size={24} color={accentPrimary} />
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Business License</h3>
                 <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.businessLicense.number}</p>
@@ -1133,7 +1138,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
       {/* Report New Incident */}
       <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: colors.coral }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: accentError }}>
           <ShieldAlert size={20} style={{ display: 'inline', marginRight: '8px' }} />
           Report New Incident
         </h3>
@@ -1249,7 +1254,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               alert('Please fill in Type, Project, and Description fields.');
             }
           }}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Incident Report
         </button>
@@ -1268,8 +1273,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                     padding: '2px 8px',
                     borderRadius: '4px',
                     fontSize: '0.75rem',
-                    backgroundColor: incident.status === 'closed' ? `${colors.green}20` : `${colors.orange}20`,
-                    color: incident.status === 'closed' ? colors.green : colors.orange,
+                    backgroundColor: incident.status === 'closed' ? `${accentSecondary}20` : `${accentSecondary}20`,
+                    color: incident.status === 'closed' ? accentSecondary : accentSecondary,
                   }}>
                     {incident.status}
                   </span>
@@ -1277,7 +1282,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{incident.description}</p>
                 <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{incident.project} • {incident.date}</p>
               </div>
-              <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '6px', color: colors.teal, cursor: 'pointer', fontSize: '0.85rem' }}>
+              <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '6px', color: accentPrimary, cursor: 'pointer', fontSize: '0.85rem' }}>
                 View
               </button>
             </div>
@@ -1307,7 +1312,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Status</label>
-            <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', backgroundColor: `${colors.green}20`, color: colors.green, textTransform: 'capitalize' }}>
+            <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', backgroundColor: `${accentSecondary}20`, color: accentSecondary, textTransform: 'capitalize' }}>
               {loggedInUser?.status}
             </span>
           </div>
@@ -1341,7 +1346,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       <aside style={{ width: '260px', backgroundColor: colors.dark, padding: '24px 0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh' }}>
         <div style={{ padding: '0 24px', marginBottom: '32px' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>
-            <span style={{ color: colors.teal }}>LYT</span> Contractor
+            <span style={{ color: accentPrimary }}>LYT</span> Contractor
           </div>
         </div>
 
@@ -1356,10 +1361,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: activeTab === item.id ? `${colors.teal}20` : 'transparent',
+                backgroundColor: activeTab === item.id ? `${accentPrimary}20` : 'transparent',
                 border: 'none',
-                borderLeft: activeTab === item.id ? `3px solid ${colors.teal}` : '3px solid transparent',
-                color: activeTab === item.id ? colors.teal : '#9ca3af',
+                borderLeft: activeTab === item.id ? `3px solid ${accentPrimary}` : '3px solid transparent',
+                color: activeTab === item.id ? accentPrimary : '#9ca3af',
                 fontSize: '0.95rem',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -1385,8 +1390,8 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               justifyContent: 'center',
               gap: '8px',
               backgroundColor: 'transparent',
-              border: `1px solid ${colors.coral}`,
-              color: colors.coral,
+              border: `1px solid ${accentError}`,
+              color: accentError,
               borderRadius: '8px',
               cursor: 'pointer',
               fontSize: '0.9rem',
