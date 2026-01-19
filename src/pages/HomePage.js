@@ -8,8 +8,10 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
   const cardBg = darkMode ? '#0d1b2a' : '#f8fafc';
   const cardBgAlt = darkMode ? '#112240' : '#ffffff';
   
-  // Logo paths - dark mode gets the pink/orange version, light mode gets blue/green
-  const logoSrc = darkMode ? '/lyt_logo_dark.jpg' : '/lyt_logo_light.jpg';
+  // Logo - use SVG with transparent background
+  // Dark mode: white logo displays directly
+  // Light mode: white logo in dark rounded container
+  const logoSrc = '/lyt_logo_light.svg';  // White logo for both modes
 
   // Service icons - matched to services
   const serviceIcons = [
@@ -107,15 +109,23 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             display: 'flex',
             justifyContent: 'center',
           }}>
-            <img 
-              src={logoSrc} 
-              alt="LYT Communications" 
-              style={{ 
-                maxWidth: '450px', 
-                width: '100%',
-                height: 'auto',
-              }} 
-            />
+            <div style={{
+              padding: darkMode ? '0' : '30px 40px',
+              backgroundColor: darkMode ? 'transparent' : '#0d1b2a',
+              borderRadius: darkMode ? '0' : '20px',
+              boxShadow: darkMode ? 'none' : '0 10px 40px rgba(0,0,0,0.2)',
+            }}>
+              <img 
+                src={logoSrc} 
+                alt="LYT Communications" 
+                style={{ 
+                  maxWidth: '400px', 
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                }} 
+              />
+            </div>
           </div>
 
           {/* Tagline */}
