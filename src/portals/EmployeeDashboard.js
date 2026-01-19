@@ -3,6 +3,11 @@ import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calen
 import { colors, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
 
 const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -77,12 +82,12 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={24} color={colors.teal} /> Time Clock
+              <Clock size={24} color={accentPrimary} /> Time Clock
             </h3>
             {clockedIn ? (
               <div>
-                <p style={{ color: colors.green, fontWeight: '600', fontSize: '1.1rem' }}>● Clocked In</p>
-                <p style={{ fontSize: '2.5rem', fontWeight: '700', fontFamily: 'monospace', color: colors.teal }}>{formatElapsed(elapsedTime)}</p>
+                <p style={{ color: accentSecondary, fontWeight: '600', fontSize: '1.1rem' }}>● Clocked In</p>
+                <p style={{ fontSize: '2.5rem', fontWeight: '700', fontFamily: 'monospace', color: accentPrimary }}>{formatElapsed(elapsedTime)}</p>
               </div>
             ) : (
               <p style={{ color: colors.gray }}>You are not clocked in</p>
@@ -96,7 +101,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   padding: '16px 32px',
                   fontSize: '1.1rem',
                   fontWeight: '600',
-                  backgroundColor: colors.coral,
+                  backgroundColor: accentError,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '12px',
@@ -115,7 +120,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   padding: '16px 32px',
                   fontSize: '1.1rem',
                   fontWeight: '600',
-                  backgroundColor: colors.green,
+                  backgroundColor: accentSecondary,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '12px',
@@ -135,9 +140,9 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'Hours This Week', value: '32.5', icon: Clock, color: colors.blue },
-          { label: 'Active Projects', value: userProjects.filter((p) => p.status === 'active').length, icon: Briefcase, color: colors.teal },
-          { label: 'Pending Approvals', value: userTimeEntries.filter((t) => t.status === 'pending').length, icon: Calendar, color: colors.coral },
+          { label: 'Hours This Week', value: '32.5', icon: Clock, color: accentPrimary },
+          { label: 'Active Projects', value: userProjects.filter((p) => p.status === 'active').length, icon: Briefcase, color: accentPrimary },
+          { label: 'Pending Approvals', value: userTimeEntries.filter((t) => t.status === 'pending').length, icon: Calendar, color: accentError },
         ].map((stat, idx) => (
           <div key={idx} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -161,7 +166,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               <div key={project.id} style={{ padding: '12px 0', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontWeight: '500' }}>{project.name}</span>
-                  <span style={{ fontSize: '0.8rem', padding: '4px 8px', backgroundColor: project.status === 'active' ? `${colors.green}20` : `${colors.gray}20`, color: project.status === 'active' ? colors.green : colors.gray, borderRadius: '4px' }}>
+                  <span style={{ fontSize: '0.8rem', padding: '4px 8px', backgroundColor: project.status === 'active' ? `${accentSecondary}20` : `${colors.gray}20`, color: project.status === 'active' ? accentSecondary : colors.gray, borderRadius: '4px' }}>
                     {project.status}
                   </span>
                 </div>
@@ -169,14 +174,14 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   <MapPin size={14} /> {project.client}
                 </div>
                 <div style={{ marginTop: '8px', height: '6px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: colors.teal, borderRadius: '3px' }} />
+                  <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: accentPrimary, borderRadius: '3px' }} />
                 </div>
               </div>
             ))
           )}
           <button
             onClick={() => setActiveTab('projects')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: colors.teal, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
           >
             View All <ChevronRight size={16} />
           </button>
@@ -185,12 +190,12 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         {/* Announcements */}
         <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Bell size={18} color={colors.coral} /> Announcements
+            <Bell size={18} color={accentError} /> Announcements
           </h3>
           {mockAnnouncements.map((announcement) => (
             <div key={announcement.id} style={{ padding: '12px 0', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                {announcement.priority === 'high' && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: colors.coral }} />}
+                {announcement.priority === 'high' && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: accentError }} />}
                 <span style={{ fontWeight: '500' }}>{announcement.title}</span>
               </div>
               <p style={{ color: colors.gray, fontSize: '0.85rem', marginBottom: '4px' }}>{announcement.content}</p>
@@ -230,8 +235,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                         padding: '4px 8px',
                         borderRadius: '4px',
                         fontSize: '0.8rem',
-                        backgroundColor: entry.status === 'approved' ? `${colors.green}20` : entry.status === 'pending' ? `${colors.coral}20` : `${colors.teal}20`,
-                        color: entry.status === 'approved' ? colors.green : entry.status === 'pending' ? colors.coral : colors.teal,
+                        backgroundColor: entry.status === 'approved' ? `${accentSecondary}20` : entry.status === 'pending' ? `${accentError}20` : `${accentPrimary}20`,
+                        color: entry.status === 'approved' ? accentSecondary : entry.status === 'pending' ? accentError : accentPrimary,
                       }}>
                         {entry.status}
                       </span>
@@ -262,8 +267,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 borderRadius: '6px',
                 fontSize: '0.85rem',
                 fontWeight: '500',
-                backgroundColor: project.status === 'active' ? `${colors.green}20` : project.status === 'completed' ? `${colors.blue}20` : `${colors.coral}20`,
-                color: project.status === 'active' ? colors.green : project.status === 'completed' ? colors.blue : colors.coral,
+                backgroundColor: project.status === 'active' ? `${accentSecondary}20` : project.status === 'completed' ? `${accentPrimary}20` : `${accentError}20`,
+                color: project.status === 'active' ? accentSecondary : project.status === 'completed' ? accentPrimary : accentError,
               }}>
                 {project.status}
               </span>
@@ -278,7 +283,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{project.progress}%</span>
               </div>
               <div style={{ height: '8px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: colors.teal, borderRadius: '4px' }} />
+                <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: accentPrimary, borderRadius: '4px' }} />
               </div>
             </div>
           </div>
@@ -294,15 +299,15 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         {mockFiles.map((file, idx) => (
           <div key={file.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: idx < mockFiles.length - 1 ? `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: `${colors.teal}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {file.type === 'pdf' ? <FileText size={20} color={colors.coral} /> : <Folder size={20} color={colors.teal} />}
+              <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {file.type === 'pdf' ? <FileText size={20} color={accentError} /> : <Folder size={20} color={accentPrimary} />}
               </div>
               <div>
                 <p style={{ fontWeight: '500', marginBottom: '2px' }}>{file.name}</p>
                 <p style={{ fontSize: '0.8rem', color: colors.gray }}>{file.folder} • {file.size} • {file.date}</p>
               </div>
             </div>
-            <button style={{ padding: '8px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.teal }}>
+            <button style={{ padding: '8px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: accentPrimary }}>
               <Download size={20} />
             </button>
           </div>
@@ -319,7 +324,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         {mockUsers.map((user) => (
           <div key={user.id} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: colors.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: accentPrimary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
                 {user.avatar}
               </div>
               <div>
@@ -385,7 +390,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           </div>
         </div>
 
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: colors.teal }}>Production Quantities</h4>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Production Quantities</h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Fiber Installed (ft)</label>
@@ -459,7 +464,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <Camera size={32} color={colors.gray} style={{ marginBottom: '8px' }} />
             <p style={{ color: colors.gray, marginBottom: '8px' }}>Drag photos here or click to upload</p>
             <input type="file" accept="image/*" multiple style={{ display: 'none' }} id="photo-upload" />
-            <label htmlFor="photo-upload" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <label htmlFor="photo-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
               Select Photos
             </label>
           </div>
@@ -467,7 +472,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
         <button
           onClick={() => alert('Production log submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Production Log
         </button>
@@ -571,7 +576,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           </div>
         </div>
 
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: colors.teal }}>Inspection Checklist</h4>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Inspection Checklist</h4>
         <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
           {inspectionItems.map(item => (
             <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
@@ -581,10 +586,10 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'pass' } })}
                   style={{
                     padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'pass' ? colors.green : 'transparent',
-                    border: `1px solid ${colors.green}`,
+                    backgroundColor: equipmentCheck.items[item.key] === 'pass' ? accentSecondary : 'transparent',
+                    border: `1px solid ${accentSecondary}`,
                     borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'pass' ? '#fff' : colors.green,
+                    color: equipmentCheck.items[item.key] === 'pass' ? '#fff' : accentSecondary,
                     cursor: 'pointer',
                     fontSize: '0.85rem',
                   }}
@@ -595,10 +600,10 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'fail' } })}
                   style={{
                     padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'fail' ? colors.coral : 'transparent',
-                    border: `1px solid ${colors.coral}`,
+                    backgroundColor: equipmentCheck.items[item.key] === 'fail' ? accentError : 'transparent',
+                    border: `1px solid ${accentError}`,
                     borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'fail' ? '#fff' : colors.coral,
+                    color: equipmentCheck.items[item.key] === 'fail' ? '#fff' : accentError,
                     cursor: 'pointer',
                     fontSize: '0.85rem',
                   }}
@@ -640,7 +645,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
         <button
           onClick={() => alert('Equipment inspection submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Inspection
         </button>
@@ -766,7 +771,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           style={{
             width: '100%',
             padding: '14px',
-            backgroundColor: toolboxTalk.acknowledged ? colors.green : colors.gray,
+            backgroundColor: toolboxTalk.acknowledged ? accentSecondary : colors.gray,
             color: '#fff',
             border: 'none',
             borderRadius: '8px',
@@ -873,7 +878,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           </label>
           <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
             <input type="file" accept=".sor,.trc,.pdf" style={{ display: 'none' }} id="otdr-upload" />
-            <label htmlFor="otdr-upload" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <label htmlFor="otdr-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
               Select File
             </label>
             <p style={{ color: colors.gray, fontSize: '0.85rem', marginTop: '8px' }}>Accepts .sor, .trc, or PDF export</p>
@@ -899,7 +904,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               alert('Please fill in Project and Fiber Segment fields.');
             }
           }}
-          style={{ padding: '12px 24px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
+          style={{ padding: '12px 24px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
         >
           Upload Test Result
         </button>
@@ -933,8 +938,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                       borderRadius: '4px',
                       fontSize: '0.8rem',
                       fontWeight: '500',
-                      backgroundColor: test.result === 'pass' ? `${colors.green}20` : test.result === 'fail' ? `${colors.coral}20` : `${colors.orange}20`,
-                      color: test.result === 'pass' ? colors.green : test.result === 'fail' ? colors.coral : colors.orange,
+                      backgroundColor: test.result === 'pass' ? `${accentSecondary}20` : test.result === 'fail' ? `${accentError}20` : `${accentSecondary}20`,
+                      color: test.result === 'pass' ? accentSecondary : test.result === 'fail' ? accentError : accentSecondary,
                       textTransform: 'capitalize',
                     }}>
                       {test.result}
@@ -942,7 +947,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
-                      <Eye size={18} color={colors.teal} />
+                      <Eye size={18} color={accentPrimary} />
                     </button>
                     <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
                       <Download size={18} color={colors.gray} />
@@ -990,10 +995,10 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
         {/* Expiring Soon Alert */}
         {expiringSoon.length > 0 && (
-          <div style={{ backgroundColor: `${colors.coral}15`, border: `1px solid ${colors.coral}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={24} color={colors.coral} />
+          <div style={{ backgroundColor: `${accentError}15`, border: `1px solid ${accentError}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={24} color={accentError} />
             <div>
-              <p style={{ fontWeight: '600', color: colors.coral }}>{expiringSoon.length} ticket(s) expiring within 3 days!</p>
+              <p style={{ fontWeight: '600', color: accentError }}>{expiringSoon.length} ticket(s) expiring within 3 days!</p>
               <p style={{ fontSize: '0.9rem', color: colors.gray }}>Renew tickets before starting work in these areas.</p>
             </div>
           </div>
@@ -1051,7 +1056,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 alert('Please fill in all required fields.');
               }
             }}
-            style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
+            style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
           >
             Add Ticket
           </button>
@@ -1073,21 +1078,21 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                     padding: '16px',
                     backgroundColor: darkMode ? colors.dark : '#f8fafc',
                     borderRadius: '8px',
-                    borderLeft: `4px solid ${isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green}`,
+                    borderLeft: `4px solid ${isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary}`,
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <Phone size={16} color={colors.teal} />
+                        <Phone size={16} color={accentPrimary} />
                         <span style={{ fontWeight: '600' }}>#{ticket.ticketNumber}</span>
                         <span style={{
                           padding: '2px 8px',
                           borderRadius: '4px',
                           fontSize: '0.75rem',
                           fontWeight: '500',
-                          backgroundColor: isExpired ? `${colors.coral}20` : `${colors.green}20`,
-                          color: isExpired ? colors.coral : colors.green,
+                          backgroundColor: isExpired ? `${accentError}20` : `${accentSecondary}20`,
+                          color: isExpired ? accentError : accentSecondary,
                         }}>
                           {isExpired ? 'EXPIRED' : 'Active'}
                         </span>
@@ -1095,11 +1100,11 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                       <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{ticket.address}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '0.85rem', color: isExpiringSoon ? colors.orange : colors.gray }}>
+                      <p style={{ fontSize: '0.85rem', color: isExpiringSoon ? accentSecondary : colors.gray }}>
                         {isExpired ? 'Expired' : `Expires: ${ticket.expires}`}
                       </p>
                       {isExpiringSoon && !isExpired && (
-                        <p style={{ fontSize: '0.8rem', color: colors.orange, fontWeight: '500' }}>
+                        <p style={{ fontSize: '0.8rem', color: accentSecondary, fontWeight: '500' }}>
                           ⚠️ {daysUntil} day(s) left
                         </p>
                       )}
@@ -1140,7 +1145,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Certifications</h2>
             <p style={{ color: colors.gray }}>Track your training and certification status</p>
           </div>
-          <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+          <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
             <Plus size={18} /> Add Certification
           </button>
         </div>
@@ -1149,19 +1154,19 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         {(expiringSoon.length > 0 || expired.length > 0) && (
           <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
             {expired.length > 0 && (
-              <div style={{ backgroundColor: `${colors.coral}15`, border: `1px solid ${colors.coral}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <AlertTriangle size={24} color={colors.coral} />
+              <div style={{ backgroundColor: `${accentError}15`, border: `1px solid ${accentError}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertTriangle size={24} color={accentError} />
                 <div>
-                  <p style={{ fontWeight: '600', color: colors.coral }}>{expired.length} certification(s) EXPIRED!</p>
+                  <p style={{ fontWeight: '600', color: accentError }}>{expired.length} certification(s) EXPIRED!</p>
                   <p style={{ fontSize: '0.9rem', color: colors.gray }}>Renew immediately to maintain compliance.</p>
                 </div>
               </div>
             )}
             {expiringSoon.length > 0 && (
-              <div style={{ backgroundColor: `${colors.orange}15`, border: `1px solid ${colors.orange}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <AlertTriangle size={24} color={colors.orange} />
+              <div style={{ backgroundColor: `${accentSecondary}15`, border: `1px solid ${accentSecondary}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertTriangle size={24} color={accentSecondary} />
                 <div>
-                  <p style={{ fontWeight: '600', color: colors.orange }}>{expiringSoon.length} certification(s) expiring within 30 days</p>
+                  <p style={{ fontWeight: '600', color: accentSecondary }}>{expiringSoon.length} certification(s) expiring within 30 days</p>
                   <p style={{ fontSize: '0.9rem', color: colors.gray }}>Schedule renewal training soon.</p>
                 </div>
               </div>
@@ -1185,21 +1190,21 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                     padding: '16px',
                     backgroundColor: darkMode ? colors.dark : '#f8fafc',
                     borderRadius: '8px',
-                    borderLeft: `4px solid ${isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green}`,
+                    borderLeft: `4px solid ${isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary}`,
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <Award size={18} color={colors.teal} />
+                        <Award size={18} color={accentPrimary} />
                         <span style={{ fontWeight: '600' }}>{cert.name}</span>
                         <span style={{
                           padding: '2px 8px',
                           borderRadius: '4px',
                           fontSize: '0.75rem',
                           fontWeight: '500',
-                          backgroundColor: isExpired ? `${colors.coral}20` : isExpiringSoon ? `${colors.orange}20` : `${colors.green}20`,
-                          color: isExpired ? colors.coral : isExpiringSoon ? colors.orange : colors.green,
+                          backgroundColor: isExpired ? `${accentError}20` : isExpiringSoon ? `${accentSecondary}20` : `${accentSecondary}20`,
+                          color: isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary,
                         }}>
                           {isExpired ? 'EXPIRED' : isExpiringSoon ? 'EXPIRING SOON' : 'Active'}
                         </span>
@@ -1209,11 +1214,11 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '0.9rem', fontWeight: '500', color: isExpired ? colors.coral : isExpiringSoon ? colors.orange : textColor }}>
+                      <p style={{ fontSize: '0.9rem', fontWeight: '500', color: isExpired ? accentError : isExpiringSoon ? accentSecondary : textColor }}>
                         {isExpired ? 'Expired' : `Expires: ${cert.expiryDate}`}
                       </p>
                       {isExpiringSoon && (
-                        <p style={{ fontSize: '0.8rem', color: colors.orange }}>⚠️ {daysUntil} days left</p>
+                        <p style={{ fontSize: '0.8rem', color: accentSecondary }}>⚠️ {daysUntil} days left</p>
                       )}
                     </div>
                   </div>
@@ -1267,7 +1272,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
       {/* Report New Incident */}
       <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: colors.coral }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: accentError }}>
           <ShieldAlert size={20} style={{ display: 'inline', marginRight: '8px' }} />
           Report New Incident
         </h3>
@@ -1394,7 +1399,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           </label>
           <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
             <input type="file" accept="image/*" multiple style={{ display: 'none' }} id="incident-photos" />
-            <label htmlFor="incident-photos" style={{ padding: '8px 16px', backgroundColor: colors.teal, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <label htmlFor="incident-photos" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
               Add Photos
             </label>
           </div>
@@ -1430,7 +1435,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               alert('Please fill in Type, Project, and Description fields.');
             }
           }}
-          style={{ width: '100%', padding: '14px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '14px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Submit Incident Report
         </button>
@@ -1453,8 +1458,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                         padding: '2px 8px',
                         borderRadius: '4px',
                         fontSize: '0.75rem',
-                        backgroundColor: incident.status === 'closed' ? `${colors.green}20` : `${colors.orange}20`,
-                        color: incident.status === 'closed' ? colors.green : colors.orange,
+                        backgroundColor: incident.status === 'closed' ? `${accentSecondary}20` : `${accentSecondary}20`,
+                        color: incident.status === 'closed' ? accentSecondary : accentSecondary,
                         textTransform: 'capitalize',
                       }}>
                         {incident.status}
@@ -1463,7 +1468,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                     <p style={{ color: colors.gray, fontSize: '0.9rem', marginBottom: '4px' }}>{incident.description}</p>
                     <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{incident.project} • {incident.date}</p>
                   </div>
-                  <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '6px', color: colors.teal, cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '6px', color: accentPrimary, cursor: 'pointer', fontSize: '0.85rem' }}>
                     View Details
                   </button>
                 </div>
@@ -1521,7 +1526,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       <aside style={{ width: '260px', backgroundColor: colors.dark, padding: '24px 0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh' }}>
         <div style={{ padding: '0 24px', marginBottom: '32px' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>
-            <span style={{ color: colors.teal }}>LYT</span> Portal
+            <span style={{ color: accentPrimary }}>LYT</span> Portal
           </div>
         </div>
 
@@ -1536,10 +1541,10 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: activeTab === item.id ? `${colors.teal}20` : 'transparent',
+                backgroundColor: activeTab === item.id ? `${accentPrimary}20` : 'transparent',
                 border: 'none',
-                borderLeft: activeTab === item.id ? `3px solid ${colors.teal}` : '3px solid transparent',
-                color: activeTab === item.id ? colors.teal : '#9ca3af',
+                borderLeft: activeTab === item.id ? `3px solid ${accentPrimary}` : '3px solid transparent',
+                color: activeTab === item.id ? accentPrimary : '#9ca3af',
                 fontSize: '0.95rem',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -1553,7 +1558,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         <div style={{ padding: '0 24px' }}>
           <div style={{ padding: '16px', backgroundColor: colors.darkLight, borderRadius: '12px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: colors.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: accentPrimary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
                 {loggedInUser?.avatar || 'U'}
               </div>
               <div>
@@ -1572,8 +1577,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               justifyContent: 'center',
               gap: '8px',
               backgroundColor: 'transparent',
-              border: `1px solid ${colors.coral}`,
-              color: colors.coral,
+              border: `1px solid ${accentError}`,
+              color: accentError,
               borderRadius: '8px',
               cursor: 'pointer',
               fontSize: '0.9rem',
