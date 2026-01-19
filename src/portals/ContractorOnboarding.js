@@ -287,7 +287,13 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
 
   const selectStyle = {
     ...inputStyle,
-    color: textColor,
+    color: darkMode ? '#ffffff' : '#1e293b',
+    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+  };
+
+  const optionStyle = {
+    backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+    color: darkMode ? '#ffffff' : '#1e293b',
   };
 
   const labelStyle = {
@@ -317,9 +323,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       <div style={{ marginBottom: '16px' }}>
         <label style={labelStyle}>Entity Type *</label>
         <select name="entityType" value={formData.entityType} onChange={handleChange} required style={selectStyle}>
-          <option value="">Select entity type...</option>
+          <option value="" style={optionStyle}>Select entity type...</option>
           {entityTypes.map((type) => (
-            <option key={type.value} value={type.value} style={{ color: '#000' }}>{type.label}</option>
+            <option key={type.value} value={type.value} style={optionStyle}>{type.label}</option>
           ))}
         </select>
       </div>
@@ -541,16 +547,16 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           required
           style={selectStyle}
         >
-          <option value="">Select classification...</option>
-          <option value="individual" style={{ color: '#000' }}>Individual/Sole Proprietor</option>
-          <option value="c-corp" style={{ color: '#000' }}>C Corporation</option>
-          <option value="s-corp" style={{ color: '#000' }}>S Corporation</option>
-          <option value="partnership" style={{ color: '#000' }}>Partnership</option>
-          <option value="trust" style={{ color: '#000' }}>Trust/Estate</option>
-          <option value="llc-c" style={{ color: '#000' }}>LLC - C Corporation</option>
-          <option value="llc-s" style={{ color: '#000' }}>LLC - S Corporation</option>
-          <option value="llc-p" style={{ color: '#000' }}>LLC - Partnership</option>
-          <option value="other" style={{ color: '#000' }}>Other</option>
+          <option value="" style={optionStyle}>Select classification...</option>
+          <option value="individual" style={optionStyle}>Individual/Sole Proprietor</option>
+          <option value="c-corp" style={optionStyle}>C Corporation</option>
+          <option value="s-corp" style={optionStyle}>S Corporation</option>
+          <option value="partnership" style={optionStyle}>Partnership</option>
+          <option value="trust" style={optionStyle}>Trust/Estate</option>
+          <option value="llc-c" style={optionStyle}>LLC - C Corporation</option>
+          <option value="llc-s" style={optionStyle}>LLC - S Corporation</option>
+          <option value="llc-p" style={optionStyle}>LLC - Partnership</option>
+          <option value="other" style={optionStyle}>Other</option>
         </select>
       </div>
 
@@ -882,7 +888,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         />
         <span style={{ lineHeight: '1.5' }}>
           I have reviewed the rate card and understand that specific rates will be agreed upon in individual 
-          project SOWs. I agree to the general payment terms of Net 30 from invoice approval.
+          project SOWs. I agree to the general payment terms of Net 30 from invoice approval with 10% retainage 
+          held until project completion and final acceptance.
         </span>
       </label>
     </div>
