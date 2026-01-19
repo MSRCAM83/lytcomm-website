@@ -193,7 +193,7 @@ function App() {
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>
-              <span style={{ color: colors.teal }}>LYT</span>
+              <span style={{ color: accentSecondary }}>LYT</span>
               <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px' }}>Communications</span>
             </div>
           </button>
@@ -207,10 +207,10 @@ function App() {
                   onClick={() => handleNavClick(link.id)}
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: currentPage === link.id ? `${colors.teal}20` : 'transparent',
+                    backgroundColor: currentPage === link.id ? `${accentSecondary}20` : 'transparent',
                     border: 'none',
                     borderRadius: '8px',
-                    color: currentPage === link.id ? colors.teal : textColor,
+                    color: currentPage === link.id ? accentSecondary : textColor,
                     fontSize: '0.95rem',
                     fontWeight: '500',
                     cursor: 'pointer',
