@@ -7,6 +7,11 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
   const [error, setError] = useState('');
   const [codeVerified, setCodeVerified] = useState(false);
 
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -41,7 +46,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-              <span style={{ color: colors.teal }}>LYT</span>
+              <span style={{ color: accentPrimary }}>LYT</span>
             </div>
           </button>
           <button
@@ -60,8 +65,8 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
             /* Invite Code Entry */
             <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
               <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${colors.coral}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <Lock size={32} color={colors.coral} />
+                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentError}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <Lock size={32} color={accentError} />
                 </div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
                   Welcome to Onboarding
@@ -85,7 +90,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                       width: '100%',
                       padding: '14px 16px',
                       fontSize: '1rem',
-                      border: `1px solid ${error ? colors.coral : (darkMode ? '#374151' : '#ddd')}`,
+                      border: `1px solid ${error ? accentError : (darkMode ? '#374151' : '#ddd')}`,
                       borderRadius: '8px',
                       backgroundColor: darkMode ? colors.dark : '#fff',
                       color: textColor,
@@ -93,7 +98,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                     }}
                   />
                   {error && (
-                    <p style={{ color: colors.coral, fontSize: '0.85rem', marginTop: '8px' }}>{error}</p>
+                    <p style={{ color: accentError, fontSize: '0.85rem', marginTop: '8px' }}>{error}</p>
                   )}
                 </div>
 
@@ -102,7 +107,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                   style={{
                     width: '100%',
                     padding: '14px',
-                    backgroundColor: colors.coral,
+                    backgroundColor: accentError,
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -117,7 +122,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
 
               <p style={{ textAlign: 'center', marginTop: '24px', color: mutedColor, fontSize: '0.85rem' }}>
                 Don't have an invite code? Contact{' '}
-                <a href={`mailto:${LYT_INFO.email}`} style={{ color: colors.teal }}>
+                <a href={`mailto:${LYT_INFO.email}`} style={{ color: accentPrimary }}>
                   {LYT_INFO.email}
                 </a>
               </p>
@@ -126,8 +131,8 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
             /* Type Selection */
             <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
               <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${colors.green}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <CheckCircle size={32} color={colors.green} />
+                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <CheckCircle size={32} color={accentSecondary} />
                 </div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
                   Code Verified
@@ -153,16 +158,16 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                     textAlign: 'left',
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = colors.teal;
-                    e.currentTarget.style.backgroundColor = `${colors.teal}10`;
+                    e.currentTarget.style.borderColor = accentPrimary;
+                    e.currentTarget.style.backgroundColor = `${accentPrimary}10`;
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.borderColor = darkMode ? '#374151' : '#e5e7eb';
                     e.currentTarget.style.backgroundColor = darkMode ? colors.dark : '#f8fafc';
                   }}
                 >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${colors.teal}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Users size={24} color={colors.teal} />
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Users size={24} color={accentPrimary} />
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor, marginBottom: '4px' }}>
@@ -189,16 +194,16 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                     textAlign: 'left',
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = colors.coral;
-                    e.currentTarget.style.backgroundColor = `${colors.coral}10`;
+                    e.currentTarget.style.borderColor = accentError;
+                    e.currentTarget.style.backgroundColor = `${accentError}10`;
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.borderColor = darkMode ? '#374151' : '#e5e7eb';
                     e.currentTarget.style.backgroundColor = darkMode ? colors.dark : '#f8fafc';
                   }}
                 >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${colors.coral}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Building2 size={24} color={colors.coral} />
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentError}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Building2 size={24} color={accentError} />
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor, marginBottom: '4px' }}>
