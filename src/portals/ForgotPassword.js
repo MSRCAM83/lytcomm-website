@@ -37,7 +37,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? colors.dark : '#fff',
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
     color: textColor,
     boxSizing: 'border-box',
   };
