@@ -8,6 +8,11 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -48,7 +53,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-                <span style={{ color: colors.teal }}>LYT</span>
+                <span style={{ color: accentPrimary }}>LYT</span>
               </div>
             </button>
           </div>
@@ -57,8 +62,8 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
           <div style={{ width: '100%', maxWidth: '420px' }}>
             <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${colors.green}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <CheckCircle size={40} color={colors.green} />
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <CheckCircle size={40} color={accentSecondary} />
               </div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
                 Check Your Email
@@ -78,7 +83,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: colors.teal,
+                  backgroundColor: accentPrimary,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
@@ -122,7 +127,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-              <span style={{ color: colors.teal }}>LYT</span>
+              <span style={{ color: accentPrimary }}>LYT</span>
             </div>
           </button>
           <button
@@ -139,8 +144,8 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
         <div style={{ width: '100%', maxWidth: '420px' }}>
           <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${colors.teal}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <Mail size={32} color={colors.teal} />
+              <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Mail size={32} color={accentPrimary} />
               </div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
                 Forgot Password?
@@ -166,9 +171,9 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
               </div>
 
               {error && (
-                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${colors.coral}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={18} color={colors.coral} />
-                  <span style={{ color: colors.coral, fontSize: '0.9rem' }}>{error}</span>
+                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={18} color={accentError} />
+                  <span style={{ color: accentError, fontSize: '0.9rem' }}>{error}</span>
                 </div>
               )}
 
@@ -178,7 +183,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: loading ? colors.gray : colors.teal,
+                  backgroundColor: loading ? colors.gray : accentPrimary,
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
@@ -196,7 +201,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
                 Remember your password?{' '}
                 <button
                   onClick={() => setCurrentPage('portal-login')}
-                  style={{ background: 'none', border: 'none', color: colors.teal, cursor: 'pointer', fontSize: '0.9rem' }}
+                  style={{ background: 'none', border: 'none', color: accentPrimary, cursor: 'pointer', fontSize: '0.9rem' }}
                 >
                   Sign in
                 </button>
