@@ -62,7 +62,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? colors.dark : '#fff',
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
     color: textColor,
     boxSizing: 'border-box',
   };
@@ -191,7 +191,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
               </div>
 
               {/* Password Requirements */}
-              <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+              <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
                 <p style={{ fontSize: '0.85rem', fontWeight: '500', color: textColor, marginBottom: '8px' }}>
                   Password Requirements:
                 </p>
