@@ -10,6 +10,11 @@ const mockPendingOnboarding = [
 ];
 
 const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -46,12 +51,12 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
       case 'approved':
       case 'paid':
       case 'active':
-        return colors.green;
+        return accentSecondary;
       case 'pending':
       case 'submitted':
-        return colors.coral;
+        return accentError;
       case 'completed':
-        return colors.blue;
+        return accentPrimary;
       default:
         return colors.gray;
     }
@@ -67,11 +72,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
       {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'Active Employees', value: mockUsers.length, icon: Users, color: colors.blue },
-          { label: 'Active Contractors', value: mockContractors.filter((c) => c.status === 'active').length, icon: Briefcase, color: colors.teal },
-          { label: 'Active Projects', value: activeProjects.length, icon: FileText, color: colors.green },
-          { label: 'Pending Onboarding', value: mockPendingOnboarding.length, icon: UserPlus, color: colors.orange, onClick: () => setActiveTab('onboarding') },
-          { label: 'Pending Approvals', value: pendingTimeEntries.length + pendingInvoices.length, icon: AlertCircle, color: colors.coral },
+          { label: 'Active Employees', value: mockUsers.length, icon: Users, color: accentPrimary },
+          { label: 'Active Contractors', value: mockContractors.filter((c) => c.status === 'active').length, icon: Briefcase, color: accentPrimary },
+          { label: 'Active Projects', value: activeProjects.length, icon: FileText, color: accentSecondary },
+          { label: 'Pending Onboarding', value: mockPendingOnboarding.length, icon: UserPlus, color: accentSecondary, onClick: () => setActiveTab('onboarding') },
+          { label: 'Pending Approvals', value: pendingTimeEntries.length + pendingInvoices.length, icon: AlertCircle, color: accentError },
         ].map((stat, idx) => (
           <div 
             key={idx} 
@@ -102,7 +107,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Pending Time Entries</h3>
-            <span style={{ backgroundColor: `${colors.coral}20`, color: colors.coral, padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500' }}>
+            <span style={{ backgroundColor: `${accentError}20`, color: accentError, padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500' }}>
               {pendingTimeEntries.length} pending
             </span>
           </div>
@@ -118,11 +123,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     <p style={{ fontSize: '0.85rem', color: colors.gray }}>{entry.date} • {entry.project}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ padding: '6px', backgroundColor: `${colors.green}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                      <CheckCircle size={18} color={colors.green} />
+                    <button style={{ padding: '6px', backgroundColor: `${accentSecondary}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                      <CheckCircle size={18} color={accentSecondary} />
                     </button>
-                    <button style={{ padding: '6px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                      <XCircle size={18} color={colors.coral} />
+                    <button style={{ padding: '6px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                      <XCircle size={18} color={accentError} />
                     </button>
                   </div>
                 </div>
@@ -131,7 +136,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           )}
           <button
             onClick={() => setActiveTab('time')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: colors.teal, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
           >
             View All <ChevronRight size={16} />
           </button>
@@ -141,7 +146,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Pending Invoices</h3>
-            <span style={{ backgroundColor: `${colors.coral}20`, color: colors.coral, padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500' }}>
+            <span style={{ backgroundColor: `${accentError}20`, color: accentError, padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500' }}>
               {pendingInvoices.length} pending
             </span>
           </div>
@@ -157,11 +162,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     <p style={{ fontSize: '0.85rem', color: colors.gray }}>{invoice.project} • ${invoice.amount.toLocaleString()}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ padding: '6px', backgroundColor: `${colors.green}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                      <CheckCircle size={18} color={colors.green} />
+                    <button style={{ padding: '6px', backgroundColor: `${accentSecondary}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                      <CheckCircle size={18} color={accentSecondary} />
                     </button>
-                    <button style={{ padding: '6px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                      <XCircle size={18} color={colors.coral} />
+                    <button style={{ padding: '6px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                      <XCircle size={18} color={accentError} />
                     </button>
                   </div>
                 </div>
@@ -170,7 +175,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           )}
           <button
             onClick={() => setActiveTab('invoices')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: colors.teal, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
           >
             View All <ChevronRight size={16} />
           </button>
@@ -193,7 +198,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                   <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>{project.progress}%</span>
                 </div>
                 <div style={{ height: '6px', backgroundColor: darkMode ? colors.darkLight : '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: colors.teal, borderRadius: '3px' }} />
+                  <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: accentPrimary, borderRadius: '3px' }} />
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -228,7 +233,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               }}
             />
           </div>
-          <button style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+          <button style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
             <Plus size={18} /> Add Employee
           </button>
         </div>
@@ -251,7 +256,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 <tr key={user.id} style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: colors.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: accentPrimary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
                         {user.avatar}
                       </div>
                       <span style={{ fontWeight: '500' }}>{user.name}</span>
@@ -260,12 +265,12 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                   <td style={{ padding: '14px 16px', color: colors.gray }}>{user.email}</td>
                   <td style={{ padding: '14px 16px', color: colors.gray }}>{user.phone}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${colors.blue}20`, color: colors.blue, textTransform: 'capitalize' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${accentPrimary}20`, color: accentPrimary, textTransform: 'capitalize' }}>
                       {user.role}
                     </span>
                   </td>
                   <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                    <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${colors.teal}`, borderRadius: '6px', color: colors.teal, cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '6px', color: accentPrimary, cursor: 'pointer', fontSize: '0.85rem' }}>
                       Edit
                     </button>
                   </td>
@@ -282,7 +287,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Contractors</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+        <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
           <Plus size={18} /> Add Contractor
         </button>
       </div>
@@ -360,11 +365,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       {entry.status === 'pending' && (
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
-                          <button style={{ padding: '4px', backgroundColor: `${colors.green}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <CheckCircle size={16} color={colors.green} />
+                          <button style={{ padding: '4px', backgroundColor: `${accentSecondary}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                            <CheckCircle size={16} color={accentSecondary} />
                           </button>
-                          <button style={{ padding: '4px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <XCircle size={16} color={colors.coral} />
+                          <button style={{ padding: '4px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                            <XCircle size={16} color={accentError} />
                           </button>
                         </div>
                       )}
@@ -419,11 +424,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       {(invoice.status === 'pending' || invoice.status === 'submitted') && (
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
-                          <button style={{ padding: '4px', backgroundColor: `${colors.green}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <CheckCircle size={16} color={colors.green} />
+                          <button style={{ padding: '4px', backgroundColor: `${accentSecondary}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                            <CheckCircle size={16} color={accentSecondary} />
                           </button>
-                          <button style={{ padding: '4px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <XCircle size={16} color={colors.coral} />
+                          <button style={{ padding: '4px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                            <XCircle size={16} color={accentError} />
                           </button>
                         </div>
                       )}
@@ -442,7 +447,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Projects</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+        <button style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
           <Plus size={18} /> New Project
         </button>
       </div>
@@ -470,7 +475,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{project.progress}%</span>
               </div>
               <div style={{ height: '8px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: colors.teal, borderRadius: '4px' }} />
+                <div style={{ height: '100%', width: `${project.progress}%`, backgroundColor: accentPrimary, borderRadius: '4px' }} />
               </div>
             </div>
           </div>
@@ -503,7 +508,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
 
         {localPending.length === 0 ? (
           <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '48px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <CheckCircle size={48} color={colors.green} style={{ marginBottom: '16px' }} />
+            <CheckCircle size={48} color={accentSecondary} style={{ marginBottom: '16px' }} />
             <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>All Caught Up!</h3>
             <p style={{ color: colors.gray }}>No pending onboarding applications at this time.</p>
           </div>
@@ -517,12 +522,12 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                       width: '48px', 
                       height: '48px', 
                       borderRadius: '12px', 
-                      backgroundColor: item.type === 'employee' ? `${colors.teal}20` : `${colors.coral}20`,
+                      backgroundColor: item.type === 'employee' ? `${accentPrimary}20` : `${accentError}20`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      {item.type === 'employee' ? <Users size={24} color={colors.teal} /> : <Building2 size={24} color={colors.coral} />}
+                      {item.type === 'employee' ? <Users size={24} color={accentPrimary} /> : <Building2 size={24} color={accentError} />}
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -534,8 +539,8 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                           borderRadius: '4px', 
                           fontSize: '0.75rem', 
                           fontWeight: '500',
-                          backgroundColor: item.type === 'employee' ? `${colors.teal}20` : `${colors.coral}20`,
-                          color: item.type === 'employee' ? colors.teal : colors.coral,
+                          backgroundColor: item.type === 'employee' ? `${accentPrimary}20` : `${accentError}20`,
+                          color: item.type === 'employee' ? accentPrimary : accentError,
                           textTransform: 'capitalize'
                         }}>
                           {item.type}
@@ -560,13 +565,13 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     </button>
                     <button
                       onClick={() => handleReject(item.id)}
-                      style={{ padding: '8px 16px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '6px', color: colors.coral, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: '500' }}
+                      style={{ padding: '8px 16px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '6px', color: accentError, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: '500' }}
                     >
                       <XCircle size={16} /> Reject
                     </button>
                     <button
                       onClick={() => handleApprove(item.id)}
-                      style={{ padding: '8px 16px', backgroundColor: colors.green, border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: '500' }}
+                      style={{ padding: '8px 16px', backgroundColor: accentSecondary, border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: '500' }}
                     >
                       <CheckCircle size={16} /> Approve
                     </button>
@@ -602,7 +607,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           </div>
           <button
             onClick={() => setShowAddAdmin(true)}
-            style={{ padding: '10px 20px', backgroundColor: colors.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}
+            style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}
           >
             <Plus size={18} /> Add Admin
           </button>
@@ -631,7 +636,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               </div>
               <button
                 onClick={handleAddAdmin}
-                style={{ padding: '12px 24px', backgroundColor: colors.green, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
+                style={{ padding: '12px 24px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
               >
                 Send Invite
               </button>
@@ -664,7 +669,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 <tr key={admin.id} style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: colors.coral, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: accentError, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.85rem' }}>
                         {admin.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       <span style={{ fontWeight: '500' }}>{admin.name}</span>
@@ -672,12 +677,12 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                   </td>
                   <td style={{ padding: '14px 16px', color: colors.gray }}>{admin.email}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${colors.coral}20`, color: colors.coral }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${accentError}20`, color: accentError }}>
                       {admin.role}
                     </span>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${colors.green}20`, color: colors.green, textTransform: 'capitalize' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: `${accentSecondary}20`, color: accentSecondary, textTransform: 'capitalize' }}>
                       {admin.status}
                     </span>
                   </td>
@@ -685,7 +690,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     {admin.role === 'Primary Admin' ? (
                       <span style={{ color: colors.gray, fontSize: '0.85rem' }}>—</span>
                     ) : (
-                      <button style={{ padding: '6px 12px', backgroundColor: `${colors.coral}20`, border: 'none', borderRadius: '6px', color: colors.coral, cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <button style={{ padding: '6px 12px', backgroundColor: `${accentError}20`, border: 'none', borderRadius: '6px', color: accentError, cursor: 'pointer', fontSize: '0.85rem' }}>
                         Remove
                       </button>
                     )}
@@ -715,7 +720,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Role</label>
-            <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', backgroundColor: `${colors.coral}20`, color: colors.coral, textTransform: 'capitalize' }}>
+            <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', backgroundColor: `${accentError}20`, color: accentError, textTransform: 'capitalize' }}>
               {loggedInUser?.role}
             </span>
           </div>
@@ -745,7 +750,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
       <aside style={{ width: '260px', backgroundColor: colors.dark, padding: '24px 0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh' }}>
         <div style={{ padding: '0 24px', marginBottom: '32px' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>
-            <span style={{ color: colors.coral }}>LYT</span> Admin
+            <span style={{ color: accentError }}>LYT</span> Admin
           </div>
         </div>
 
@@ -760,10 +765,10 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: activeTab === item.id ? `${colors.coral}20` : 'transparent',
+                backgroundColor: activeTab === item.id ? `${accentError}20` : 'transparent',
                 border: 'none',
-                borderLeft: activeTab === item.id ? `3px solid ${colors.coral}` : '3px solid transparent',
-                color: activeTab === item.id ? colors.coral : '#9ca3af',
+                borderLeft: activeTab === item.id ? `3px solid ${accentError}` : '3px solid transparent',
+                color: activeTab === item.id ? accentError : '#9ca3af',
                 fontSize: '0.95rem',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -776,7 +781,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 <span style={{
                   marginLeft: 'auto',
                   padding: '2px 8px',
-                  backgroundColor: colors.coral,
+                  backgroundColor: accentError,
                   color: '#fff',
                   borderRadius: '10px',
                   fontSize: '0.75rem',
@@ -792,7 +797,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         <div style={{ padding: '0 24px' }}>
           <div style={{ padding: '16px', backgroundColor: colors.darkLight, borderRadius: '12px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: colors.coral, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: accentError, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>
                 {loggedInUser?.avatar || 'A'}
               </div>
               <div>
@@ -811,8 +816,8 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               justifyContent: 'center',
               gap: '8px',
               backgroundColor: 'transparent',
-              border: `1px solid ${colors.coral}`,
-              color: colors.coral,
+              border: `1px solid ${accentError}`,
+              color: accentError,
               borderRadius: '8px',
               cursor: 'pointer',
               fontSize: '0.9rem',
