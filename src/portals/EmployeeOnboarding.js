@@ -5,6 +5,11 @@ import SignaturePad from '../components/SignaturePad';
 import SSNInput from '../components/SSNInput';
 
 const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
+  // Dynamic colors based on theme
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
@@ -332,10 +337,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           onClick={() => setShowW4Pdf(!showW4Pdf)}
           style={{ 
             padding: '8px 16px',
-            backgroundColor: showW4Pdf ? colors.teal : 'transparent',
-            border: `1px solid ${colors.teal}`,
+            backgroundColor: showW4Pdf ? accentPrimary : 'transparent',
+            border: `1px solid ${accentPrimary}`,
             borderRadius: '6px',
-            color: showW4Pdf ? '#fff' : colors.teal,
+            color: showW4Pdf ? '#fff' : accentPrimary,
             cursor: 'pointer',
             fontSize: '0.9rem',
           }}
@@ -361,7 +366,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             <a
               href={URLS.w4Pdf}
               download="W-4_Form.pdf"
-              style={{ color: colors.teal, fontSize: '0.85rem', textDecoration: 'none' }}
+              style={{ color: accentPrimary, fontSize: '0.85rem', textDecoration: 'none' }}
             >
               Download PDF
             </a>
@@ -565,7 +570,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
       </div>
 
-      <div style={{ padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px', marginTop: '24px' }}>
+      <div style={{ padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px', marginTop: '24px' }}>
         <p style={{ fontSize: '0.9rem', color: colors.gray }}>
           <strong>Note:</strong> Please double-check your routing and account numbers. 
           Incorrect information may delay your paycheck.
@@ -586,11 +591,11 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         }}>
           {formData.voidedCheckName ? (
             <div>
-              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckName}</p>
+              <p style={{ color: accentSecondary, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckName}</p>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, voidedCheck: null, voidedCheckName: '' })}
-                style={{ padding: '8px 16px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
                 Remove
               </button>
@@ -611,9 +616,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
               />
               <label htmlFor="voidedCheck" style={{ cursor: 'pointer' }}>
                 <div style={{ marginBottom: '8px' }}>
-                  <Upload size={32} color={colors.teal} />
+                  <Upload size={32} color={accentPrimary} />
                 </div>
-                <p style={{ color: colors.teal, fontWeight: '500' }}>Click to upload voided check</p>
+                <p style={{ color: accentPrimary, fontWeight: '500' }}>Click to upload voided check</p>
                 <p style={{ fontSize: '0.8rem', color: colors.gray }}>PDF, JPG, or PNG (max 5MB)</p>
               </label>
             </div>
@@ -656,11 +661,11 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         }}>
           {formData.idFileName ? (
             <div>
-              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.idFileName}</p>
+              <p style={{ color: accentSecondary, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.idFileName}</p>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, idFile: null, idFileName: '' })}
-                style={{ padding: '8px 16px', backgroundColor: colors.coral, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
                 Remove
               </button>
@@ -681,9 +686,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
               />
               <label htmlFor="idFile" style={{ cursor: 'pointer' }}>
                 <div style={{ marginBottom: '8px' }}>
-                  <Upload size={32} color={colors.teal} />
+                  <Upload size={32} color={accentPrimary} />
                 </div>
-                <p style={{ color: colors.teal, fontWeight: '500' }}>Click to upload your ID</p>
+                <p style={{ color: accentPrimary, fontWeight: '500' }}>Click to upload your ID</p>
                 <p style={{ fontSize: '0.8rem', color: colors.gray }}>PDF, JPG, or PNG (max 5MB)</p>
               </label>
             </div>
@@ -691,7 +696,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
       </div>
 
-      <div style={{ padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px', marginTop: '24px' }}>
+      <div style={{ padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px', marginTop: '24px' }}>
         <p style={{ fontSize: '0.9rem', color: colors.gray }}>
           <strong>Privacy Note:</strong> Your ID is securely stored and only used for employment verification purposes.
         </p>
@@ -733,7 +738,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       
       {/* Background Check Consent */}
       <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: colors.blue }}>Background Check Authorization</h4>
+        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Background Check Authorization</h4>
         <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
           <p style={{ marginBottom: '12px' }}>
             I hereby authorize {LYT_INFO.name} and its designated agents to conduct a comprehensive background investigation as part of my employment application. I understand this investigation may include, but is not limited to:
@@ -783,7 +788,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
 
       {/* Drug Test Consent */}
       <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: colors.blue }}>Drug & Alcohol Testing Consent</h4>
+        <h4 style={{ fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Drug & Alcohol Testing Consent</h4>
         <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
           <p style={{ marginBottom: '12px' }}>
             As a condition of employment with {LYT_INFO.name}, I understand and agree to the following drug and alcohol testing policy:
@@ -830,7 +835,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         )}
       </div>
 
-      <div style={{ padding: '16px', backgroundColor: `${colors.teal}10`, borderRadius: '8px', marginTop: '24px' }}>
+      <div style={{ padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px', marginTop: '24px' }}>
         <p style={{ fontSize: '0.9rem', color: colors.gray }}>
           <strong>Note:</strong> Both consents are required to proceed with your employment application. Your signatures confirm that you understand and agree to these policies.
         </p>
@@ -848,11 +853,11 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         backgroundColor: darkMode ? '#0a2540' : '#dbeafe', 
         borderRadius: '8px', 
         marginBottom: '24px',
-        border: `2px solid ${colors.blue}`
+        border: `2px solid ${accentPrimary}`
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <FileText size={24} style={{ color: colors.blue }} />
-          <h4 style={{ fontWeight: '600', color: colors.blue, margin: 0 }}>Required Reading: LYT HSE Safety Manual</h4>
+          <FileText size={24} style={{ color: accentPrimary }} />
+          <h4 style={{ fontWeight: '600', color: accentPrimary, margin: 0 }}>Required Reading: LYT HSE Safety Manual</h4>
         </div>
         <p style={{ color: darkMode ? '#94a3b8' : '#475569', marginBottom: '16px', lineHeight: '1.6' }}>
           Before signing below, you must download and read the complete LYT Communications Health, Safety & Environment (HSE) Manual. 
@@ -867,7 +872,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             alignItems: 'center',
             gap: '8px',
             padding: '12px 24px',
-            backgroundColor: colors.blue,
+            backgroundColor: accentPrimary,
             color: 'white',
             borderRadius: '8px',
             textDecoration: 'none',
@@ -960,7 +965,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-          <CheckCircle size={80} color={colors.green} style={{ marginBottom: '24px' }} />
+          <CheckCircle size={80} color={accentSecondary} style={{ marginBottom: '24px' }} />
           <h2 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '16px', color: textColor }}>
             Welcome to the Team!
           </h2>
@@ -974,7 +979,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
               padding: '14px 28px',
               fontSize: '1rem',
               fontWeight: '600',
-              backgroundColor: colors.teal,
+              backgroundColor: accentPrimary,
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -999,7 +1004,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           <ArrowLeft size={20} /> Back to Portal
         </button>
         <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff' }}>
-          <span style={{ color: colors.teal }}>Employee</span> Onboarding
+          <span style={{ color: accentPrimary }}>Employee</span> Onboarding
         </div>
         <div style={{ width: '120px' }} />
       </header>
@@ -1023,7 +1028,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
-                  backgroundColor: idx <= currentStep ? colors.teal : (darkMode ? colors.dark : '#e5e7eb'),
+                  backgroundColor: idx <= currentStep ? accentPrimary : (darkMode ? colors.dark : '#e5e7eb'),
                   color: idx <= currentStep ? '#fff' : colors.gray,
                   display: 'flex',
                   alignItems: 'center',
@@ -1049,7 +1054,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             {renderStepContent()}
 
             {error && (
-              <div style={{ marginTop: '24px', padding: '12px', backgroundColor: `${colors.coral}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: colors.coral }}>
+              <div style={{ marginTop: '24px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: accentError }}>
                 <AlertCircle size={20} /> {error}
               </div>
             )}
@@ -1082,7 +1087,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                   style={{
                     padding: '12px 24px',
                     fontSize: '1rem',
-                    backgroundColor: canProceed() ? colors.teal : '#ccc',
+                    backgroundColor: canProceed() ? accentPrimary : '#ccc',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -1101,7 +1106,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                   style={{
                     padding: '12px 24px',
                     fontSize: '1rem',
-                    backgroundColor: canProceed() ? colors.green : '#ccc',
+                    backgroundColor: canProceed() ? accentSecondary : '#ccc',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
