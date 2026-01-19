@@ -641,12 +641,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           name="idType"
           value={formData.idType}
           onChange={handleChange}
-          style={{ ...inputStyle, color: darkMode ? '#fff' : colors.dark }}
+          style={{ ...inputStyle, color: darkMode ? '#ffffff' : '#1e293b', backgroundColor: darkMode ? '#1e293b' : '#ffffff' }}
         >
-          <option value="drivers-license" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Driver's License</option>
-          <option value="state-id" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>State ID</option>
-          <option value="passport" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Passport</option>
-          <option value="passport-card" style={{ backgroundColor: darkMode ? colors.dark : '#fff', color: darkMode ? '#fff' : colors.dark }}>Passport Card</option>
+          <option value="drivers-license" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Driver's License</option>
+          <option value="state-id" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>State ID</option>
+          <option value="passport" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Passport</option>
+          <option value="passport-card" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Passport Card</option>
         </select>
       </div>
 
