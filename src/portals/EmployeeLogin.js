@@ -40,7 +40,7 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? colors.dark : '#fff',
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
     color: textColor,
     boxSizing: 'border-box',
   };
@@ -165,7 +165,7 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
             </form>
 
             {/* Demo Credentials */}
-            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
               <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '8px' }}>
                 <strong>Demo Credentials:</strong>
               </p>
