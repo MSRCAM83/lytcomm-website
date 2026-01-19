@@ -199,27 +199,6 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div style={{
-          position: 'absolute',
-          bottom: '30px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px',
-          color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)',
-          fontSize: '0.8rem',
-        }}>
-          <span>Scroll</span>
-          <div style={{
-            width: '2px',
-            height: '30px',
-            background: `linear-gradient(to bottom, ${accentSecondary}, transparent)`,
-            animation: 'scrollPulse 2s ease-in-out infinite',
-          }} />
-        </div>
       </section>
 
       {/* Stats Section */}
@@ -252,7 +231,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             Access your dashboard, submit daily reports, and manage your work all in one place.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
             {/* Employee/Contractor Login */}
             <div style={{
               padding: '40px',
@@ -603,10 +582,6 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         @keyframes pulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.1); }
-        }
-        @keyframes scrollPulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 1; }
         }
       `}</style>
     </div>
