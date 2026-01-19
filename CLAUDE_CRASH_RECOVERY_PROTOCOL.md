@@ -1,6 +1,6 @@
 # CLAUDE CRASH RECOVERY PROTOCOL
 ## For LYT Communications Project
-### Created: January 19, 2026
+### Updated: January 19, 2026
 
 ---
 
@@ -10,105 +10,112 @@ If you are a new Claude session working on the LYT Communications project, follo
 
 ---
 
-## STEP 1: Check the Work Log
+## STEP 1: Fetch BLUEPRINT.md Using Bash
+
+**IMPORTANT:** The Zapier GitHub tools may not work. Use bash with the GitHub token from your memory:
+
+```bash
+curl -s \
+  -H "Authorization: token YOUR_TOKEN_FROM_MEMORY" \
+  -H "Accept: application/vnd.github.v3.raw" \
+  "https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/BLUEPRINT.md"
+```
+
+**The token is stored in Claude's memory.** Look for the memory item that says "GitHub token: ghp_..."
+
+This BLUEPRINT.md file contains:
+- Exact color codes
+- Styling patterns (cards, buttons, inputs)
+- File structure
+- Component specifications
+- Company info
+- Rules to follow
+
+**READ THE ENTIRE BLUEPRINT BEFORE WRITING ANY CODE.**
+
+---
+
+## STEP 2: Check the Work Log
 
 ```
-Google Doc: CLAUDE_WORK_LOG
+Google Doc ID: 110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo
 URL: https://docs.google.com/document/d/110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo
-Folder: LYT Communications (11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC)
 ```
 
-Use `google_drive_fetch` to read this document. It contains:
+Use `google_drive_fetch` with document ID `110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo`
+
+This document tells you:
 - What the last session was working on
-- How far it got
-- What files were being modified
+- Progress percentage
 - Whether it completed or crashed
 
 ---
 
-## STEP 2: Check the WIP Branch
+## STEP 3: Check the WIP Branch
+
+Compare main vs claude-wip to see if there's unfinished work:
 
 ```bash
-# Compare WIP branch to main
-curl -s -H "Authorization: token [PAT]" \
+curl -s \
+  -H "Authorization: token YOUR_TOKEN_FROM_MEMORY" \
   "https://api.github.com/repos/MSRCAM83/lytcomm-website/compare/main...claude-wip"
 ```
 
-The `claude-wip` branch contains work-in-progress commits. If main and claude-wip differ, there's unfinished work.
+If claude-wip is ahead of main, there's work in progress.
 
 ---
 
-## STEP 3: Determine Recovery Action
+## STEP 4: Fetch Any Specific File
 
-| Work Log Says | WIP Branch Status | Action |
-|---------------|-------------------|--------|
-| Task completed | Same as main | Start fresh, no recovery needed |
-| Task in progress | Ahead of main | Resume from WIP branch |
-| Task crashed mid-file | Ahead of main | Check partial commits, resume |
-| Task crashed | Same as main | Check log for plan, restart task |
+To get any file from the repo:
 
----
+```bash
+curl -s \
+  -H "Authorization: token YOUR_TOKEN_FROM_MEMORY" \
+  -H "Accept: application/vnd.github.v3.raw" \
+  "https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/src/pages/HomePage.js"
+```
 
-## AUTOMATED WORKFLOW FOR ALL SESSIONS
-
-### BEFORE Starting Any Task:
-1. Fetch and read CLAUDE_WORK_LOG
-2. Update log with: timestamp, task description, files planned
-3. Push log update to Google Drive
-
-### DURING Task Execution:
-1. Work in small chunks (max 300 lines per file section)
-2. After each chunk: commit to claude-wip branch
-3. Update work log with progress percentage
-
-### AFTER Completing Task:
-1. Merge claude-wip to main (or push directly if small change)
-2. Update work log: mark task complete, record commit SHA
-3. Verify Vercel deployment succeeded
-
-### IF Session Is About to End:
-1. Immediately commit any WIP to claude-wip
-2. Update work log with exact stopping point
-3. List next steps for recovery
+Replace the path as needed.
 
 ---
 
 ## KEY RESOURCES
 
-| Resource | Location |
-|----------|----------|
-| GitHub Repo | MSRCAM83/lytcomm-website |
-| Main Branch | main |
-| WIP Branch | claude-wip |
-| Work Log | docs.google.com/document/d/110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo |
-| Google Drive Folder | 11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC |
-| GitHub PAT | In memory (ghp_73wJJ4...) |
-| Vercel Project | lytcomm-website |
-| Vercel Team ID | team_KdY24IuzstUJ0GmIFbiMTPFn |
+| Resource | How to Access |
+|----------|---------------|
+| GitHub Token | Claude's memory (look for "GitHub token: ghp_...") |
+| BLUEPRINT.md | Bash curl with token (see Step 1) |
+| Work Log | google_drive_fetch doc ID: 110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo |
+| WIP Branch | Bash curl compare (see Step 3) |
+| Any repo file | Bash curl with token (see Step 4) |
+| Vercel deployments | Use Vercel MCP tools |
 
 ---
 
-## EXAMPLE RECOVERY SCENARIO
+## RECOVERY DECISION TREE
 
-**Previous session was creating ContactPage.js and crashed mid-file**
-
-1. Read work log → Shows "Creating ContactPage.js, 60% complete, stopped at contact form section"
-2. Check claude-wip → Has partial ContactPage.js committed
-3. Fetch partial file from WIP branch
-4. Continue from where it stopped
-5. Complete file, commit, merge to main
-6. Update work log as complete
-
----
-
-## MEMORY ITEMS TO VERIFY
-
-Claude should have these in memory:
-- GitHub PAT for repo access
-- Google Drive folder ID
-- Work log document ID
-- Instruction to update work log BEFORE starting tasks
+```
+1. Read BLUEPRINT.md (use bash + token from memory)
+   ↓
+2. Read Work Log (google_drive_fetch)
+   ↓
+3. Is there an active task?
+   ├── YES → Check claude-wip branch, continue from there
+   └── NO → Ask user what they want to work on
+```
 
 ---
 
-*This protocol ensures no work is ever lost due to session crashes.*
+## GOLDEN RULES
+
+1. **ALWAYS read BLUEPRINT.md first** - It has the design system
+2. **Use bash + token for GitHub** - Zapier tools may not work
+3. **Commit to claude-wip every ~100 lines** - Crash protection
+4. **Update work log before AND after tasks** - Session continuity
+5. **Never delete functionality** - Fix it instead
+6. **Test with CI=true npm run build** - Catch ESLint errors
+
+---
+
+*This protocol ensures session continuity even when chats crash mid-task.*
