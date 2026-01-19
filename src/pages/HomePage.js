@@ -143,7 +143,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           </p>
 
           {/* CTA Buttons */}
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '40px' }}>
             <button
               onClick={() => setCurrentPage('contact')}
               style={{
