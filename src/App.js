@@ -346,9 +346,9 @@ function App() {
 
       {/* Footer - Clean & Minimal */}
       <footer style={{ 
-        backgroundColor: darkMode ? '#0a1628' : '#1e293b', 
+        backgroundColor: darkMode ? '#0a1628' : '#f1f5f9', 
         padding: '48px 20px 24px', 
-        color: 'rgba(255,255,255,0.7)' 
+        color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b' 
       }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           {/* Main Footer Content */}
@@ -362,13 +362,13 @@ function App() {
           }}>
             {/* Logo & Tagline */}
             <div style={{ flex: '1 1 280px' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '12px' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: darkMode ? '#fff' : '#1e293b', marginBottom: '12px' }}>
                 <span style={{ color: colors.teal }}>LYT</span> Communications
               </div>
               <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px' }}>
                 Professional fiber optic construction across the Gulf Coast.
               </p>
-              <p style={{ fontSize: '0.75rem', marginTop: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
+              <p style={{ fontSize: '0.75rem', marginTop: '12px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#94a3b8', lineHeight: '1.5' }}>
                 Texas • Louisiana • Mississippi<br />Florida • Alabama
               </p>
             </div>
@@ -376,7 +376,7 @@ function App() {
             {/* Navigation */}
             <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
               <div>
-                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Navigate</h4>
+                <h4 style={{ color: darkMode ? '#fff' : '#1e293b', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Navigate</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {navLinks.map((link) => (
                     <button
@@ -385,7 +385,7 @@ function App() {
                       style={{ 
                         background: 'none', 
                         border: 'none', 
-                        color: 'rgba(255,255,255,0.7)', 
+                        color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b', 
                         cursor: 'pointer', 
                         textAlign: 'left', 
                         padding: 0,
@@ -393,7 +393,7 @@ function App() {
                         transition: 'color 0.2s',
                       }}
                       onMouseOver={(e) => e.currentTarget.style.color = colors.teal}
-                      onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = darkMode ? 'rgba(255,255,255,0.7)' : '#64748b'}
                     >
                       {link.label}
                     </button>
@@ -402,7 +402,7 @@ function App() {
               </div>
 
               <div>
-                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Services</h4>
+                <h4 style={{ color: darkMode ? '#fff' : '#1e293b', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Services</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                   <span>HDD Drilling</span>
                   <span>Fiber Splicing</span>
@@ -412,14 +412,14 @@ function App() {
               </div>
 
               <div>
-                <h4 style={{ color: '#fff', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Team</h4>
+                <h4 style={{ color: darkMode ? '#fff' : '#1e293b', fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Team</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
                     onClick={() => handleNavClick('portal-login')}
                     style={{ 
                       background: 'none', 
                       border: 'none', 
-                      color: 'rgba(255,255,255,0.7)', 
+                      color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b', 
                       cursor: 'pointer', 
                       textAlign: 'left', 
                       padding: 0,
@@ -433,7 +433,7 @@ function App() {
                     style={{ 
                       background: 'none', 
                       border: 'none', 
-                      color: 'rgba(255,255,255,0.7)', 
+                      color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b', 
                       cursor: 'pointer', 
                       textAlign: 'left', 
                       padding: 0,
@@ -449,7 +449,7 @@ function App() {
 
           {/* Bottom Bar */}
           <div style={{ 
-            borderTop: '1px solid rgba(255,255,255,0.1)', 
+            borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', 
             paddingTop: '20px', 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -457,7 +457,7 @@ function App() {
             flexWrap: 'wrap', 
             gap: '12px' 
           }}>
-            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+            <p style={{ fontSize: '0.8rem', color: darkMode ? 'rgba(255,255,255,0.5)' : '#94a3b8' }}>
               © {new Date().getFullYear()} {LYT_INFO.name}
             </p>
             <button
