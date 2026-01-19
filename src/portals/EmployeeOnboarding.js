@@ -255,11 +255,16 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     width: '100%',
     padding: '12px',
     fontSize: '1rem',
-    border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
+    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? colors.dark : '#fff',
-    color: textColor,
+    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+    color: darkMode ? '#f9fafb' : '#1f2937',
     boxSizing: 'border-box',
+  };
+
+  const selectStyle = {
+    ...inputStyle,
+    cursor: 'pointer',
   };
 
   const labelStyle = {
@@ -362,7 +367,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             }}
             title="W-4 Form"
           />
-          <div style={{ padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
+          <div style={{ padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
             <a
               href={URLS.w4Pdf}
               download="W-4_Form.pdf"
@@ -375,7 +380,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       )}
 
       {/* Filing Status */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 1(c): Filing Status *</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[
@@ -399,7 +404,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Multiple Jobs */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 2: Multiple Jobs or Spouse Works</label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
           <input
@@ -414,7 +419,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Dependents */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 3: Claim Dependents</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div>
@@ -446,7 +451,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Other Adjustments */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 4: Other Adjustments (Optional)</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div>
@@ -486,7 +491,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Exempt */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
           <input
             type="checkbox"
@@ -641,12 +646,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           name="idType"
           value={formData.idType}
           onChange={handleChange}
-          style={{ ...inputStyle, color: darkMode ? '#ffffff' : '#1e293b', backgroundColor: darkMode ? '#1e293b' : '#ffffff' }}
+          style={selectStyle}
         >
-          <option value="drivers-license" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Driver's License</option>
-          <option value="state-id" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>State ID</option>
-          <option value="passport" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Passport</option>
-          <option value="passport-card" style={{ backgroundColor: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#ffffff' : '#1e293b' }}>Passport Card</option>
+          <option value="drivers-license">Driver's License</option>
+          <option value="state-id">State ID</option>
+          <option value="passport">Passport</option>
+          <option value="passport-card">Passport Card</option>
         </select>
       </div>
 
@@ -737,7 +742,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Employment Consents</h3>
       
       {/* Background Check Consent */}
-      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+      <div style={{ padding: '24px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
         <h4 style={{ fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Background Check Authorization</h4>
         <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
           <p style={{ marginBottom: '12px' }}>
@@ -787,7 +792,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       </div>
 
       {/* Drug Test Consent */}
-      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+      <div style={{ padding: '24px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
         <h4 style={{ fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Drug & Alcohol Testing Consent</h4>
         <div style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px', fontSize: '0.95rem' }}>
           <p style={{ marginBottom: '12px' }}>
@@ -885,7 +890,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         </a>
       </div>
 
-      <div style={{ padding: '24px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+      <div style={{ padding: '24px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
         <h4 style={{ fontWeight: '600', marginBottom: '16px' }}>Safety Commitment</h4>
         <p style={{ color: colors.gray, lineHeight: '1.7', marginBottom: '16px' }}>
           As an employee of {LYT_INFO.name}, I understand and agree to the following:
