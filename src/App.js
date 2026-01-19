@@ -53,6 +53,19 @@ function App() {
     { id: 'onboarding', label: 'Onboarding' },
   ];
 
+  // Dynamic favicon based on theme
+  useEffect(() => {
+    const favicon = document.querySelector("link[rel='icon']");
+    if (favicon) {
+      favicon.href = darkMode ? '/lyt_logo_dark.png' : '/lyt_logo_light.png';
+    }
+    // Also update theme-color meta tag
+    const themeColor = document.querySelector("meta[name='theme-color']");
+    if (themeColor) {
+      themeColor.content = darkMode ? '#0d1b2a' : '#ffffff';
+    }
+  }, [darkMode]);
+
   // Browser history integration - back button support
   useEffect(() => {
     // Handle browser back/forward buttons
