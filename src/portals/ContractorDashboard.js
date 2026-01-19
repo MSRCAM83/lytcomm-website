@@ -221,7 +221,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Invoice #</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Project</th>
                 <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Date</th>
@@ -366,7 +366,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               type="date"
               value={productionLog.date}
               onChange={(e) => setProductionLog({ ...productionLog, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -374,7 +374,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={productionLog.project}
               onChange={(e) => setProductionLog({ ...productionLog, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="">Select project...</option>
               {mockProjects.filter(p => p.status === 'active').map(p => (
@@ -393,7 +393,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={productionLog.fiberFootage}
               onChange={(e) => setProductionLog({ ...productionLog, fiberFootage: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -403,7 +403,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={productionLog.splicesCompleted}
               onChange={(e) => setProductionLog({ ...productionLog, splicesCompleted: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -413,7 +413,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={productionLog.polesSet}
               onChange={(e) => setProductionLog({ ...productionLog, polesSet: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -423,7 +423,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={productionLog.hddBoreLength}
               onChange={(e) => setProductionLog({ ...productionLog, hddBoreLength: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -433,7 +433,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={productionLog.conduitInstalled}
               onChange={(e) => setProductionLog({ ...productionLog, conduitInstalled: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
         </div>
@@ -445,7 +445,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             onChange={(e) => setProductionLog({ ...productionLog, notes: e.target.value })}
             placeholder="Any delays, issues, or additional notes..."
             rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
           />
         </div>
 
@@ -532,7 +532,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               type="date"
               value={equipmentCheck.date}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -540,7 +540,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={equipmentCheck.equipmentType}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentType: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="">Select type...</option>
               {equipmentTypes.map(type => (
@@ -555,7 +555,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={equipmentCheck.equipmentId}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentId: e.target.value })}
               placeholder="e.g., T-101"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -565,7 +565,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={equipmentCheck.mileage}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, mileage: e.target.value })}
               placeholder="Current reading"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
         </div>
@@ -573,7 +573,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Inspection Checklist</h4>
         <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
           {inspectionItems.map(item => (
-            <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+            <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
               <span>{item.label}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -633,7 +633,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             onChange={(e) => setEquipmentCheck({ ...equipmentCheck, issues: e.target.value })}
             placeholder="Describe any issues found..."
             rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
           />
         </div>
 
@@ -681,7 +681,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               type="date"
               value={newOtdr.date}
               onChange={(e) => setNewOtdr({ ...newOtdr, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -689,7 +689,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={newOtdr.project}
               onChange={(e) => setNewOtdr({ ...newOtdr, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="">Select project...</option>
               {mockProjects.filter(p => p.status === 'active').map(p => (
@@ -704,7 +704,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={newOtdr.segment}
               onChange={(e) => setNewOtdr({ ...newOtdr, segment: e.target.value })}
               placeholder="e.g., Span A1-A5"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -714,7 +714,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               value={newOtdr.loss}
               onChange={(e) => setNewOtdr({ ...newOtdr, loss: e.target.value })}
               placeholder="e.g., 0.18"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -722,7 +722,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={newOtdr.result}
               onChange={(e) => setNewOtdr({ ...newOtdr, result: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="pass">Pass</option>
               <option value="fail">Fail - Needs Resplice</option>
@@ -775,7 +775,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
             <thead>
-              <tr style={{ backgroundColor: darkMode ? colors.dark : '#f8fafc' }}>
+              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
                 <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Date</th>
                 <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Project</th>
                 <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Segment</th>
@@ -868,7 +868,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 value={newTicket.ticketNumber}
                 onChange={(e) => setNewTicket({ ...newTicket, ticketNumber: e.target.value })}
                 placeholder="e.g., 2501160001"
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
               />
             </div>
             <div>
@@ -878,7 +878,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 value={newTicket.address}
                 onChange={(e) => setNewTicket({ ...newTicket, address: e.target.value })}
                 placeholder="Street address"
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
               />
             </div>
             <div>
@@ -887,7 +887,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                 type="date"
                 value={newTicket.expires}
                 onChange={(e) => setNewTicket({ ...newTicket, expires: e.target.value })}
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
               />
             </div>
           </div>
@@ -928,7 +928,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
                   key={ticket.id}
                   style={{
                     padding: '16px',
-                    backgroundColor: darkMode ? colors.dark : '#f8fafc',
+                    backgroundColor: darkMode ? '#111827' : '#f8fafc',
                     borderRadius: '8px',
                     borderLeft: `4px solid ${isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary}`,
                   }}
@@ -1150,7 +1150,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               type="date"
               value={newIncident.date}
               onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -1159,7 +1159,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
               type="time"
               value={newIncident.time}
               onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             />
           </div>
           <div>
@@ -1167,7 +1167,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={newIncident.type}
               onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="">Select type...</option>
               {incidentTypes.map(type => (
@@ -1180,7 +1180,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <select
               value={newIncident.project}
               onChange={(e) => setNewIncident({ ...newIncident, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
             >
               <option value="">Select project...</option>
               {mockProjects.map(p => (
@@ -1197,7 +1197,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             value={newIncident.location}
             onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
             placeholder="Specific location"
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor }}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
           />
         </div>
 
@@ -1208,11 +1208,11 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
             placeholder="Describe what happened..."
             rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? colors.dark : '#fff', color: textColor, resize: 'vertical' }}
+            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
           />
         </div>
 
-        <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+        <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
           <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '10px' }}>Were there any injuries?</label>
           <div style={{ display: 'flex', gap: '20px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -1264,7 +1264,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Previous Reports</h3>
         {incidents.map(incident => (
-          <div key={incident.id} style={{ padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
+          <div key={incident.id} style={{ padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
