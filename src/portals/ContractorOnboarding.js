@@ -274,27 +274,30 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     }
   };
 
+  // Force light background for all form inputs to ensure text visibility
+  // Using white background with dark text for maximum contrast in all modes
   const inputStyle = {
     width: '100%',
     padding: '12px',
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: darkMode ? '#f9fafb' : '#1f2937',
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
     boxSizing: 'border-box',
   };
 
   const selectStyle = {
     ...inputStyle,
     cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '36px',
   };
 
-  // Note: option styling is limited in browsers, but we set background on select
-  const optionStyle = {
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: darkMode ? '#f9fafb' : '#1f2937',
-  };
+  // Option styling removed - using light background inputs ensures visibility
 
   const labelStyle = {
     display: 'block',
@@ -323,9 +326,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       <div style={{ marginBottom: '16px' }}>
         <label style={labelStyle}>Entity Type *</label>
         <select name="entityType" value={formData.entityType} onChange={handleChange} required style={selectStyle}>
-          <option value="" style={optionStyle}>Select entity type...</option>
+          <option value="">Select entity type...</option>
           {entityTypes.map((type) => (
-            <option key={type.value} value={type.value} style={optionStyle}>{type.label}</option>
+            <option key={type.value} value={type.value}>{type.label}</option>
           ))}
         </select>
       </div>
@@ -547,16 +550,16 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           required
           style={selectStyle}
         >
-          <option value="" style={optionStyle}>Select classification...</option>
-          <option value="individual" style={optionStyle}>Individual/Sole Proprietor</option>
-          <option value="c-corp" style={optionStyle}>C Corporation</option>
-          <option value="s-corp" style={optionStyle}>S Corporation</option>
-          <option value="partnership" style={optionStyle}>Partnership</option>
-          <option value="trust" style={optionStyle}>Trust/Estate</option>
-          <option value="llc-c" style={optionStyle}>LLC - C Corporation</option>
-          <option value="llc-s" style={optionStyle}>LLC - S Corporation</option>
-          <option value="llc-p" style={optionStyle}>LLC - Partnership</option>
-          <option value="other" style={optionStyle}>Other</option>
+          <option value="">Select classification...</option>
+          <option value="individual">Individual/Sole Proprietor</option>
+          <option value="c-corp">C Corporation</option>
+          <option value="s-corp">S Corporation</option>
+          <option value="partnership">Partnership</option>
+          <option value="trust">Trust/Estate</option>
+          <option value="llc-c">LLC - C Corporation</option>
+          <option value="llc-s">LLC - S Corporation</option>
+          <option value="llc-p">LLC - Partnership</option>
+          <option value="other">Other</option>
         </select>
       </div>
 
@@ -849,6 +852,71 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     </div>
   );
 
+  // Rate card data embedded directly - no iframe needed
+  const rateCardData = [
+    { category: 'AERIAL', items: [
+      { code: 'AE1', desc: 'Place 6M strand', uom: 'LF', price: '$0.50' },
+      { code: 'AE2', desc: 'Lash Cable Up to 144 Fiber on new strand', uom: 'LF', price: '$0.60' },
+      { code: 'AE3', desc: 'Overlash to Existing Fiber up to 144 Fiber', uom: 'LF', price: '$0.60' },
+      { code: 'AE3.1', desc: 'Lash or Overlash Cable Larger than 144 Fiber', uom: 'LF', price: '$0.90' },
+      { code: 'AE4', desc: 'Place Down Guy for 6M strand (includes Guy Guard)', uom: 'EA', price: '$14.00' },
+      { code: 'AE5', desc: 'Place Screw Anchor – 6000 lbs', uom: 'EA', price: '$30.00' },
+      { code: 'AE7', desc: 'Place 2 in. Riser Guard', uom: 'EA', price: '$30.00' },
+      { code: 'AE8', desc: 'Place aerial dielectric self supporting cable', uom: 'LF', price: '$0.40' },
+      { code: 'AE9L', desc: 'Place Cable extension Arm Long', uom: 'EA', price: '$50.00' },
+      { code: 'AE9S', desc: 'Place Cable extension Arm Short', uom: 'EA', price: '$40.00' },
+      { code: 'AE10', desc: 'Tree Trimming', uom: 'Span', price: '$25.00' },
+      { code: 'AE11', desc: 'Resag cable', uom: 'Span', price: '$25.00' },
+      { code: 'AE12', desc: 'Delash/relash', uom: 'LF', price: '$0.60' },
+      { code: 'AE13', desc: 'Dead end Pole Transfer', uom: 'EA', price: '$50.00' },
+      { code: 'AE14', desc: 'Straight thru Pole Transfer', uom: 'EA', price: '$35.00' },
+      { code: 'AE15', desc: 'Bonding aerial strand', uom: 'EA', price: '$8.00' },
+      { code: 'AE17', desc: 'Place Aerial Damper Unit', uom: 'EA', price: '$20.00' },
+      { code: 'AE18', desc: 'Place Tree/Squirrel Guard', uom: 'LF', price: '$0.25' },
+    ]},
+    { category: 'SPLICING', items: [
+      { code: 'FS1', desc: 'Fusion splice 1 fiber', uom: 'EA', price: '$13.00' },
+      { code: 'FS2', desc: 'Ring cut', uom: 'EA', price: '$180.00' },
+      { code: 'FS3', desc: 'Test Fiber', uom: 'EA', price: '$5.00' },
+      { code: 'FS4', desc: 'ReEnter/Install Enclosure', uom: 'EA', price: '$100.00' },
+    ]},
+    { category: 'UNDERGROUND', items: [
+      { code: 'UG1', desc: 'Directional bore 1-4 x 1.25 inch ID subduct', uom: 'LF', price: '$6.00' },
+      { code: 'UG4', desc: 'Pull up to 144ct armored cable/micro cable in duct', uom: 'LF', price: '$0.40' },
+      { code: 'UG5', desc: 'Direct Bury Cable - Plow', uom: 'LF', price: '$1.50' },
+      { code: 'UG6', desc: 'Direct Bury cable – Additional Depth 6" increments', uom: 'EA', price: '$0.40' },
+      { code: 'UG7', desc: 'Direct Bury Pipe - Plow', uom: 'LF', price: '$1.60' },
+      { code: 'UG8', desc: 'Direct Bury Pipe – Additional Duct', uom: 'LF', price: '$0.40' },
+      { code: 'UG9', desc: 'Buried plant Pedestal', uom: 'EA', price: '$30.00' },
+      { code: 'UG10', desc: 'Place Hand hole 30x48x30', uom: 'EA', price: '$240.00' },
+      { code: 'UG11', desc: 'Place Hand hole 24x36x24', uom: 'EA', price: '$85.00' },
+      { code: 'UG12', desc: 'Place Utility Box', uom: 'EA', price: '$16.00' },
+      { code: 'UG14', desc: 'Locate Marker post/Ground Assembly', uom: 'EA', price: '$14.00' },
+      { code: 'UG15', desc: 'Route Marker Post', uom: 'EA', price: '$9.00' },
+    ]},
+    { category: 'POLES & RESTORATION', items: [
+      { code: 'PP1', desc: "Place Pole 35' Class 7", uom: 'EA', price: '$280.00' },
+      { code: 'PP2', desc: 'Hand Carry/Set in rear Easement', uom: 'EA', price: '$80.00' },
+      { code: 'PP3', desc: "Detach & Remove Pole up to 35' Class 5", uom: 'EA', price: '$160.00' },
+      { code: 'PA01', desc: 'Place Asphalt up to 4"', uom: 'SF', price: '$15.00' },
+      { code: 'PA02', desc: 'Place Asphalt > 4" up to 8"', uom: 'SF', price: '$24.00' },
+      { code: 'PC01', desc: 'Place Concrete up to 4" depth', uom: 'SF', price: '$20.00' },
+      { code: 'PC02', desc: 'Place Concrete > 4" up to 8" depth', uom: 'SF', price: '$30.00' },
+    ]},
+    { category: 'OTHER', items: [
+      { code: 'TC1', desc: 'Traffic control personnel', uom: 'HR', price: '$30.00' },
+      { code: 'HSPH', desc: 'Hardscape Potholing', uom: 'EA', price: '$150.00' },
+    ]},
+  ];
+
+  const [expandedCategories, setExpandedCategories] = useState(['AERIAL']);
+
+  const toggleCategory = (cat) => {
+    setExpandedCategories(prev => 
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
   const renderRateCard = () => (
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Rate Card Acceptance</h3>
@@ -859,45 +927,67 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           and will be specified in individual Scope of Work (SOW) documents.
         </p>
         
-        {/* Embedded Rate Card */}
+        {/* Embedded Rate Card Table */}
         <div style={{ 
           border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, 
           borderRadius: '8px', 
           overflow: 'hidden',
-          marginBottom: '16px'
+          marginBottom: '16px',
+          maxHeight: '450px',
+          overflowY: 'auto',
         }}>
-          <iframe
-            src={`https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}/pubhtml?widget=true&headers=false`}
-            style={{
-              width: '100%',
-              height: '400px',
-              border: 'none',
-              backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-            }}
-            title="LYT Communications Rate Card"
-          />
+          {rateCardData.map((section) => (
+            <div key={section.category}>
+              <button
+                type="button"
+                onClick={() => toggleCategory(section.category)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: darkMode ? '#374151' : '#e5e7eb',
+                  border: 'none',
+                  borderBottom: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  color: darkMode ? '#f9fafb' : '#1f2937',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                }}
+              >
+                <span>{section.category}</span>
+                <span style={{ transform: expandedCategories.includes(section.category) ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
+              </button>
+              {expandedCategories.includes(section.category) && (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: darkMode ? '#1f2937' : '#f9fafb' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Code</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Description</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>UOM</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.items.map((item, idx) => (
+                      <tr key={item.code} style={{ backgroundColor: idx % 2 === 0 ? (darkMode ? '#111827' : '#ffffff') : (darkMode ? '#1f2937' : '#f9fafb') }}>
+                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentPrimary, fontWeight: '500' }}>{item.code}</td>
+                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#e5e7eb' : '#374151' }}>{item.desc}</td>
+                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>{item.uom}</td>
+                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentSecondary, fontWeight: '600', textAlign: 'right' }}>{item.price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ))}
         </div>
         
-        <a
-          href={`https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            backgroundColor: 'transparent',
-            color: accentPrimary,
-            border: `1px solid ${accentPrimary}`,
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: '500',
-            fontSize: '0.9rem',
-          }}
-        >
-          Open in Google Sheets
-        </a>
+        <p style={{ fontSize: '0.8rem', color: darkMode ? '#6b7280' : '#9ca3af', fontStyle: 'italic' }}>
+          * Texas/Louisiana Standard Rates. Project-specific rates confirmed in SOW.
+        </p>
       </div>
 
       <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
