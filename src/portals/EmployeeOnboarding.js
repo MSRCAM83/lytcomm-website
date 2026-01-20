@@ -251,20 +251,27 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     }
   };
 
+  // Force light background for all form inputs to ensure text visibility
+  // Using white background with dark text for maximum contrast in all modes
   const inputStyle = {
     width: '100%',
     padding: '12px',
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: darkMode ? '#f9fafb' : '#1f2937',
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
     boxSizing: 'border-box',
   };
 
   const selectStyle = {
     ...inputStyle,
     cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '36px',
   };
 
   const labelStyle = {
