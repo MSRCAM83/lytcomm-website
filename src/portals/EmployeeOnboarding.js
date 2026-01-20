@@ -161,7 +161,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
 
       // Prepare data for Google Apps Script
       const payload = {
-        type: 'employee',
+        type: 'employee_onboarding',
         formData: {
           firstName: formData.firstName,
           middleName: formData.middleName,
