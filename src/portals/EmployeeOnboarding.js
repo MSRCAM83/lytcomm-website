@@ -201,28 +201,18 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           backgroundCheckConsent: formData.backgroundCheckConsent,
           drugTestConsent: formData.drugTestConsent,
         },
-        documents: {
-          w4: { 
-            signed: !!formData.w4Signature, 
-            signedAt: formData.w4Signature ? new Date().toISOString() : null 
-          },
-          safety: { 
-            signed: !!formData.safetySignature, 
-            signedAt: formData.safetySignature ? new Date().toISOString() : null 
-          },
-          directDeposit: {
-            signed: !!(formData.bankName && formData.routingNumber),
-            signedAt: formData.bankName ? new Date().toISOString() : null
-          },
-          backgroundCheck: {
-            signed: !!formData.backgroundCheckSignature,
-            signedAt: formData.backgroundCheckSignature ? new Date().toISOString() : null
-          },
-          drugTest: {
-            signed: !!formData.drugTestSignature,
-            signedAt: formData.drugTestSignature ? new Date().toISOString() : null
-          }
+        // ACTUAL SIGNATURE DATA (base64 PNG images)
+        signatures: {
+          w4Signature: formData.w4Signature,
+          directDepositSignature: formData.directDepositSignature,
+          backgroundCheckSignature: formData.backgroundCheckSignature,
+          drugTestSignature: formData.drugTestSignature,
+          safetySignature: formData.safetySignature,
         },
+        // Metadata for legal compliance
+        ipAddress: 'Captured via client',
+        submittedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent,
         voidedCheck: voidedCheckData,
         idFile: idFileData
       };
