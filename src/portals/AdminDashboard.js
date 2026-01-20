@@ -17,6 +17,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
+  // eslint-disable-next-line no-unused-vars
   const textColor = darkMode ? '#ffffff' : colors.dark;
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -227,8 +228,8 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 padding: '10px 12px 10px 40px',
                 border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
                 borderRadius: '8px',
-                backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-                color: textColor,
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
                 width: '250px',
               }}
             />
@@ -325,7 +326,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Time Records</h2>
-        <button style={{ padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '8px', color: textColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button style={{ padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '8px', color: '#1f2937', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Filter size={16} /> Filter
         </button>
       </div>
@@ -559,7 +560,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => alert('View details modal would open here')}
-                      style={{ padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '6px', color: textColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}
+                      style={{ padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '6px', color: '#1f2937', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}
                     >
                       <Eye size={16} /> View
                     </button>
@@ -629,8 +630,8 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     padding: '12px',
                     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
                     borderRadius: '8px',
-                    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-                    color: textColor,
+                    backgroundColor: '#ffffff',
+                    color: '#1f2937',
                   }}
                 />
               </div>
@@ -642,7 +643,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               </button>
               <button
                 onClick={() => setShowAddAdmin(false)}
-                style={{ padding: '12px 24px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '8px', color: textColor, cursor: 'pointer' }}
+                style={{ padding: '12px 24px', backgroundColor: 'transparent', border: `1px solid ${colors.gray}`, borderRadius: '8px', color: '#1f2937', cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -745,7 +746,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor, display: 'flex' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: '#1f2937', display: 'flex' }}>
       {/* Sidebar */}
       <aside style={{ width: '260px', backgroundColor: colors.dark, padding: '24px 0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh' }}>
         <div style={{ padding: '0 24px', marginBottom: '32px' }}>
