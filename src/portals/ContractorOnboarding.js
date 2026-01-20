@@ -4,6 +4,7 @@ import { colors, LYT_INFO, URLS, skillOptions } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import EINInput from '../components/EINInput';
 import SSNInput from '../components/SSNInput';
+import { fillW9, fillMSA, createFormPdf } from '../services/pdfService';
 
 const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
   // Dynamic colors based on theme
@@ -278,108 +279,183 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
-      // Prepare COI file as base64 if uploaded
+      // ========== GENERATE FILLED PDFs ==========
+      console.log('Generating contractor PDFs...');
+      
+      // 1. Fill actual IRS W-9 form
+      let w9Pdf = null;
+      try {
+        w9Pdf = await fillW9({
+          companyName: formData.companyName,
+          dba: formData.dba,
+          entityType: formData.entityType,
+          taxClassification: formData.taxClassification,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          ein: formData.taxIdType === 'ein' ? formData.ein : '',
+          ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
+        }, formData.w9Signature);
+        console.log('W-9 PDF filled successfully');
+      } catch (e) {
+        console.error('W-9 error:', e);
+      }
+      
+      // 2. Sign MSA document
+      let msaPdf = null;
+      try {
+        msaPdf = await fillMSA({
+          companyName: formData.companyName,
+          contactName: formData.contactName,
+          contactTitle: formData.contactTitle,
+          title: formData.contactTitle,
+        }, formData.msaSignature);
+        console.log('MSA signed successfully');
+      } catch (e) {
+        console.error('MSA error:', e);
+      }
+      
+      // 3. Rate Card Acceptance
+      let rateCardPdf = null;
+      try {
+        rateCardPdf = await createFormPdf(
+          'Rate Card Acceptance',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'PAYMENT TERMS', checkboxes: [
+              { label: 'Net 30 from invoice approval', checked: true },
+              { label: '10% retainage until project completion', checked: true },
+              { label: 'Lien waivers required with payment applications', checked: true },
+              { label: 'Rates per LYT Communications Rate Card', checked: true },
+            ]},
+            { paragraphs: ['By signing, I accept the rates and payment terms above.'] }
+          ],
+          formData.rateCardSignature,
+          formData.contactName
+        );
+        console.log('Rate Card PDF created');
+      } catch (e) {
+        console.error('Rate Card error:', e);
+      }
+      
+      // 4. Direct Deposit Authorization
+      let directDepositPdf = null;
+      try {
+        directDepositPdf = await createFormPdf(
+          'Direct Deposit Authorization - Contractor',
+          [
+            { title: 'COMPANY', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'BANK INFORMATION', fields: [
+              { label: 'Bank Name', value: formData.bankName },
+              { label: 'Routing Number', value: formData.routingNumber },
+              { label: 'Account (last 4)', value: formData.accountNumber ? '****' + formData.accountNumber.slice(-4) : '' },
+              { label: 'Account Type', value: formData.accountType },
+            ]},
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to initiate credit entries to the account above.',
+            ]}
+          ],
+          formData.bankingSignature,
+          formData.contactName
+        );
+        console.log('Direct Deposit PDF created');
+      } catch (e) {
+        console.error('Direct Deposit error:', e);
+      }
+      
+      // 5. Safety Acknowledgment
+      let safetyPdf = null;
+      try {
+        safetyPdf = await createFormPdf(
+          'Safety Program Acknowledgment',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'SAFETY REQUIREMENTS', checkboxes: [
+              { label: 'Complete site-specific safety orientation', checked: true },
+              { label: 'Required PPE at all times on job sites', checked: true },
+              { label: 'Report all incidents immediately', checked: true },
+              { label: 'Daily toolbox safety meetings required', checked: true },
+              { label: 'OSHA and LYT safety policy compliance', checked: true },
+            ]},
+            { title: 'INSURANCE', fields: [
+              { label: 'General Liability', value: formData.liabilityAmount || 'Per COI' },
+              { label: 'Workers Comp', value: formData.workersCompAmount || 'Per COI' },
+            ]}
+          ],
+          formData.safetySignature,
+          formData.contactName
+        );
+        console.log('Safety PDF created');
+      } catch (e) {
+        console.error('Safety error:', e);
+      }
+
+      // Prepare COI file upload
       let coiFileData = null;
       if (formData.coiFile) {
         const reader = new FileReader();
         coiFileData = await new Promise((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            resolve({
-              name: formData.coiFileName,
-              data: base64,
-              mimeType: formData.coiFile.type
-            });
-          };
+          reader.onload = () => resolve({
+            name: formData.coiFileName,
+            data: reader.result.split(',')[1],
+            mimeType: formData.coiFile.type
+          });
           reader.onerror = reject;
           reader.readAsDataURL(formData.coiFile);
         });
       }
 
-      // Prepare data for Google Apps Script
+      // Build payload with filled PDFs
       const payload = {
         type: 'contractor_onboarding',
         formData: {
           companyName: formData.companyName,
-          dba: formData.dba,
-          entityType: formData.entityType,
           contactName: formData.contactName,
-          contactTitle: formData.contactTitle,
           contactEmail: formData.email,
           contactPhone: formData.phone,
-          companyAddress: formData.address,
-          companyCity: formData.city,
-          companyState: formData.state,
-          companyZip: formData.zip,
-          // For address parsing in Apps Script
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          email: formData.email,
-          phone: formData.phone,
-          // Tax ID
-          ein: formData.taxIdType === 'ein' ? formData.ein : '',
           einLast4: formData.ein ? formData.ein.slice(-4) : '',
-          ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
-          taxClassification: formData.taxClassification,
-          // Insurance
-          insuranceExpiration: formData.coiExpiration,
-          liabilityAmount: formData.liabilityAmount,
-          generalLiability: formData.liabilityAmount,
-          workersCompAmount: formData.workersCompAmount,
-          workersComp: formData.workersCompAmount,
-          autoLiability: formData.autoLiabilityAmount || '',
-          coiUploaded: !!formData.coiFile,
-          // Fleet & Personnel
-          fleet: formData.fleet.filter(f => f.type || f.description),
-          personnel: formData.personnel.filter(p => p.name || p.role),
-          // Skills
-          skills: formData.skills,
-          otherSkills: formData.otherSkills,
-          // Banking
-          bankName: formData.bankName,
-          routingNumber: formData.routingNumber,
-          accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
-          accountType: formData.accountType,
         },
-        // ACTUAL SIGNATURE DATA (base64 PNG images)
-        signatures: {
-          msaSignature: formData.msaSignature,
-          w9Signature: formData.w9Signature,
-          rateCardSignature: formData.rateCardSignature,
-          bankingSignature: formData.bankingSignature,
-          safetySignature: formData.safetySignature,
+        // PRE-FILLED PDFs (base64)
+        filledPdfs: {
+          w9: w9Pdf,
+          msa: msaPdf,
+          rateCard: rateCardPdf,
+          directDeposit: directDepositPdf,
+          safety: safetyPdf,
         },
-        // Metadata for legal compliance
-        ipAddress: 'Captured via client',
+        coiFile: coiFileData,
         submittedAt: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        coiFile: coiFileData
       };
 
-      console.log('Submitting contractor onboarding:', payload);
+      console.log('Submitting contractor with filled PDFs...');
 
-      // Submit to Google Apps Script
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain', // Apps Script requires this for CORS
-        },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
 
       const result = await response.json();
-      console.log('Submission result:', result);
+      console.log('Result:', result);
 
       if (result.success) {
         setSubmitted(true);
       } else {
-        setError(result.error || 'Submission failed. Please try again.');
+        setError(result.error || 'Submission failed.');
       }
     } catch (err) {
       console.error('Submission error:', err);
-      setError('Failed to submit. Please check your connection and try again.');
+      setError('Failed to submit: ' + err.message);
     } finally {
       setSubmitting(false);
     }
