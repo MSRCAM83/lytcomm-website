@@ -1,13 +1,13 @@
 /**
- * LYT Communications - PDF Filling Service
+ * LYT Communications - PDF Service
  * 
- * Uses pdf-lib to fill actual IRS W-4, W-9 forms and LYT MSA
- * with user data and embedded signatures.
+ * Fills actual IRS W-4, W-9 forms and LYT MSA with user data and signatures.
+ * Uses pdf-lib to manipulate PDF form fields.
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-// PDF URLs - these are in the public folder
+// PDF URLs in public folder
 const PDF_URLS = {
   W4: '/Form%20W-4%20sign.pdf',
   W9: '/Form%20W-9%20sign.pdf',
@@ -15,154 +15,164 @@ const PDF_URLS = {
 };
 
 /**
- * Load a PDF from URL
+ * Convert base64 data URL to Uint8Array
+ */
+function dataUrlToBytes(dataUrl) {
+  if (!dataUrl) return null;
+  try {
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch (e) {
+    console.error('Error converting signature:', e);
+    return null;
+  }
+}
+
+/**
+ * Load PDF from public folder
  */
 async function loadPdf(url) {
   const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load PDF: ${url}`);
   const arrayBuffer = await response.arrayBuffer();
-  return PDFDocument.load(arrayBuffer);
+  return PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
 }
 
 /**
- * Convert base64 signature to PNG bytes
+ * Fill IRS Form W-4 with employee data
+ * 
+ * Field names from actual form:
+ * - "a First name and middle initial"
+ * - "Last name"
+ * - "b Social security number"
+ * - "Address"
+ * - "City or town state and ZIP code"
+ * - "Single or Married filing separately" (checkbox)
+ * - "Married filing jointly or Qualifying surviving spouse" (checkbox)
+ * - "Head of household..." (checkbox)
+ * - "fill_14" through "fill_17" (Step 3 amounts)
+ * - "fill_22", "fill_23" (Step 4 amounts)
+ * - "Date"
+ * - "Signature2_es_:signer:signature" (signature field)
  */
-function signatureToBytes(signatureDataUrl) {
-  if (!signatureDataUrl) return null;
-  const base64 = signatureDataUrl.replace(/^data:image\/\w+;base64,/, '');
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-/**
- * Fill W-4 Form with employee data
- */
-export async function fillW4(employeeData, signatureDataUrl) {
+export async function fillW4(data, signatureDataUrl) {
   try {
+    console.log('Loading W-4 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.W4);
     const form = pdfDoc.getForm();
     
-    // Get all field names for debugging
-    const fields = form.getFields();
-    console.log('W-4 Fields:', fields.map(f => f.getName()));
-    
-    // Fill personal info
-    const setTextField = (fieldName, value) => {
+    // Helper to safely set text field
+    const setText = (fieldName, value) => {
       try {
         const field = form.getTextField(fieldName);
-        if (field && value) field.setText(String(value));
+        if (field && value !== undefined && value !== null) {
+          field.setText(String(value));
+        }
       } catch (e) {
-        console.log(`Field not found or error: ${fieldName}`, e.message);
+        console.log(`W-4 field "${fieldName}" error:`, e.message);
       }
     };
     
-    // Personal Information (Step 1)
-    setTextField('a First name and middle initial', `${employeeData.firstName || ''} ${employeeData.middleName || ''}`.trim());
-    setTextField('Last name', employeeData.lastName || '');
-    setTextField('b Social security number', employeeData.ssn || '');
-    setTextField('Address', employeeData.address || '');
-    setTextField('City or town state and ZIP code', `${employeeData.city || ''}, ${employeeData.state || ''} ${employeeData.zip || ''}`);
-    
-    // Filing Status (Step 1c) - checkboxes
-    const setCheckbox = (fieldName, checked) => {
+    // Helper to safely check checkbox
+    const setCheck = (fieldName, checked) => {
       try {
         const field = form.getCheckBox(fieldName);
-        if (field && checked) field.check();
+        if (field && checked) {
+          field.check();
+        }
       } catch (e) {
-        console.log(`Checkbox not found: ${fieldName}`, e.message);
+        console.log(`W-4 checkbox "${fieldName}" error:`, e.message);
       }
     };
     
-    if (employeeData.filingStatus === 'single') {
-      setCheckbox('Single or Married filing separately', true);
-    } else if (employeeData.filingStatus === 'married') {
-      setCheckbox('Married filing jointly or Qualifying surviving spouse', true);
-    } else if (employeeData.filingStatus === 'head') {
-      setCheckbox('Head of household Check only if youre unmarried and pay more than half the costs of keeping up a home for yourself and a qualifying individual', true);
+    // Step 1a - Name
+    setText('a First name and middle initial', `${data.firstName || ''} ${data.middleName || ''}`.trim());
+    setText('Last name', data.lastName || '');
+    
+    // Step 1b - SSN
+    setText('b Social security number', data.ssn || '');
+    
+    // Address
+    setText('Address', data.address || '');
+    setText('City or town state and ZIP code', `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`);
+    
+    // Step 1c - Filing Status
+    const status = (data.filingStatus || '').toLowerCase();
+    if (status === 'single' || status === 'married_separate') {
+      setCheck('Single or Married filing separately', true);
+    } else if (status === 'married' || status === 'married_joint') {
+      setCheck('Married filing jointly or Qualifying surviving spouse', true);
+    } else if (status === 'head') {
+      setCheck('Head of household Check only if youre unmarried and pay more than half the costs of keeping up a home for yourself and a qualifying individual', true);
     }
     
-    // Step 2 - Multiple Jobs
-    if (employeeData.multipleJobs) {
-      setCheckbox('option is generally more accurate than Step 2b if pay at the lower paying job is more than half of the pay at', true);
+    // Step 3 - Dependents (fill_14 = children x $2000, fill_15 = other x $500)
+    if (data.qualifyingChildren) {
+      const childAmount = parseInt(data.qualifyingChildren) * 2000;
+      setText('fill_14', childAmount > 0 ? String(childAmount) : '');
+    }
+    if (data.otherDependents) {
+      const otherAmount = parseInt(data.otherDependents) * 500;
+      setText('fill_15', otherAmount > 0 ? String(otherAmount) : '');
     }
     
-    // Step 3 - Dependents
-    if (employeeData.qualifyingChildren) {
-      setTextField('fill_14', String(parseInt(employeeData.qualifyingChildren) * 2000));
-    }
-    if (employeeData.otherDependents) {
-      setTextField('fill_15', String(parseInt(employeeData.otherDependents) * 500));
+    // Step 4a - Other income
+    if (data.otherIncome) {
+      setText('fill_16', data.otherIncome);
     }
     
-    // Step 4 - Other adjustments
-    if (employeeData.otherIncome) {
-      setTextField('fill_16', employeeData.otherIncome);
+    // Step 4b - Deductions
+    if (data.deductions) {
+      setText('fill_17', data.deductions);
     }
-    if (employeeData.deductions) {
-      setTextField('fill_17', employeeData.deductions);
-    }
-    if (employeeData.extraWithholding) {
-      setTextField('fill_22', employeeData.extraWithholding);
+    
+    // Step 4c - Extra withholding
+    if (data.extraWithholding) {
+      setText('fill_22', data.extraWithholding);
     }
     
     // Date
-    setTextField('Date', new Date().toLocaleDateString());
+    setText('Date', new Date().toLocaleDateString());
+    
+    // Employer info
+    setText('Employers name and address', 'LYT Communications, LLC\n12130 State Highway 3\nWebster, TX 77598');
+    setText('Employer identification number EIN', '');
+    setText('First date of employment', new Date().toLocaleDateString());
     
     // Embed signature image
     if (signatureDataUrl) {
       try {
-        const sigBytes = signatureToBytes(signatureDataUrl);
-        const sigImage = await pdfDoc.embedPng(sigBytes);
-        
-        // Get the signature field and its position
-        const sigField = form.getField('Signature2_es_:signer:signature');
-        if (sigField) {
-          const widgets = sigField.acroField.getWidgets();
-          if (widgets.length > 0) {
-            const widget = widgets[0];
-            const rect = widget.getRectangle();
-            
-            // Draw the signature image on the page
-            const pages = pdfDoc.getPages();
-            const page = pages[0]; // Signature is on first page
-            
-            page.drawImage(sigImage, {
-              x: rect.x,
-              y: rect.y,
-              width: rect.width,
-              height: rect.height,
-            });
-          }
-        }
-      } catch (sigError) {
-        console.log('Signature embed error:', sigError);
-        // Try alternative approach - draw on fixed position
-        const pages = pdfDoc.getPages();
-        const firstPage = pages[0];
-        const sigBytes = signatureToBytes(signatureDataUrl);
+        const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
-          // W-4 signature line is approximately at these coordinates
+          const pages = pdfDoc.getPages();
+          const firstPage = pages[0];
+          
+          // W-4 signature line is near bottom of first page
+          // Position: approximately x=72, y=195, width=180, height=45
           firstPage.drawImage(sigImage, {
-            x: 50,
-            y: 195,
-            width: 150,
-            height: 40,
+            x: 72,
+            y: 188,
+            width: 180,
+            height: 45,
           });
         }
+      } catch (sigErr) {
+        console.error('W-4 signature embed error:', sigErr);
       }
     }
     
-    // Flatten the form so it can't be edited
+    // Flatten form
     form.flatten();
     
-    // Save and return as base64
+    // Save and convert to base64
     const pdfBytes = await pdfDoc.save();
-    const base64 = btoa(String.fromCharCode(...pdfBytes));
-    return base64;
+    return uint8ArrayToBase64(pdfBytes);
     
   } catch (error) {
     console.error('Error filling W-4:', error);
@@ -171,105 +181,122 @@ export async function fillW4(employeeData, signatureDataUrl) {
 }
 
 /**
- * Fill W-9 Form with contractor data
+ * Fill IRS Form W-9 with contractor data
+ * 
+ * Field names from actual form:
+ * - "1 Name of entityindividual..." (name/company)
+ * - "2 Business namedisregarded entity name..." (DBA)
+ * - "Individualsole proprietor" (checkbox)
+ * - "C corporation" (checkbox)
+ * - "S corporation" (checkbox)
+ * - "Partnership" (checkbox)
+ * - "LLC Enter the tax classification..." (checkbox)
+ * - "undefined" (LLC classification letter)
+ * - "5 Address..." (address)
+ * - "6 City state and ZIP code" (city/state/zip)
+ * - "Text11", "Text12" (EIN parts)
+ * - "Social security number" (SSN)
+ * - "Signature of US person Date" (date)
+ * - "Signature1_es_:signer:signature" (signature)
  */
-export async function fillW9(contractorData, signatureDataUrl) {
+export async function fillW9(data, signatureDataUrl) {
   try {
+    console.log('Loading W-9 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.W9);
     const form = pdfDoc.getForm();
     
-    const setTextField = (fieldName, value) => {
+    const setText = (fieldName, value) => {
       try {
         const field = form.getTextField(fieldName);
-        if (field && value) field.setText(String(value));
+        if (field && value !== undefined && value !== null) {
+          field.setText(String(value));
+        }
       } catch (e) {
-        console.log(`Field not found: ${fieldName}`);
+        console.log(`W-9 field "${fieldName}" error:`, e.message);
       }
     };
     
-    const setCheckbox = (fieldName, checked) => {
+    const setCheck = (fieldName, checked) => {
       try {
         const field = form.getCheckBox(fieldName);
-        if (field && checked) field.check();
+        if (field && checked) {
+          field.check();
+        }
       } catch (e) {
-        console.log(`Checkbox not found: ${fieldName}`);
+        console.log(`W-9 checkbox "${fieldName}" error:`, e.message);
       }
     };
     
     // Line 1 - Name
-    setTextField('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', 
-      contractorData.companyName || '');
+    setText('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', 
+      data.companyName || data.name || '');
     
-    // Line 2 - Business name/DBA
-    setTextField('2 Business namedisregarded entity name if different from above', contractorData.dba || '');
+    // Line 2 - DBA
+    setText('2 Business namedisregarded entity name if different from above', data.dba || '');
     
-    // Line 3 - Tax classification checkboxes
-    const entityType = (contractorData.entityType || '').toLowerCase();
+    // Line 3 - Tax Classification
+    const entityType = (data.entityType || '').toLowerCase();
     if (entityType.includes('individual') || entityType.includes('sole')) {
-      setCheckbox('Individualsole proprietor', true);
-    } else if (entityType.includes('c corp')) {
-      setCheckbox('C corporation', true);
+      setCheck('Individualsole proprietor', true);
+    } else if (entityType.includes('c corp') && !entityType.includes('s corp')) {
+      setCheck('C corporation', true);
     } else if (entityType.includes('s corp')) {
-      setCheckbox('S corporation', true);
+      setCheck('S corporation', true);
     } else if (entityType.includes('partner')) {
-      setCheckbox('Partnership', true);
+      setCheck('Partnership', true);
     } else if (entityType.includes('trust') || entityType.includes('estate')) {
-      setCheckbox('Trustestate', true);
+      setCheck('Trustestate', true);
     } else if (entityType.includes('llc')) {
-      setCheckbox('LLC Enter the tax classification C  C corporation S  S corporation P  Partnership', true);
-      // Set the LLC tax classification letter
-      if (contractorData.taxClassification) {
-        setTextField('undefined', contractorData.taxClassification.charAt(0).toUpperCase());
+      setCheck('LLC Enter the tax classification C  C corporation S  S corporation P  Partnership', true);
+      // LLC tax classification letter
+      if (data.taxClassification) {
+        setText('undefined', data.taxClassification.charAt(0).toUpperCase());
       }
     }
     
     // Line 5 - Address
-    setTextField('5 Address number street and apt or suite no See instructions', contractorData.address || '');
+    setText('5 Address number street and apt or suite no See instructions', data.address || '');
     
     // Line 6 - City, State, ZIP
-    setTextField('6 City state and ZIP code', 
-      `${contractorData.city || ''}, ${contractorData.state || ''} ${contractorData.zip || ''}`);
+    setText('6 City state and ZIP code', `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`);
     
-    // Part I - TIN (Social Security Number or EIN)
-    // The SSN field has 3 parts, EIN has 2 parts
-    if (contractorData.ein) {
-      // EIN format: XX-XXXXXXX
-      const ein = contractorData.ein.replace(/\D/g, '');
-      setTextField('Text11', ein.substring(0, 2));
-      setTextField('Text12', ein.substring(2));
-    } else if (contractorData.ssn) {
-      // SSN format: XXX-XX-XXXX  
-      const ssn = contractorData.ssn.replace(/\D/g, '');
-      setTextField('Social security number', ssn);
+    // Part I - TIN
+    if (data.ein) {
+      const ein = (data.ein || '').replace(/\D/g, '');
+      setText('Text11', ein.substring(0, 2));
+      setText('Text12', ein.substring(2));
+    } else if (data.ssn) {
+      setText('Social security number', data.ssn);
     }
     
     // Signature date
-    setTextField('Signature of US person Date', new Date().toLocaleDateString());
+    setText('Signature of US person Date', new Date().toLocaleDateString());
     
     // Embed signature
     if (signatureDataUrl) {
       try {
-        const sigBytes = signatureToBytes(signatureDataUrl);
-        const sigImage = await pdfDoc.embedPng(sigBytes);
-        
-        const pages = pdfDoc.getPages();
-        const firstPage = pages[0];
-        
-        // W-9 signature line position (approximate)
-        firstPage.drawImage(sigImage, {
-          x: 50,
-          y: 140,
-          width: 180,
-          height: 45,
-        });
-      } catch (sigError) {
-        console.log('W-9 signature error:', sigError);
+        const sigBytes = dataUrlToBytes(signatureDataUrl);
+        if (sigBytes) {
+          const sigImage = await pdfDoc.embedPng(sigBytes);
+          const pages = pdfDoc.getPages();
+          const firstPage = pages[0];
+          
+          // W-9 signature line position
+          firstPage.drawImage(sigImage, {
+            x: 72,
+            y: 130,
+            width: 180,
+            height: 45,
+          });
+        }
+      } catch (sigErr) {
+        console.error('W-9 signature embed error:', sigErr);
       }
     }
     
     form.flatten();
     const pdfBytes = await pdfDoc.save();
-    return btoa(String.fromCharCode(...pdfBytes));
+    return uint8ArrayToBase64(pdfBytes);
     
   } catch (error) {
     console.error('Error filling W-9:', error);
@@ -278,56 +305,55 @@ export async function fillW9(contractorData, signatureDataUrl) {
 }
 
 /**
- * Fill MSA with contractor signature
- * Since MSA has no form fields, we'll add text and signature to the signature page
+ * Sign MSA document
+ * MSA has no form fields, so we add signature and info to last page
  */
-export async function fillMSA(contractorData, signatureDataUrl) {
+export async function fillMSA(data, signatureDataUrl) {
   try {
+    console.log('Loading MSA PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.MSA);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
     const pages = pdfDoc.getPages();
-    // MSA signature page is typically the last page
     const lastPage = pages[pages.length - 1];
-    const { width, height } = lastPage.getSize();
     
-    // Add contractor information to signature block
-    // These positions need to be adjusted based on your actual MSA layout
-    const signatureBlockY = 200; // Adjust based on actual position
+    // Add contractor info to signature block area
+    // These positions need adjustment based on actual MSA layout
+    const sigBlockY = 180;
     
     // Company Name
-    lastPage.drawText(contractorData.companyName || '', {
+    lastPage.drawText(data.companyName || '', {
       x: 72,
-      y: signatureBlockY + 80,
+      y: sigBlockY + 100,
       size: 11,
       font: fontBold,
       color: rgb(0, 0, 0),
     });
     
-    // Contact Name (Printed Name)
-    lastPage.drawText(contractorData.contactName || '', {
+    // Printed Name
+    lastPage.drawText(`Name: ${data.contactName || ''}`, {
       x: 72,
-      y: signatureBlockY + 40,
-      size: 11,
+      y: sigBlockY + 60,
+      size: 10,
       font: font,
       color: rgb(0, 0, 0),
     });
     
     // Title
-    lastPage.drawText(contractorData.contactTitle || contractorData.title || '', {
+    lastPage.drawText(`Title: ${data.contactTitle || data.title || ''}`, {
       x: 300,
-      y: signatureBlockY + 40,
-      size: 11,
+      y: sigBlockY + 60,
+      size: 10,
       font: font,
       color: rgb(0, 0, 0),
     });
     
     // Date
-    lastPage.drawText(new Date().toLocaleDateString(), {
-      x: 450,
-      y: signatureBlockY + 40,
-      size: 11,
+    lastPage.drawText(`Date: ${new Date().toLocaleDateString()}`, {
+      x: 72,
+      y: sigBlockY + 40,
+      size: 10,
       font: font,
       color: rgb(0, 0, 0),
     });
@@ -335,32 +361,32 @@ export async function fillMSA(contractorData, signatureDataUrl) {
     // Embed signature
     if (signatureDataUrl) {
       try {
-        const sigBytes = signatureToBytes(signatureDataUrl);
-        const sigImage = await pdfDoc.embedPng(sigBytes);
-        
-        lastPage.drawImage(sigImage, {
-          x: 72,
-          y: signatureBlockY,
-          width: 180,
-          height: 45,
-        });
-      } catch (sigError) {
-        console.log('MSA signature error:', sigError);
+        const sigBytes = dataUrlToBytes(signatureDataUrl);
+        if (sigBytes) {
+          const sigImage = await pdfDoc.embedPng(sigBytes);
+          lastPage.drawImage(sigImage, {
+            x: 72,
+            y: sigBlockY - 10,
+            width: 200,
+            height: 50,
+          });
+        }
+      } catch (sigErr) {
+        console.error('MSA signature embed error:', sigErr);
       }
     }
     
     const pdfBytes = await pdfDoc.save();
-    return btoa(String.fromCharCode(...pdfBytes));
+    return uint8ArrayToBase64(pdfBytes);
     
   } catch (error) {
-    console.error('Error filling MSA:', error);
+    console.error('Error signing MSA:', error);
     throw error;
   }
 }
 
 /**
- * Create a simple PDF for forms that don't have fillable fields
- * (Direct Deposit, Emergency Contact, Safety Acknowledgment, etc.)
+ * Create a branded PDF for other forms (Direct Deposit, Emergency Contact, etc.)
  */
 export async function createFormPdf(title, sections, signatureDataUrl, signerName) {
   try {
@@ -373,7 +399,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
     
     let y = height - 50;
     
-    // Header
+    // Blue header
     page.drawRectangle({
       x: 0,
       y: height - 60,
@@ -384,7 +410,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
     
     page.drawText('LYT Communications, LLC', {
       x: 50,
-      y: height - 40,
+      y: height - 38,
       size: 18,
       font: fontBold,
       color: rgb(1, 1, 1),
@@ -392,7 +418,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
     
     y = height - 90;
     
-    // Title
+    // Document title
     page.drawText(title, {
       x: 50,
       y: y,
@@ -418,8 +444,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
       
       if (section.fields) {
         for (const field of section.fields) {
-          const text = `${field.label}: ${field.value || ''}`;
-          page.drawText(text, {
+          page.drawText(`${field.label}: ${field.value || ''}`, {
             x: 50,
             y: y,
             size: 10,
@@ -432,33 +457,20 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
       
       if (section.paragraphs) {
         for (const para of section.paragraphs) {
-          // Word wrap long paragraphs
+          // Simple word wrap
           const words = para.split(' ');
           let line = '';
           for (const word of words) {
-            const testLine = line + word + ' ';
-            if (testLine.length > 85) {
-              page.drawText(line.trim(), {
-                x: 50,
-                y: y,
-                size: 9,
-                font: font,
-                color: rgb(0, 0, 0),
-              });
+            if ((line + word).length > 90) {
+              page.drawText(line.trim(), { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
               y -= 12;
               line = word + ' ';
             } else {
-              line = testLine;
+              line += word + ' ';
             }
           }
           if (line.trim()) {
-            page.drawText(line.trim(), {
-              x: 50,
-              y: y,
-              size: 9,
-              font: font,
-              color: rgb(0, 0, 0),
-            });
+            page.drawText(line.trim(), { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
             y -= 12;
           }
           y -= 5;
@@ -467,14 +479,8 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
       
       if (section.checkboxes) {
         for (const cb of section.checkboxes) {
-          const checkmark = cb.checked ? '☑' : '☐';
-          page.drawText(`${checkmark} ${cb.label}`, {
-            x: 50,
-            y: y,
-            size: 9,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
+          const mark = cb.checked ? '☑' : '☐';
+          page.drawText(`${mark} ${cb.label}`, { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
           y -= 14;
         }
       }
@@ -484,101 +490,61 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
     
     // E-Sign consent
     y -= 10;
-    page.drawLine({
-      start: { x: 50, y: y },
-      end: { x: width - 50, y: y },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
-    });
+    page.drawLine({ start: { x: 50, y: y }, end: { x: width - 50, y: y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
     y -= 15;
     
-    page.drawText('ELECTRONIC SIGNATURE CONSENT', {
-      x: 50,
-      y: y,
-      size: 8,
-      font: fontBold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    y -= 10;
+    page.drawText('ELECTRONIC SIGNATURE CONSENT', { x: 50, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+    y -= 12;
     
-    const consentText = 'By signing below, I consent to conduct this transaction electronically pursuant to the ESIGN Act and UETA.';
-    page.drawText(consentText, {
-      x: 50,
-      y: y,
-      size: 7,
-      font: font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+    page.drawText('By signing, I consent to electronic transaction per ESIGN Act and UETA.', { x: 50, y: y, size: 7, font: font, color: rgb(0.4, 0.4, 0.4) });
     y -= 25;
     
-    // Signature section
-    page.drawText('Signature:', {
-      x: 50,
-      y: y,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    // Signature area
+    page.drawText('Signature:', { x: 50, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
     
-    // Embed signature
     if (signatureDataUrl) {
       try {
-        const sigBytes = signatureToBytes(signatureDataUrl);
-        const sigImage = await pdfDoc.embedPng(sigBytes);
-        page.drawImage(sigImage, {
-          x: 120,
-          y: y - 10,
-          width: 150,
-          height: 40,
-        });
+        const sigBytes = dataUrlToBytes(signatureDataUrl);
+        if (sigBytes) {
+          const sigImage = await pdfDoc.embedPng(sigBytes);
+          page.drawImage(sigImage, { x: 120, y: y - 15, width: 150, height: 40 });
+        }
       } catch (e) {
         console.log('Signature error:', e);
       }
     }
     
     y -= 50;
-    
-    page.drawText(`Printed Name: ${signerName || ''}`, {
-      x: 50,
-      y: y,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
-    
-    page.drawText(`Date: ${new Date().toLocaleDateString()}`, {
-      x: 300,
-      y: y,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    page.drawText(`Printed Name: ${signerName || ''}`, { x: 50, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
+    page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: 300, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
     
     y -= 15;
-    page.drawText(`Time: ${new Date().toLocaleTimeString()}`, {
-      x: 300,
-      y: y,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    page.drawText(`Time: ${new Date().toLocaleTimeString()}`, { x: 300, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
     
     // Footer
     page.drawText(`Document ID: LYT-${Date.now()} | Generated: ${new Date().toISOString()}`, {
-      x: 50,
-      y: 30,
-      size: 7,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
+      x: 50, y: 30, size: 7, font: font, color: rgb(0.5, 0.5, 0.5)
     });
     
     const pdfBytes = await pdfDoc.save();
-    return btoa(String.fromCharCode(...pdfBytes));
+    return uint8ArrayToBase64(pdfBytes);
     
   } catch (error) {
     console.error('Error creating form PDF:', error);
     throw error;
   }
+}
+
+/**
+ * Convert Uint8Array to base64 string
+ */
+function uint8ArrayToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 export default {
