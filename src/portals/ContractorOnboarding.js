@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw } from 'lucide-react';
 import { colors, LYT_INFO, URLS, skillOptions } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import EINInput from '../components/EINInput';
@@ -35,10 +35,14 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     city: '',
     state: '',
     zip: '',
-    // MSA
+    // MSA - additional fields for PDF generation
+    msaPrintedName: '',
+    msaTitle: '',
     msaSignature: null,
     msaDate: new Date().toISOString().split('T')[0],
+    msaEffectiveDate: new Date().toISOString().split('T')[0],
     witnessName: '',
+    witnessSignature: null,
     witnessDate: '',
     // W-9
     taxIdType: 'ein',
@@ -63,12 +67,22 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     otherSkills: '',
     // Rate Card
     rateCardAccepted: false,
-    // Banking
+    // Banking / Direct Deposit
     bankName: '',
     routingNumber: '',
     accountNumber: '',
     accountType: 'checking',
+    voidedCheckFile: null,
+    voidedCheckFileName: '',
+    directDepositSignature: null,
+    directDepositDate: new Date().toISOString().split('T')[0],
+    directDepositAgreed: false,
   });
+
+  // State for live rate card data
+  const [rateCardData, setRateCardData] = useState([]);
+  const [rateCardLoading, setRateCardLoading] = useState(false);
+  const [rateCardError, setRateCardError] = useState(null);
 
   const steps = [
     { id: 'company', title: 'Company Info', icon: Building },
@@ -92,6 +106,94 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     { value: 'trust', label: 'Trust/Estate' },
     { value: 'other', label: 'Other' },
   ];
+
+  // Fetch rate card data from Google Sheets
+  const fetchRateCard = async () => {
+    setRateCardLoading(true);
+    setRateCardError(null);
+    try {
+      const response = await fetch(
+        `https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}/export?format=csv`
+      );
+      const text = await response.text();
+      
+      // Parse CSV
+      const lines = text.split('\n').filter(line => line.trim());
+      const data = [];
+      let currentCategory = '';
+      
+      for (const line of lines) {
+        // Skip header rows and empty lines
+        if (line.includes('Contractor:') || line.includes('Unit Code,') || !line.trim()) continue;
+        
+        const cols = line.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+        
+        // Check if this is a valid data row (starts with a code like AE1, FS1, etc.)
+        if (cols[0] && /^[A-Z]{1,4}[0-9]/.test(cols[0])) {
+          // Determine category from code prefix
+          const code = cols[0];
+          if (code.startsWith('AE') || code.startsWith('BCP')) currentCategory = 'AERIAL';
+          else if (code.startsWith('FS')) currentCategory = 'SPLICING';
+          else if (code.startsWith('UG')) currentCategory = 'UNDERGROUND';
+          else if (code.startsWith('PP') || code.startsWith('PA') || code.startsWith('PC') || code.startsWith('RA') || code.startsWith('RC')) currentCategory = 'POLES & RESTORATION';
+          else if (code.startsWith('TC') || code.startsWith('HS')) currentCategory = 'OTHER';
+          
+          data.push({
+            code: cols[0] || '',
+            description: cols[1] || '',
+            uom: cols[2] || '',
+            price: cols[3] || '',
+            category: currentCategory
+          });
+        }
+      }
+      
+      setRateCardData(data);
+    } catch (err) {
+      console.error('Failed to fetch rate card:', err);
+      setRateCardError('Failed to load rate card. Please try again.');
+    } finally {
+      setRateCardLoading(false);
+    }
+  };
+
+  // Fetch rate card on component mount
+  useEffect(() => {
+    fetchRateCard();
+  }, []);
+
+  // Download rate card as CSV
+  const downloadRateCard = () => {
+    if (rateCardData.length === 0) return;
+    
+    const headers = ['Unit Code', 'Description', 'UOM', 'Unit Price'];
+    const csvContent = [
+      headers.join(','),
+      ...rateCardData.map(row => 
+        [row.code, `"${row.description}"`, row.uom, row.price].join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LYT_Rate_Card_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle voided check upload
+  const handleVoidedCheckUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData({
+        ...formData,
+        voidedCheckFile: file,
+        voidedCheckFileName: file.name,
+      });
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -447,22 +549,77 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       <SignaturePad
         onSignatureChange={(sig) => setFormData({ ...formData, msaSignature: sig })}
         label="Authorized Signature"
+        darkMode={darkMode}
       />
+
+      {/* Required fields that will be filled into the MSA PDF */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '16px' }}>
+        <div>
+          <label style={labelStyle}>Printed Name *</label>
+          <input 
+            type="text" 
+            name="msaPrintedName" 
+            value={formData.msaPrintedName} 
+            onChange={handleChange} 
+            required
+            style={inputStyle} 
+            placeholder="Full legal name"
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Title *</label>
+          <input 
+            type="text" 
+            name="msaTitle" 
+            value={formData.msaTitle} 
+            onChange={handleChange} 
+            required
+            style={inputStyle} 
+            placeholder="e.g., Owner, President, Manager"
+          />
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '16px' }}>
         <div>
-          <label style={labelStyle}>Date</label>
-          <input type="date" name="msaDate" value={formData.msaDate} onChange={handleChange} style={inputStyle} />
+          <label style={labelStyle}>Signature Date *</label>
+          <input type="date" name="msaDate" value={formData.msaDate} onChange={handleChange} required style={inputStyle} />
         </div>
         <div>
-          <label style={labelStyle}>Witness Name (if required)</label>
-          <input type="text" name="witnessName" value={formData.witnessName} onChange={handleChange} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>Witness Date</label>
-          <input type="date" name="witnessDate" value={formData.witnessDate} onChange={handleChange} style={inputStyle} />
+          <label style={labelStyle}>Agreement Effective Date *</label>
+          <input type="date" name="msaEffectiveDate" value={formData.msaEffectiveDate} onChange={handleChange} required style={inputStyle} />
         </div>
       </div>
+
+      {/* Witness section - optional but recommended */}
+      <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#f0f9ff', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#bae6fd'}` }}>
+        <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '12px', color: darkMode ? '#93c5fd' : '#0369a1' }}>Witness (Recommended)</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div>
+            <label style={labelStyle}>Witness Name</label>
+            <input type="text" name="witnessName" value={formData.witnessName} onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Witness Date</label>
+            <input type="date" name="witnessDate" value={formData.witnessDate} onChange={handleChange} style={inputStyle} />
+          </div>
+        </div>
+        {formData.witnessName && (
+          <div style={{ marginTop: '12px' }}>
+            <SignaturePad
+              onSignatureChange={(sig) => setFormData({ ...formData, witnessSignature: sig })}
+              label="Witness Signature"
+              required={false}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Autofill notice */}
+      <p style={{ marginTop: '16px', fontSize: '0.85rem', color: darkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
+        Note: Company information from Step 1 ({formData.companyName || 'Company Name'}) will be automatically included in the final agreement document.
+      </p>
     </div>
   );
 
@@ -534,9 +691,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
         
         {formData.taxIdType === 'ein' ? (
-          <EINInput value={formData.ein} onChange={(val) => setFormData({ ...formData, ein: val })} />
+          <EINInput value={formData.ein} onChange={(val) => setFormData({ ...formData, ein: val })} darkMode={darkMode} />
         ) : (
-          <SSNInput value={formData.ssn} onChange={(val) => setFormData({ ...formData, ssn: val })} />
+          <SSNInput value={formData.ssn} onChange={(val) => setFormData({ ...formData, ssn: val })} darkMode={darkMode} />
         )}
       </div>
 
@@ -589,6 +746,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       <SignaturePad
         onSignatureChange={(sig) => setFormData({ ...formData, w9Signature: sig })}
         label="Signature"
+        darkMode={darkMode}
       />
 
       <div style={{ marginTop: '16px' }}>
@@ -852,62 +1010,12 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     </div>
   );
 
-  // Rate card data embedded directly - no iframe needed
-  const rateCardData = [
-    { category: 'AERIAL', items: [
-      { code: 'AE1', desc: 'Place 6M strand', uom: 'LF', price: '$0.50' },
-      { code: 'AE2', desc: 'Lash Cable Up to 144 Fiber on new strand', uom: 'LF', price: '$0.60' },
-      { code: 'AE3', desc: 'Overlash to Existing Fiber up to 144 Fiber', uom: 'LF', price: '$0.60' },
-      { code: 'AE3.1', desc: 'Lash or Overlash Cable Larger than 144 Fiber', uom: 'LF', price: '$0.90' },
-      { code: 'AE4', desc: 'Place Down Guy for 6M strand (includes Guy Guard)', uom: 'EA', price: '$14.00' },
-      { code: 'AE5', desc: 'Place Screw Anchor – 6000 lbs', uom: 'EA', price: '$30.00' },
-      { code: 'AE7', desc: 'Place 2 in. Riser Guard', uom: 'EA', price: '$30.00' },
-      { code: 'AE8', desc: 'Place aerial dielectric self supporting cable', uom: 'LF', price: '$0.40' },
-      { code: 'AE9L', desc: 'Place Cable extension Arm Long', uom: 'EA', price: '$50.00' },
-      { code: 'AE9S', desc: 'Place Cable extension Arm Short', uom: 'EA', price: '$40.00' },
-      { code: 'AE10', desc: 'Tree Trimming', uom: 'Span', price: '$25.00' },
-      { code: 'AE11', desc: 'Resag cable', uom: 'Span', price: '$25.00' },
-      { code: 'AE12', desc: 'Delash/relash', uom: 'LF', price: '$0.60' },
-      { code: 'AE13', desc: 'Dead end Pole Transfer', uom: 'EA', price: '$50.00' },
-      { code: 'AE14', desc: 'Straight thru Pole Transfer', uom: 'EA', price: '$35.00' },
-      { code: 'AE15', desc: 'Bonding aerial strand', uom: 'EA', price: '$8.00' },
-      { code: 'AE17', desc: 'Place Aerial Damper Unit', uom: 'EA', price: '$20.00' },
-      { code: 'AE18', desc: 'Place Tree/Squirrel Guard', uom: 'LF', price: '$0.25' },
-    ]},
-    { category: 'SPLICING', items: [
-      { code: 'FS1', desc: 'Fusion splice 1 fiber', uom: 'EA', price: '$13.00' },
-      { code: 'FS2', desc: 'Ring cut', uom: 'EA', price: '$180.00' },
-      { code: 'FS3', desc: 'Test Fiber', uom: 'EA', price: '$5.00' },
-      { code: 'FS4', desc: 'ReEnter/Install Enclosure', uom: 'EA', price: '$100.00' },
-    ]},
-    { category: 'UNDERGROUND', items: [
-      { code: 'UG1', desc: 'Directional bore 1-4 x 1.25 inch ID subduct', uom: 'LF', price: '$6.00' },
-      { code: 'UG4', desc: 'Pull up to 144ct armored cable/micro cable in duct', uom: 'LF', price: '$0.40' },
-      { code: 'UG5', desc: 'Direct Bury Cable - Plow', uom: 'LF', price: '$1.50' },
-      { code: 'UG6', desc: 'Direct Bury cable – Additional Depth 6" increments', uom: 'EA', price: '$0.40' },
-      { code: 'UG7', desc: 'Direct Bury Pipe - Plow', uom: 'LF', price: '$1.60' },
-      { code: 'UG8', desc: 'Direct Bury Pipe – Additional Duct', uom: 'LF', price: '$0.40' },
-      { code: 'UG9', desc: 'Buried plant Pedestal', uom: 'EA', price: '$30.00' },
-      { code: 'UG10', desc: 'Place Hand hole 30x48x30', uom: 'EA', price: '$240.00' },
-      { code: 'UG11', desc: 'Place Hand hole 24x36x24', uom: 'EA', price: '$85.00' },
-      { code: 'UG12', desc: 'Place Utility Box', uom: 'EA', price: '$16.00' },
-      { code: 'UG14', desc: 'Locate Marker post/Ground Assembly', uom: 'EA', price: '$14.00' },
-      { code: 'UG15', desc: 'Route Marker Post', uom: 'EA', price: '$9.00' },
-    ]},
-    { category: 'POLES & RESTORATION', items: [
-      { code: 'PP1', desc: "Place Pole 35' Class 7", uom: 'EA', price: '$280.00' },
-      { code: 'PP2', desc: 'Hand Carry/Set in rear Easement', uom: 'EA', price: '$80.00' },
-      { code: 'PP3', desc: "Detach & Remove Pole up to 35' Class 5", uom: 'EA', price: '$160.00' },
-      { code: 'PA01', desc: 'Place Asphalt up to 4"', uom: 'SF', price: '$15.00' },
-      { code: 'PA02', desc: 'Place Asphalt > 4" up to 8"', uom: 'SF', price: '$24.00' },
-      { code: 'PC01', desc: 'Place Concrete up to 4" depth', uom: 'SF', price: '$20.00' },
-      { code: 'PC02', desc: 'Place Concrete > 4" up to 8" depth', uom: 'SF', price: '$30.00' },
-    ]},
-    { category: 'OTHER', items: [
-      { code: 'TC1', desc: 'Traffic control personnel', uom: 'HR', price: '$30.00' },
-      { code: 'HSPH', desc: 'Hardscape Potholing', uom: 'EA', price: '$150.00' },
-    ]},
-  ];
+  // Group rate card data by category
+  const groupedRateCard = rateCardData.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {});
 
   const [expandedCategories, setExpandedCategories] = useState(['AERIAL']);
 
@@ -919,74 +1027,137 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
 
   const renderRateCard = () => (
     <div>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Rate Card Acceptance</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Rate Card Acceptance</h3>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={fetchRateCard}
+            disabled={rateCardLoading}
+            style={{ 
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${accentPrimary}`,
+              borderRadius: '6px',
+              color: accentPrimary,
+              cursor: rateCardLoading ? 'wait' : 'pointer',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <RefreshCw size={14} style={{ animation: rateCardLoading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={downloadRateCard}
+            disabled={rateCardData.length === 0}
+            style={{ 
+              padding: '8px 12px',
+              backgroundColor: accentSecondary,
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              cursor: rateCardData.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Download size={14} />
+            Download CSV
+          </button>
+        </div>
+      </div>
       
       <div style={{ padding: '24px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
-        <p style={{ color: darkMode ? '#9ca3af' : '#6b7280', lineHeight: '1.7', marginBottom: '16px' }}>
+        <p style={{ color: darkMode ? '#d1d5db' : '#4b5563', lineHeight: '1.7', marginBottom: '16px' }}>
           {LYT_INFO.name} maintains a standard rate card for subcontractor services. Rates are negotiable on a per-project basis 
           and will be specified in individual Scope of Work (SOW) documents.
         </p>
         
-        {/* Embedded Rate Card Table */}
-        <div style={{ 
-          border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, 
-          borderRadius: '8px', 
-          overflow: 'hidden',
-          marginBottom: '16px',
-          maxHeight: '450px',
-          overflowY: 'auto',
-        }}>
-          {rateCardData.map((section) => (
-            <div key={section.category}>
-              <button
-                type="button"
-                onClick={() => toggleCategory(section.category)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  backgroundColor: darkMode ? '#374151' : '#e5e7eb',
-                  border: 'none',
-                  borderBottom: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  color: darkMode ? '#f9fafb' : '#1f2937',
-                  fontWeight: '600',
-                  fontSize: '0.9rem',
-                }}
-              >
-                <span>{section.category}</span>
-                <span style={{ transform: expandedCategories.includes(section.category) ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
-              </button>
-              {expandedCategories.includes(section.category) && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: darkMode ? '#1f2937' : '#f9fafb' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Code</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Description</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>UOM</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.items.map((item, idx) => (
-                      <tr key={item.code} style={{ backgroundColor: idx % 2 === 0 ? (darkMode ? '#111827' : '#ffffff') : (darkMode ? '#1f2937' : '#f9fafb') }}>
-                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentPrimary, fontWeight: '500' }}>{item.code}</td>
-                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#e5e7eb' : '#374151' }}>{item.desc}</td>
-                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>{item.uom}</td>
-                        <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentSecondary, fontWeight: '600', textAlign: 'right' }}>{item.price}</td>
+        {/* Live Rate Card from Google Sheets */}
+        {rateCardLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+            <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
+            <p>Loading rate card...</p>
+          </div>
+        ) : rateCardError ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: accentError, backgroundColor: darkMode ? '#1f2937' : '#fef2f2', borderRadius: '8px' }}>
+            <AlertCircle size={24} style={{ marginBottom: '8px' }} />
+            <p>{rateCardError}</p>
+            <button onClick={fetchRateCard} style={{ marginTop: '12px', padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+              Try Again
+            </button>
+          </div>
+        ) : rateCardData.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+            <p>No rate card data available.</p>
+          </div>
+        ) : (
+          <div style={{ 
+            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            marginBottom: '16px',
+            maxHeight: '450px',
+            overflowY: 'auto',
+          }}>
+            {Object.entries(groupedRateCard).map(([category, items]) => (
+              <div key={category}>
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: darkMode ? '#374151' : '#e5e7eb',
+                    border: 'none',
+                    borderBottom: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    color: darkMode ? '#f9fafb' : '#1f2937',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <span>{category} ({items.length})</span>
+                  <span style={{ transform: expandedCategories.includes(category) ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▼</span>
+                </button>
+                {expandedCategories.includes(category) && (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: darkMode ? '#1f2937' : '#f9fafb' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500', width: '80px' }}>Code</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>Description</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500', width: '60px' }}>UOM</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500', width: '80px' }}>Rate</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          ))}
-        </div>
+                    </thead>
+                    <tbody>
+                      {items.map((item, idx) => (
+                        <tr key={item.code} style={{ backgroundColor: idx % 2 === 0 ? (darkMode ? '#111827' : '#ffffff') : (darkMode ? '#1f2937' : '#f9fafb') }}>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentPrimary, fontWeight: '500' }}>{item.code}</td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#e5e7eb' : '#374151' }}>{item.description}</td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: darkMode ? '#9ca3af' : '#6b7280', textAlign: 'center' }}>{item.uom}</td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, color: accentSecondary, fontWeight: '600', textAlign: 'right' }}>{item.price}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         
-        <p style={{ fontSize: '0.8rem', color: darkMode ? '#6b7280' : '#9ca3af', fontStyle: 'italic' }}>
-          * Texas/Louisiana Standard Rates. Project-specific rates confirmed in SOW.
+        <p style={{ fontSize: '0.8rem', color: darkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
+          * Texas/Louisiana Standard Rates - Live from Google Sheets. Project-specific rates confirmed in SOW.
         </p>
       </div>
 
@@ -1009,61 +1180,180 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
 
   const renderBanking = () => (
     <div>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Banking Information</h3>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Direct Deposit Authorization</h3>
       
-      <p style={{ color: colors.gray, marginBottom: '20px' }}>
-        Provide your banking details for payment via ACH direct deposit.
+      <p style={{ color: darkMode ? '#d1d5db' : '#4b5563', marginBottom: '20px', lineHeight: '1.6' }}>
+        Provide your banking details for payment via ACH direct deposit. A voided check is required for verification.
       </p>
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Bank Name *</label>
-        <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} required style={inputStyle} />
+      {/* Bank Information */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Bank Account Information</h4>
+        
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Bank Name *</label>
+          <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} required style={inputStyle} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          <div>
+            <label style={labelStyle}>Routing Number (ABA) *</label>
+            <input
+              type="text"
+              name="routingNumber"
+              value={formData.routingNumber}
+              onChange={handleChange}
+              required
+              maxLength={9}
+              style={inputStyle}
+              placeholder="9 digits"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Account Number *</label>
+            <input
+              type="text"
+              name="accountNumber"
+              value={formData.accountNumber}
+              onChange={handleChange}
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Account Type *</label>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            {['checking', 'savings'].map((type) => (
+              <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: textColor }}>
+                <input
+                  type="radio"
+                  name="accountType"
+                  value={type}
+                  checked={formData.accountType === type}
+                  onChange={handleChange}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ textTransform: 'capitalize' }}>{type}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-        <div>
-          <label style={labelStyle}>Routing Number *</label>
-          <input
-            type="text"
-            name="routingNumber"
-            value={formData.routingNumber}
-            onChange={handleChange}
-            required
-            maxLength={9}
-            style={inputStyle}
-            placeholder="9 digits"
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Account Number *</label>
-          <input
-            type="text"
-            name="accountNumber"
-            value={formData.accountNumber}
-            onChange={handleChange}
-            required
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Account Type *</label>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          {['checking', 'savings'].map((type) => (
-            <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      {/* Voided Check Upload */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Voided Check *</h4>
+        <p style={{ color: darkMode ? '#9ca3af' : '#6b7280', fontSize: '0.9rem', marginBottom: '16px' }}>
+          Please upload an image of a voided check for bank account verification. This ensures accurate ACH deposit setup.
+        </p>
+        
+        <div style={{ 
+          border: `2px dashed ${formData.voidedCheckFileName ? colors.green : (darkMode ? '#374151' : '#ddd')}`, 
+          borderRadius: '8px', 
+          padding: '24px', 
+          textAlign: 'center',
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : '#fff'
+        }}>
+          {formData.voidedCheckFileName ? (
+            <div>
+              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckFileName}</p>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, voidedCheckFile: null, voidedCheckFileName: '' })}
+                style={{ padding: '8px 16px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div>
               <input
-                type="radio"
-                name="accountType"
-                value={type}
-                checked={formData.accountType === type}
-                onChange={handleChange}
-                style={{ width: '18px', height: '18px' }}
+                type="file"
+                id="voidedCheck"
+                accept="image/*,.pdf"
+                onChange={handleVoidedCheckUpload}
+                style={{ display: 'none' }}
               />
-              <span style={{ textTransform: 'capitalize' }}>{type}</span>
-            </label>
-          ))}
+              <label
+                htmlFor="voidedCheck"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 24px',
+                  backgroundColor: accentPrimary,
+                  color: '#fff',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                }}
+              >
+                <Upload size={18} />
+                Upload Voided Check
+              </label>
+              <p style={{ color: darkMode ? '#6b7280' : '#9ca3af', fontSize: '0.8rem', marginTop: '12px' }}>
+                Accepted formats: JPG, PNG, PDF (max 10MB)
+              </p>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Direct Deposit Authorization Agreement */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#111827' : '#fffbeb', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#fcd34d'}` }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: darkMode ? '#fcd34d' : '#92400e' }}>Direct Deposit Authorization Agreement</h4>
+        
+        <div style={{ color: darkMode ? '#d1d5db' : '#4b5563', fontSize: '0.9rem', lineHeight: '1.7', marginBottom: '16px' }}>
+          <p style={{ marginBottom: '12px' }}>
+            I hereby authorize {LYT_INFO.name} to initiate credit entries (deposits) to my account at the financial 
+            institution named above. I also authorize the financial institution to accept and credit any such entries.
+          </p>
+          <p style={{ marginBottom: '12px' }}>
+            This authorization will remain in effect until I notify {LYT_INFO.name} in writing to discontinue 
+            these payments, allowing reasonable time to act on my request.
+          </p>
+          <p>
+            I understand that if erroneous deposits are made to my account, {LYT_INFO.name} is authorized to 
+            debit my account for an amount not to exceed the original amount of the erroneous credit.
+          </p>
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', marginBottom: '16px' }}>
+          <input
+            type="checkbox"
+            name="directDepositAgreed"
+            checked={formData.directDepositAgreed}
+            onChange={handleChange}
+            style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: accentPrimary }}
+          />
+          <span style={{ color: textColor, lineHeight: '1.5' }}>
+            I have read and agree to the Direct Deposit Authorization terms above. I certify that the bank 
+            account information provided is accurate.
+          </span>
+        </label>
+
+        {formData.directDepositAgreed && (
+          <>
+            <SignaturePad
+              onSignatureChange={(sig) => setFormData({ ...formData, directDepositSignature: sig })}
+              label="Direct Deposit Authorization Signature"
+              darkMode={darkMode}
+            />
+            <div style={{ marginTop: '12px' }}>
+              <label style={labelStyle}>Date *</label>
+              <input 
+                type="date" 
+                name="directDepositDate" 
+                value={formData.directDepositDate} 
+                onChange={handleChange} 
+                required
+                style={{ ...inputStyle, maxWidth: '200px' }} 
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
