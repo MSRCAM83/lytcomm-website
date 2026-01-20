@@ -311,14 +311,25 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           companyCity: formData.city,
           companyState: formData.state,
           companyZip: formData.zip,
+          // For address parsing in Apps Script
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          email: formData.email,
+          phone: formData.phone,
           // Tax ID
           ein: formData.taxIdType === 'ein' ? formData.ein : '',
+          einLast4: formData.ein ? formData.ein.slice(-4) : '',
           ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
           taxClassification: formData.taxClassification,
           // Insurance
           insuranceExpiration: formData.coiExpiration,
           liabilityAmount: formData.liabilityAmount,
+          generalLiability: formData.liabilityAmount,
           workersCompAmount: formData.workersCompAmount,
+          workersComp: formData.workersCompAmount,
+          autoLiability: formData.autoLiabilityAmount || '',
           coiUploaded: !!formData.coiFile,
           // Fleet & Personnel
           fleet: formData.fleet.filter(f => f.type || f.description),
@@ -332,20 +343,18 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
           accountType: formData.accountType,
         },
-        documents: {
-          msa: { 
-            signed: !!formData.msaSignature, 
-            signedAt: formData.msaSignature ? new Date().toISOString() : null 
-          },
-          w9: { 
-            signed: !!formData.w9Signature, 
-            signedAt: formData.w9Signature ? new Date().toISOString() : null 
-          },
-          rateCard: {
-            signed: formData.rateCardAccepted,
-            signedAt: formData.rateCardAccepted ? new Date().toISOString() : null
-          }
+        // ACTUAL SIGNATURE DATA (base64 PNG images)
+        signatures: {
+          msaSignature: formData.msaSignature,
+          w9Signature: formData.w9Signature,
+          rateCardSignature: formData.rateCardSignature,
+          bankingSignature: formData.bankingSignature,
+          safetySignature: formData.safetySignature,
         },
+        // Metadata for legal compliance
+        ipAddress: 'Captured via client',
+        submittedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent,
         coiFile: coiFileData
       };
 
