@@ -10,6 +10,7 @@ import ServicesPage from './pages/ServicesPage';
 import ContactPage from './pages/ContactPage';
 import PortalSelect from './pages/PortalSelect';
 import InviteCodePage from './pages/InviteCodePage';
+import ApiTestPage from './pages/ApiTestPage';
 
 // Portals
 import EmployeeOnboarding from './portals/EmployeeOnboarding';
@@ -110,6 +111,7 @@ function App() {
     'admin-dashboard',
     'set-password',
     'forgot-password',
+    'api-test',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -150,6 +152,8 @@ function App() {
         return <SetPassword setCurrentPage={handleNavClick} darkMode={darkMode} />;
       case 'forgot-password':
         return <ForgotPassword setCurrentPage={handleNavClick} darkMode={darkMode} />;
+      case 'api-test':
+        return <ApiTestPage darkMode={darkMode} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
