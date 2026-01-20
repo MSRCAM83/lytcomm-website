@@ -15,6 +15,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
+  // eslint-disable-next-line no-unused-vars
   const textColor = darkMode ? '#ffffff' : colors.dark;
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
 
@@ -37,8 +38,8 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: textColor,
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
     boxSizing: 'border-box',
   };
 
@@ -65,13 +66,13 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                 <CheckCircle size={40} color={accentSecondary} />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', marginBottom: '12px' }}>
                 Check Your Email
               </h1>
               <p style={{ color: mutedColor, marginBottom: '8px' }}>
                 We've sent a password reset link to:
               </p>
-              <p style={{ color: textColor, fontWeight: '600', marginBottom: '24px' }}>
+              <p style={{ color: '#1f2937', fontWeight: '600', marginBottom: '24px' }}>
                 {email}
               </p>
               <p style={{ color: mutedColor, fontSize: '0.9rem', marginBottom: '32px' }}>
@@ -147,7 +148,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
               <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                 <Mail size={32} color={accentPrimary} />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', marginBottom: '8px' }}>
                 Forgot Password?
               </h1>
               <p style={{ color: mutedColor }}>
@@ -157,7 +158,7 @@ function ForgotPassword({ setCurrentPage, darkMode }) {
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#1f2937' }}>
                   Email Address
                 </label>
                 <input
