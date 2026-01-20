@@ -5,6 +5,7 @@ import { colors, mockContractors } from '../config/constants';
 const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
+  // eslint-disable-next-line no-unused-vars
   const textColor = darkMode ? '#ffffff' : colors.dark;
 
   const [email, setEmail] = useState('');
@@ -38,8 +39,8 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: textColor,
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
     boxSizing: 'border-box',
   };
 
@@ -76,7 +77,7 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               >
                 <Briefcase size={32} color={colors.teal} />
               </div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '8px' }}>
                 Contractor Portal
               </h2>
               <p style={{ color: colors.gray }}>Sign in to manage your jobs</p>
@@ -84,7 +85,7 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: textColor }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#1f2937' }}>
                   Email Address
                 </label>
                 <input
@@ -98,7 +99,7 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: textColor }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#1f2937' }}>
                   Password
                 </label>
                 <div style={{ position: 'relative' }}>
