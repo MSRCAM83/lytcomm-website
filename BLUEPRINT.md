@@ -234,7 +234,7 @@ Features:
 - Code: `welcome2lyt`
 - Used for: New employee/contractor onboarding access
 
-### Demo Accounts
+IGNORE THIS IF IT EXISTS ON THE WEBSITE REMOVE IT ### Demo Accounts
 ```javascript
 const mockUsers = [
   { email: 'matt@lytcomm.com', password: 'demo123', role: 'admin', name: 'Matt Campbell' },
