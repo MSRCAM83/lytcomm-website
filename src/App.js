@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Sun, Moon } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { colors, LYT_INFO } from './config/constants';
 
 // Pages
