@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, 
 import { colors, LYT_INFO, URLS } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import SSNInput from '../components/SSNInput';
+import { fillW4, createFormPdf } from '../services/pdfService';
 
 const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
   // Dynamic colors based on theme
@@ -124,19 +125,175 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
-      // Prepare file uploads as base64
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      
+      // ========== GENERATE FILLED PDFs ==========
+      console.log('Generating filled PDFs...');
+      
+      // 1. Fill actual IRS W-4 form
+      let w4Pdf = null;
+      try {
+        w4Pdf = await fillW4({
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          ssn: formData.ssn,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          filingStatus: formData.filingStatus,
+          multipleJobs: formData.multipleJobs,
+          qualifyingChildren: formData.qualifyingChildren,
+          otherDependents: formData.otherDependents,
+          otherIncome: formData.otherIncome,
+          deductions: formData.deductions,
+          extraWithholding: formData.extraWithholding,
+        }, formData.w4Signature);
+        console.log('W-4 PDF filled successfully');
+      } catch (e) {
+        console.error('W-4 error:', e);
+      }
+      
+      // 2. Direct Deposit Authorization
+      let directDepositPdf = null;
+      try {
+        directDepositPdf = await createFormPdf(
+          'Direct Deposit Authorization',
+          [
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
+            ]},
+            { title: 'BANK INFORMATION', fields: [
+              { label: 'Bank Name', value: formData.bankName },
+              { label: 'Routing Number', value: formData.routingNumber },
+              { label: 'Account Number (last 4)', value: formData.accountNumber ? '****' + formData.accountNumber.slice(-4) : '' },
+              { label: 'Account Type', value: formData.accountType },
+            ]},
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to initiate credit entries to my account.',
+              'This authorization remains in effect until I provide written notice to discontinue.',
+            ]}
+          ],
+          formData.directDepositSignature,
+          fullName
+        );
+        console.log('Direct Deposit PDF created');
+      } catch (e) {
+        console.error('Direct Deposit error:', e);
+      }
+      
+      // 3. Emergency Contact
+      let emergencyContactPdf = null;
+      try {
+        emergencyContactPdf = await createFormPdf(
+          'Emergency Contact Information',
+          [
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Phone', value: formData.phone },
+            ]},
+            { title: 'EMERGENCY CONTACT', fields: [
+              { label: 'Name', value: formData.emergencyName },
+              { label: 'Relationship', value: formData.emergencyRelation },
+              { label: 'Phone', value: formData.emergencyPhone },
+              { label: 'Email', value: formData.emergencyEmail },
+            ]}
+          ],
+          null,
+          fullName
+        );
+        console.log('Emergency Contact PDF created');
+      } catch (e) {
+        console.error('Emergency Contact error:', e);
+      }
+      
+      // 4. Background Check Consent
+      let backgroundCheckPdf = null;
+      try {
+        backgroundCheckPdf = await createFormPdf(
+          'Background Check Authorization',
+          [
+            { title: 'APPLICANT', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'DOB', value: formData.dateOfBirth },
+              { label: 'SSN (last 4)', value: formData.ssn ? '***-**-' + formData.ssn.slice(-4) : '' },
+            ]},
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to conduct a background investigation including criminal records, employment verification, education verification, and reference checks.',
+            ], checkboxes: [
+              { label: 'I authorize this background check', checked: formData.backgroundCheckConsent }
+            ]}
+          ],
+          formData.backgroundCheckSignature,
+          fullName
+        );
+        console.log('Background Check PDF created');
+      } catch (e) {
+        console.error('Background Check error:', e);
+      }
+      
+      // 5. Drug Test Consent
+      let drugTestPdf = null;
+      try {
+        drugTestPdf = await createFormPdf(
+          'Drug and Alcohol Testing Consent',
+          [
+            { title: 'EMPLOYEE', fields: [{ label: 'Name', value: fullName }]},
+            { title: 'CONSENT', paragraphs: [
+              'I consent to drug and alcohol testing as required by company policy.',
+            ], checkboxes: [
+              { label: 'Pre-employment testing required', checked: true },
+              { label: 'Random testing may be conducted', checked: true },
+              { label: 'Post-accident testing may be required', checked: true },
+              { label: 'I consent to testing', checked: formData.drugTestConsent }
+            ]}
+          ],
+          formData.drugTestSignature,
+          fullName
+        );
+        console.log('Drug Test PDF created');
+      } catch (e) {
+        console.error('Drug Test error:', e);
+      }
+      
+      // 6. Safety Acknowledgment
+      let safetyPdf = null;
+      try {
+        safetyPdf = await createFormPdf(
+          'HSE Safety Acknowledgment',
+          [
+            { title: 'EMPLOYEE', fields: [{ label: 'Name', value: fullName }]},
+            { title: 'ACKNOWLEDGMENT', paragraphs: [
+              'I have received, read, and understand the LYT Communications HSE Manual.',
+            ], checkboxes: [
+              { label: 'Follow all safety procedures', checked: true },
+              { label: 'Use required PPE', checked: true },
+              { label: 'Report injuries immediately', checked: true },
+              { label: 'Participate in safety training', checked: true },
+              { label: 'I acknowledge the HSE Manual', checked: formData.safetyAcknowledged }
+            ]}
+          ],
+          formData.safetySignature,
+          fullName
+        );
+        console.log('Safety PDF created');
+      } catch (e) {
+        console.error('Safety error:', e);
+      }
+
+      // Prepare file uploads
       let voidedCheckData = null;
       if (formData.voidedCheck) {
         const reader = new FileReader();
         voidedCheckData = await new Promise((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            resolve({
-              name: formData.voidedCheckName,
-              data: base64,
-              mimeType: formData.voidedCheck.type
-            });
-          };
+          reader.onload = () => resolve({
+            name: formData.voidedCheckName,
+            data: reader.result.split(',')[1],
+            mimeType: formData.voidedCheck.type
+          });
           reader.onerror = reject;
           reader.readAsDataURL(formData.voidedCheck);
         });
@@ -146,99 +303,63 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       if (formData.idFile) {
         const reader = new FileReader();
         idFileData = await new Promise((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            resolve({
-              name: formData.idFileName,
-              data: base64,
-              mimeType: formData.idFile.type
-            });
-          };
+          reader.onload = () => resolve({
+            name: formData.idFileName,
+            data: reader.result.split(',')[1],
+            mimeType: formData.idFile.type
+          });
           reader.onerror = reject;
           reader.readAsDataURL(formData.idFile);
         });
       }
 
-      // Prepare data for Google Apps Script
+      // Build payload with filled PDFs
       const payload = {
         type: 'employee_onboarding',
         formData: {
           firstName: formData.firstName,
-          middleName: formData.middleName,
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          dateOfBirth: formData.dateOfBirth,
           ssnLast4: formData.ssn ? formData.ssn.slice(-4) : '',
-          // W-4 info
-          filingStatus: formData.filingStatus,
-          multipleJobs: formData.multipleJobs,
-          qualifyingChildren: formData.qualifyingChildren,
-          otherDependents: formData.otherDependents,
-          otherIncome: formData.otherIncome,
-          deductions: formData.deductions,
-          extraWithholding: formData.extraWithholding,
-          exempt: formData.exempt,
-          // Direct Deposit
           bankName: formData.bankName,
-          routingNumber: formData.routingNumber,
-          accountLast4: formData.accountNumber ? formData.accountNumber.slice(-4) : '',
           accountType: formData.accountType,
-          voidedCheckUploaded: !!formData.voidedCheck,
-          // ID Verification
-          idType: formData.idType,
-          idUploaded: !!formData.idFile,
-          // Emergency Contact
           emergencyName: formData.emergencyName,
-          emergencyRelationship: formData.emergencyRelation,
           emergencyPhone: formData.emergencyPhone,
-          emergencyEmail: formData.emergencyEmail,
-          // Consents
-          backgroundCheckConsent: formData.backgroundCheckConsent,
-          drugTestConsent: formData.drugTestConsent,
         },
-        // ACTUAL SIGNATURE DATA (base64 PNG images)
-        signatures: {
-          w4Signature: formData.w4Signature,
-          directDepositSignature: formData.directDepositSignature,
-          backgroundCheckSignature: formData.backgroundCheckSignature,
-          drugTestSignature: formData.drugTestSignature,
-          safetySignature: formData.safetySignature,
+        // PRE-FILLED PDFs (base64)
+        filledPdfs: {
+          w4: w4Pdf,
+          directDeposit: directDepositPdf,
+          emergencyContact: emergencyContactPdf,
+          backgroundCheck: backgroundCheckPdf,
+          drugTest: drugTestPdf,
+          safety: safetyPdf,
         },
-        // Metadata for legal compliance
-        ipAddress: 'Captured via client',
-        submittedAt: new Date().toISOString(),
-        userAgent: navigator.userAgent,
         voidedCheck: voidedCheckData,
-        idFile: idFileData
+        idFile: idFileData,
+        submittedAt: new Date().toISOString(),
       };
 
-      console.log('Submitting employee onboarding:', payload);
+      console.log('Submitting with filled PDFs...');
 
-      // Submit to Google Apps Script
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain', // Apps Script requires this for CORS
-        },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
 
       const result = await response.json();
-      console.log('Submission result:', result);
+      console.log('Result:', result);
 
       if (result.success) {
         setSubmitted(true);
       } else {
-        setError(result.error || 'Submission failed. Please try again.');
+        setError(result.error || 'Submission failed.');
       }
     } catch (err) {
       console.error('Submission error:', err);
-      setError('Failed to submit. Please check your connection and try again.');
+      setError('Failed to submit: ' + err.message);
     } finally {
       setSubmitting(false);
     }
