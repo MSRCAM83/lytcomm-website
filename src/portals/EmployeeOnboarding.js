@@ -852,7 +852,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             <label style={labelStyle}>Electronic Signature *</label>
             <SignaturePad
               signature={formData.backgroundCheckSignature}
-              onSignature={(sig) => setFormData({ ...formData, backgroundCheckSignature: sig })}
+              onSignatureChange={(sig) => setFormData({ ...formData, backgroundCheckSignature: sig })}
               darkMode={darkMode}
             />
           </div>
@@ -901,7 +901,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             <label style={labelStyle}>Electronic Signature *</label>
             <SignaturePad
               signature={formData.drugTestSignature}
-              onSignature={(sig) => setFormData({ ...formData, drugTestSignature: sig })}
+              onSignatureChange={(sig) => setFormData({ ...formData, drugTestSignature: sig })}
               darkMode={darkMode}
             />
           </div>
