@@ -92,8 +92,8 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                       fontSize: '1rem',
                       border: `1px solid ${error ? accentError : (darkMode ? '#374151' : '#ddd')}`,
                       borderRadius: '8px',
-                      backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-                      color: textColor,
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
                       boxSizing: 'border-box',
                     }}
                   />
