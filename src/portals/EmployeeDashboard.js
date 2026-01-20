@@ -50,6 +50,26 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
     setCurrentPage('portal-login');
   };
 
+  // Shared form styles - white background for visibility in all modes
+  const formInputStyle = {
+    width: '100%',
+    padding: '10px',
+    border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
+  };
+
+  const formSelectStyle = {
+    ...formInputStyle,
+    cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '36px',
+  };
+
   const userProjects = mockProjects.filter((p) => p.crew.includes(loggedInUser?.id));
   const userTimeEntries = mockTimeEntries.filter((t) => t.userId === loggedInUser?.id);
 
@@ -372,7 +392,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="date"
               value={productionLog.date}
               onChange={(e) => setProductionLog({ ...productionLog, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -380,7 +400,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={productionLog.project}
               onChange={(e) => setProductionLog({ ...productionLog, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select project...</option>
               {mockProjects.filter(p => p.status === 'active').map(p => (
@@ -399,7 +419,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={productionLog.fiberFootage}
               onChange={(e) => setProductionLog({ ...productionLog, fiberFootage: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -409,7 +429,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={productionLog.splicesCompleted}
               onChange={(e) => setProductionLog({ ...productionLog, splicesCompleted: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -419,7 +439,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={productionLog.polesSet}
               onChange={(e) => setProductionLog({ ...productionLog, polesSet: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -429,7 +449,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={productionLog.hddBoreLength}
               onChange={(e) => setProductionLog({ ...productionLog, hddBoreLength: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -439,7 +459,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={productionLog.conduitInstalled}
               onChange={(e) => setProductionLog({ ...productionLog, conduitInstalled: e.target.value })}
               placeholder="0"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
         </div>
@@ -538,7 +558,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="date"
               value={equipmentCheck.date}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -546,7 +566,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={equipmentCheck.equipmentType}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentType: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select type...</option>
               {equipmentTypes.map(type => (
@@ -561,7 +581,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={equipmentCheck.equipmentId}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentId: e.target.value })}
               placeholder="e.g., T-101"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -571,7 +591,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={equipmentCheck.mileage}
               onChange={(e) => setEquipmentCheck({ ...equipmentCheck, mileage: e.target.value })}
               placeholder="Current reading"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
         </div>
@@ -697,7 +717,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="date"
               value={toolboxTalk.date}
               onChange={(e) => setToolboxTalk({ ...toolboxTalk, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -705,7 +725,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={toolboxTalk.project}
               onChange={(e) => setToolboxTalk({ ...toolboxTalk, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select project...</option>
               {mockProjects.filter(p => p.status === 'active').map(p => (
@@ -720,7 +740,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           <select
             value={toolboxTalk.topic}
             onChange={(e) => setToolboxTalk({ ...toolboxTalk, topic: e.target.value })}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, marginBottom: '12px' }}
+            style={formSelectStyle}
           >
             <option value="">Select topic...</option>
             {safetyTopics.map(topic => (
@@ -733,7 +753,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={toolboxTalk.customTopic}
               onChange={(e) => setToolboxTalk({ ...toolboxTalk, customTopic: e.target.value })}
               placeholder="Enter topic..."
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           )}
         </div>
@@ -821,7 +841,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="date"
               value={newOtdr.date}
               onChange={(e) => setNewOtdr({ ...newOtdr, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -829,7 +849,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={newOtdr.project}
               onChange={(e) => setNewOtdr({ ...newOtdr, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select project...</option>
               {mockProjects.filter(p => p.status === 'active').map(p => (
@@ -844,7 +864,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={newOtdr.segment}
               onChange={(e) => setNewOtdr({ ...newOtdr, segment: e.target.value })}
               placeholder="e.g., Span A1-A5"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -854,7 +874,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               value={newOtdr.loss}
               onChange={(e) => setNewOtdr({ ...newOtdr, loss: e.target.value })}
               placeholder="e.g., 0.18"
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -862,7 +882,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={newOtdr.result}
               onChange={(e) => setNewOtdr({ ...newOtdr, result: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="pass">Pass</option>
               <option value="fail">Fail - Needs Resplice</option>
@@ -1015,7 +1035,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 value={newTicket.ticketNumber}
                 onChange={(e) => setNewTicket({ ...newTicket, ticketNumber: e.target.value })}
                 placeholder="e.g., 2501160001"
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+                style={formInputStyle}
               />
             </div>
             <div>
@@ -1025,7 +1045,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 value={newTicket.address}
                 onChange={(e) => setNewTicket({ ...newTicket, address: e.target.value })}
                 placeholder="Street address"
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+                style={formInputStyle}
               />
             </div>
             <div>
@@ -1034,7 +1054,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 type="date"
                 value={newTicket.expires}
                 onChange={(e) => setNewTicket({ ...newTicket, expires: e.target.value })}
-                style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+                style={formInputStyle}
               />
             </div>
           </div>
@@ -1284,7 +1304,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="date"
               value={newIncident.date}
               onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -1293,7 +1313,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               type="time"
               value={newIncident.time}
               onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formInputStyle}
             />
           </div>
           <div>
@@ -1301,7 +1321,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={newIncident.type}
               onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select type...</option>
               {incidentTypes.map(type => (
@@ -1314,7 +1334,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <select
               value={newIncident.project}
               onChange={(e) => setNewIncident({ ...newIncident, project: e.target.value })}
-              style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+              style={formSelectStyle}
             >
               <option value="">Select project...</option>
               {mockProjects.map(p => (
@@ -1331,7 +1351,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             value={newIncident.location}
             onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
             placeholder="Specific location where incident occurred"
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor }}
+            style={formInputStyle}
           />
         </div>
 
