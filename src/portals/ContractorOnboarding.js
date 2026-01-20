@@ -298,7 +298,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
 
       // Prepare data for Google Apps Script
       const payload = {
-        type: 'contractor',
+        type: 'contractor_onboarding',
         formData: {
           companyName: formData.companyName,
           dba: formData.dba,
