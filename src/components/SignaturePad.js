@@ -1,10 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { colors } from '../config/constants';
 
-const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true }) => {
+const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true, darkMode = false }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+
+  // Label color based on theme
+  const labelColor = darkMode ? '#e5e7eb' : colors.dark;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -82,12 +85,12 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true 
 
   return (
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: colors.dark }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: labelColor }}>
         {label} {required && <span style={{ color: colors.coral }}>*</span>}
       </label>
       <div
         style={{
-          border: `2px solid ${hasSignature ? colors.green : '#ddd'}`,
+          border: `2px solid ${hasSignature ? colors.green : (darkMode ? '#4b5563' : '#ddd')}`,
           borderRadius: '8px',
           overflow: 'hidden',
           backgroundColor: '#fff',
@@ -113,7 +116,7 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true 
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-        <span style={{ fontSize: '12px', color: colors.gray }}>
+        <span style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : colors.gray }}>
           {hasSignature ? '✓ Signature captured' : 'Draw your signature above'}
         </span>
         <button
@@ -122,10 +125,11 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true 
           style={{
             padding: '6px 12px',
             fontSize: '12px',
-            backgroundColor: '#f3f4f6',
-            border: '1px solid #ddd',
+            backgroundColor: darkMode ? '#374151' : '#f3f4f6',
+            border: `1px solid ${darkMode ? '#4b5563' : '#ddd'}`,
             borderRadius: '4px',
             cursor: 'pointer',
+            color: darkMode ? '#e5e7eb' : '#374151',
           }}
         >
           Clear
