@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { colors } from '../config/constants';
 
-const SSNInput = ({ value, onChange, label = 'Social Security Number', required = true, showFull = false }) => {
+const SSNInput = ({ value, onChange, label = 'Social Security Number', required = true, showFull = false, darkMode = false }) => {
   const [focused, setFocused] = useState(false);
 
   const formatSSN = (val) => {
@@ -26,9 +26,12 @@ const SSNInput = ({ value, onChange, label = 'Social Security Number', required 
 
   const isComplete = value && value.replace(/\D/g, '').length === 9;
 
+  // Always use white background with dark text for form inputs
+  const labelColor = darkMode ? '#e5e7eb' : colors.dark;
+
   return (
     <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: colors.dark }}>
+      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px', color: labelColor }}>
         {label} {required && <span style={{ color: colors.coral }}>*</span>}
       </label>
       <input
@@ -43,12 +46,14 @@ const SSNInput = ({ value, onChange, label = 'Social Security Number', required 
           width: '100%',
           padding: '12px',
           fontSize: '16px',
-          border: `2px solid ${isComplete ? colors.green : '#ddd'}`,
+          border: `2px solid ${isComplete ? colors.green : (darkMode ? '#4b5563' : '#ddd')}`,
           borderRadius: '8px',
           outline: 'none',
           fontFamily: 'monospace',
           letterSpacing: '2px',
           boxSizing: 'border-box',
+          backgroundColor: '#ffffff',
+          color: '#1f2937',
         }}
       />
       {isComplete && (
