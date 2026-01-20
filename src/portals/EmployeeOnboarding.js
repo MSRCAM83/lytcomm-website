@@ -51,6 +51,9 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     accountType: 'checking',
     voidedCheck: null,
     voidedCheckName: '',
+    directDepositAgreed: false,
+    directDepositSignature: null,
+    directDepositDate: new Date().toISOString().split('T')[0],
     // ID Verification
     idType: 'drivers-license',
     idFile: null,
@@ -317,7 +320,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         </div>
       </div>
 
-      <SSNInput value={formData.ssn} onChange={handleSSNChange} />
+      <SSNInput value={formData.ssn} onChange={handleSSNChange} darkMode={darkMode} />
 
       <div style={{ marginBottom: '16px' }}>
         <label style={labelStyle}>Street Address *</label>
@@ -516,7 +519,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
 
       {/* Signature */}
       <div style={{ marginBottom: '16px' }}>
-        <SignaturePad onSignatureChange={handleW4SignatureChange} label="Employee Signature" />
+        <SignaturePad onSignatureChange={handleW4SignatureChange} label="Employee Signature" darkMode={darkMode} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div>
@@ -529,81 +532,84 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
 
   const renderDirectDeposit = () => (
     <div>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Direct Deposit Information</h3>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '24px' }}>Direct Deposit Authorization</h3>
       
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Bank Name *</label>
-        <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} required style={inputStyle} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-        <div>
-          <label style={labelStyle}>Routing Number *</label>
-          <input
-            type="text"
-            name="routingNumber"
-            value={formData.routingNumber}
-            onChange={handleChange}
-            required
-            maxLength={9}
-            style={inputStyle}
-            placeholder="9 digits"
-          />
+      <p style={{ color: darkMode ? '#d1d5db' : '#4b5563', marginBottom: '20px', lineHeight: '1.6' }}>
+        Provide your banking details for payment via ACH direct deposit. A voided check is required for verification.
+      </p>
+      
+      {/* Bank Information */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Bank Account Information</h4>
+        
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Bank Name *</label>
+          <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} required style={inputStyle} />
         </div>
-        <div>
-          <label style={labelStyle}>Account Number *</label>
-          <input
-            type="text"
-            name="accountNumber"
-            value={formData.accountNumber}
-            onChange={handleChange}
-            required
-            style={inputStyle}
-          />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          <div>
+            <label style={labelStyle}>Routing Number (ABA) *</label>
+            <input
+              type="text"
+              name="routingNumber"
+              value={formData.routingNumber}
+              onChange={handleChange}
+              required
+              maxLength={9}
+              style={inputStyle}
+              placeholder="9 digits"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Account Number *</label>
+            <input
+              type="text"
+              name="accountNumber"
+              value={formData.accountNumber}
+              onChange={handleChange}
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Account Type *</label>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            {['checking', 'savings'].map((type) => (
+              <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: textColor }}>
+                <input
+                  type="radio"
+                  name="accountType"
+                  value={type}
+                  checked={formData.accountType === type}
+                  onChange={handleChange}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ textTransform: 'capitalize' }}>{type}</span>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Account Type *</label>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          {['checking', 'savings'].map((type) => (
-            <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="accountType"
-                value={type}
-                checked={formData.accountType === type}
-                onChange={handleChange}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span style={{ textTransform: 'capitalize' }}>{type}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px', marginTop: '24px' }}>
-        <p style={{ fontSize: '0.9rem', color: colors.gray }}>
-          <strong>Note:</strong> Please double-check your routing and account numbers. 
-          Incorrect information may delay your paycheck.
-        </p>
-      </div>
-
-      <div style={{ marginTop: '24px' }}>
-        <label style={labelStyle}>Upload Voided Check (Optional)</label>
-        <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '12px' }}>
-          A voided check helps verify your bank account information.
+      {/* Voided Check Upload */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc', borderRadius: '8px', marginBottom: '24px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Voided Check *</h4>
+        <p style={{ color: darkMode ? '#9ca3af' : '#6b7280', fontSize: '0.9rem', marginBottom: '16px' }}>
+          Please upload an image of a voided check for bank account verification.
         </p>
         <div style={{ 
-          border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, 
+          border: `2px dashed ${formData.voidedCheckName ? colors.green : (darkMode ? '#374151' : '#ddd')}`, 
           borderRadius: '8px', 
           padding: '24px', 
           textAlign: 'center',
-          backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : '#f9fafb'
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : '#fff'
         }}>
           {formData.voidedCheckName ? (
             <div>
-              <p style={{ color: accentSecondary, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckName}</p>
+              <p style={{ color: colors.green, fontWeight: '500', marginBottom: '8px' }}>✓ {formData.voidedCheckName}</p>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, voidedCheck: null, voidedCheckName: '' })}
@@ -636,6 +642,61 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Direct Deposit Authorization Agreement */}
+      <div style={{ padding: '20px', backgroundColor: darkMode ? '#111827' : '#fffbeb', borderRadius: '8px', marginBottom: '24px', border: `1px solid ${darkMode ? '#374151' : '#fcd34d'}` }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: darkMode ? '#fcd34d' : '#92400e' }}>Direct Deposit Authorization Agreement</h4>
+        
+        <div style={{ color: darkMode ? '#d1d5db' : '#4b5563', fontSize: '0.9rem', lineHeight: '1.7', marginBottom: '16px' }}>
+          <p style={{ marginBottom: '12px' }}>
+            I hereby authorize {LYT_INFO.name} to initiate credit entries (deposits) to my account at the financial 
+            institution named above. I also authorize the financial institution to accept and credit any such entries.
+          </p>
+          <p style={{ marginBottom: '12px' }}>
+            This authorization will remain in effect until I notify {LYT_INFO.name} in writing to discontinue 
+            these payments, allowing reasonable time to act on my request.
+          </p>
+          <p>
+            I understand that if erroneous deposits are made to my account, {LYT_INFO.name} is authorized to 
+            debit my account for an amount not to exceed the original amount of the erroneous credit.
+          </p>
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', marginBottom: '16px' }}>
+          <input
+            type="checkbox"
+            name="directDepositAgreed"
+            checked={formData.directDepositAgreed}
+            onChange={handleChange}
+            style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: accentPrimary }}
+          />
+          <span style={{ color: textColor, lineHeight: '1.5' }}>
+            I have read and agree to the Direct Deposit Authorization terms above. I certify that the bank 
+            account information provided is accurate.
+          </span>
+        </label>
+
+        {formData.directDepositAgreed && (
+          <>
+            <SignaturePad
+              onSignatureChange={(sig) => setFormData({ ...formData, directDepositSignature: sig })}
+              label="Direct Deposit Authorization Signature"
+              darkMode={darkMode}
+            />
+            <div style={{ marginTop: '12px' }}>
+              <label style={labelStyle}>Date *</label>
+              <input 
+                type="date" 
+                name="directDepositDate" 
+                value={formData.directDepositDate} 
+                onChange={handleChange} 
+                required
+                style={{ ...inputStyle, maxWidth: '200px' }} 
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -930,7 +991,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         </label>
       </div>
 
-      <SignaturePad onSignatureChange={handleSafetySignatureChange} label="Signature" />
+      <SignaturePad onSignatureChange={handleSafetySignatureChange} label="Signature" darkMode={darkMode} />
       
       <div style={{ marginTop: '16px' }}>
         <label style={labelStyle}>Date</label>
