@@ -18,6 +18,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
+  // eslint-disable-next-line no-unused-vars
   const textColor = darkMode ? '#ffffff' : colors.dark;
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
 
@@ -62,8 +63,8 @@ function SetPassword({ setCurrentPage, darkMode }) {
     fontSize: '1rem',
     border: `1px solid ${darkMode ? '#374151' : '#ddd'}`,
     borderRadius: '8px',
-    backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-    color: textColor,
+    backgroundColor: '#ffffff',
+    color: '#1f2937',
     boxSizing: 'border-box',
   };
 
@@ -90,7 +91,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                 <CheckCircle size={40} color={accentSecondary} />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', marginBottom: '12px' }}>
                 Password Set Successfully!
               </h1>
               <p style={{ color: mutedColor, marginBottom: '32px' }}>
@@ -149,7 +150,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
               <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                 <Lock size={32} color={accentPrimary} />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', marginBottom: '8px' }}>
                 Set Your Password
               </h1>
               <p style={{ color: mutedColor }}>
@@ -159,7 +160,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#1f2937' }}>
                   New Password
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -192,7 +193,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
 
               {/* Password Requirements */}
               <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-                <p style={{ fontSize: '0.85rem', fontWeight: '500', color: textColor, marginBottom: '8px' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: '500', color: '#1f2937', marginBottom: '8px' }}>
                   Password Requirements:
                 </p>
                 {requirements.map((req, index) => (
@@ -210,7 +211,7 @@ function SetPassword({ setCurrentPage, darkMode }) {
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#1f2937' }}>
                   Confirm Password
                 </label>
                 <div style={{ position: 'relative' }}>
