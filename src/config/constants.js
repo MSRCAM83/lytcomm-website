@@ -27,7 +27,7 @@ export const LYT_INFO = {
 };
 
 export const URLS = {
-  appsScript: 'https://script.google.com/macros/s/AKfycbytBK2pBM1JaaphwVQrzuWbsegse7QIZeklBFAznHgO5Otx5sEQfzWLpiSLhZG75JPqHg/exec',
+  appsScript: 'https://script.google.com/macros/s/AKfycbz9hCpwWCr4IaD-kMh_u9axioIIRXtgR4TKX8sefxYPSZo7_uF8pxXcIC7ih-8_4Nc9/exec',
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   w4Pdf: '/Form%20W-4%20sign.pdf',
