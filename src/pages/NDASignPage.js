@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Shield, CheckCircle, ArrowLeft, AlertCircle } from 'lucide-react';
-import { colors, LYT_INFO, URLS, NDA_INVITE_CODE } from '../config/constants';
+import { colors, LYT_INFO, URLS } from '../config/constants';
 
 const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
-  const [step, setStep] = useState('verify'); // verify, form, sign, complete
-  const [inviteCode, setInviteCode] = useState('');
-  const [codeError, setCodeError] = useState('');
+  const [step, setStep] = useState('form'); // form, sign, complete (skip verify - handled by InviteCodePage)
   const [formData, setFormData] = useState({
     fullName: '',
     title: '',
@@ -21,6 +19,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Signature pad refs
@@ -47,16 +46,6 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
       ctx.lineJoin = 'round';
     }
   }, [step]);
-
-  const handleCodeSubmit = (e) => {
-    e.preventDefault();
-    if (inviteCode.toLowerCase().trim() === NDA_INVITE_CODE.toLowerCase()) {
-      setStep('form');
-      setCodeError('');
-    } else {
-      setCodeError('Invalid access code. Please check your code and try again.');
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -146,6 +135,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
         }
       };
 
+      // eslint-disable-next-line no-unused-vars
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
         mode: 'no-cors',
@@ -313,7 +303,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
       {/* Header */}
       <div style={{ maxWidth: '800px', margin: '0 auto', marginBottom: '32px' }}>
         <button
-          onClick={() => setCurrentPage('home')}
+          onClick={() => setCurrentPage('onboarding')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -328,7 +318,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
           }}
         >
           <ArrowLeft size={18} />
-          Back to Home
+          Back to Onboarding
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
@@ -347,8 +337,8 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
       {/* Progress Steps */}
       <div style={{ maxWidth: '800px', margin: '0 auto 32px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-          {['Verify', 'Information', 'Review & Sign', 'Complete'].map((label, idx) => {
-            const stepMap = ['verify', 'form', 'sign', 'complete'];
+          {['Information', 'Review & Sign', 'Complete'].map((label, idx) => {
+            const stepMap = ['form', 'sign', 'complete'];
             const currentIdx = stepMap.indexOf(step);
             const isActive = idx <= currentIdx;
             return (
@@ -371,11 +361,10 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
                   marginLeft: '8px', 
                   color: isActive ? textColor : mutedColor,
                   fontSize: '0.85rem',
-                  display: idx < 3 ? 'inline' : 'inline',
                 }}>
                   {label}
                 </span>
-                {idx < 3 && (
+                {idx < 2 && (
                   <div style={{
                     width: '40px',
                     height: '2px',
@@ -398,71 +387,16 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
           boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.08)',
         }}>
           
-          {/* Step 1: Verify Code */}
-          {step === 'verify' && (
-            <form onSubmit={handleCodeSubmit}>
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <FileText size={48} color={accentColor} style={{ marginBottom: '16px' }} />
-                <h2 style={{ color: textColor, marginBottom: '8px' }}>Enter Access Code</h2>
-                <p style={{ color: mutedColor }}>
-                  Please enter the NDA access code provided by LYT Communications
-                </p>
-              </div>
-
-              <div style={{ maxWidth: '300px', margin: '0 auto' }}>
-                <input
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Enter access code"
-                  style={{
-                    ...inputStyle,
-                    textAlign: 'center',
-                    fontSize: '1.25rem',
-                    letterSpacing: '2px',
-                  }}
-                  required
-                />
-                
-                {codeError && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: colors.coral,
-                    marginTop: '12px',
-                    fontSize: '0.9rem',
-                  }}>
-                    <AlertCircle size={16} />
-                    {codeError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    backgroundColor: accentColor,
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginTop: '20px',
-                  }}
-                >
-                  Continue
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Step 2: Form */}
+          {/* Step 1: Form */}
           {step === 'form' && (
             <form onSubmit={handleFormSubmit}>
-              <h2 style={{ color: textColor, marginBottom: '24px' }}>Your Information</h2>
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <FileText size={48} color={accentColor} style={{ marginBottom: '16px' }} />
+                <h2 style={{ color: textColor, marginBottom: '8px' }}>Your Information</h2>
+                <p style={{ color: mutedColor }}>
+                  Please provide your details for the NDA
+                </p>
+              </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
@@ -585,7 +519,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
               <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
                 <button
                   type="button"
-                  onClick={() => setStep('verify')}
+                  onClick={() => setCurrentPage('onboarding')}
                   style={{
                     padding: '14px 24px',
                     backgroundColor: 'transparent',
@@ -618,7 +552,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
             </form>
           )}
 
-          {/* Step 3: Review & Sign */}
+          {/* Step 2: Review & Sign */}
           {step === 'sign' && (
             <div>
               <h2 style={{ color: textColor, marginBottom: '8px' }}>Review & Sign</h2>
@@ -785,7 +719,7 @@ const NDASignPage = ({ setCurrentPage, darkMode = true }) => {
             </div>
           )}
 
-          {/* Step 4: Complete */}
+          {/* Step 3: Complete */}
           {step === 'complete' && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <CheckCircle size={64} color={colors.green} style={{ marginBottom: '24px' }} />
