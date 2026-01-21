@@ -11,6 +11,7 @@ import ContactPage from './pages/ContactPage';
 import PortalSelect from './pages/PortalSelect';
 import InviteCodePage from './pages/InviteCodePage';
 import ApiTestPage from './pages/ApiTestPage';
+import NDASignPage from './pages/NDASignPage';
 
 // Portals
 import EmployeeOnboarding from './portals/EmployeeOnboarding';
@@ -112,6 +113,7 @@ function App() {
     'set-password',
     'forgot-password',
     'api-test',
+    'nda-sign',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -154,6 +156,8 @@ function App() {
         return <ForgotPassword setCurrentPage={handleNavClick} darkMode={darkMode} />;
       case 'api-test':
         return <ApiTestPage darkMode={darkMode} />;
+      case 'nda-sign':
+        return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
@@ -490,7 +494,7 @@ function App() {
               onClick={() => handleNavClick('contact')}
               style={{
                 padding: '8px 20px',
-                background: darkMode 
+                background: darkMode
                   ? `linear-gradient(135deg, #667eea 0%, #ff6b35 100%)`
                   : `linear-gradient(135deg, #00b4d8 0%, #28a745 100%)`,
                 border: 'none',
