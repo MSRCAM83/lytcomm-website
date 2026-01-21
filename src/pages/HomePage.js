@@ -498,6 +498,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           companyName: formData.companyName,
           contactName: formData.contactName,
           contactTitle: formData.contactTitle,
+          entityType: formData.entityType,
           address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`,
           phone: formData.phone,
           email: formData.email,
