@@ -32,7 +32,7 @@ export const URLS = {
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   w4Pdf: '/Form%20W-4%20sign.pdf',
   w9Pdf: '/Form%20W-9%20sign.pdf',
-  msaPdf: '/LYT_MSA_2026_AdobeSign_Full_v3_5.pdf',
+  msaPdf: '/LYT_MSA_2026_AdobeSign_Full_v4_0.pdf',
 };
 
 // Onboarding invite code
