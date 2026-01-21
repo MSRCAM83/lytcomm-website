@@ -122,9 +122,10 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               src={logoSrc} 
               alt="LYT Communications" 
               style={{ 
-                maxWidth: '450px', 
+                maxWidth: '550px', 
                 width: '100%',
                 height: 'auto',
+                objectFit: 'contain',
               }} 
             />
           </div>
