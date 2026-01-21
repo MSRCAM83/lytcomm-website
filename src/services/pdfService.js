@@ -1,8 +1,10 @@
 /**
- * LYT Communications - PDF Service
+ * LYT Communications - PDF Service v2.0
  * 
  * Fills actual IRS W-4, W-9 forms and LYT MSA with user data and signatures.
  * Uses pdf-lib to manipulate PDF form fields.
+ * 
+ * v2.0 - Complete field filling for all W-4 and W-9 fields
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -44,21 +46,37 @@ async function loadPdf(url) {
 }
 
 /**
- * Fill IRS Form W-4 with employee data
+ * Fill IRS Form W-4 with employee data - ALL FIELDS
  * 
- * Field names from actual form:
- * - "a First name and middle initial"
- * - "Last name"
- * - "b Social security number"
- * - "Address"
- * - "City or town state and ZIP code"
- * - "Single or Married filing separately" (checkbox)
- * - "Married filing jointly or Qualifying surviving spouse" (checkbox)
- * - "Head of household..." (checkbox)
- * - "fill_14" through "fill_17" (Step 3 amounts)
- * - "fill_22", "fill_23" (Step 4 amounts)
- * - "Date"
- * - "Signature2_es_:signer:signature" (signature field)
+ * W-4 Field Reference:
+ * Step 1: Personal Info
+ *   - "a First name and middle initial"
+ *   - "Last name"
+ *   - "b Social security number"
+ *   - "Address"
+ *   - "City or town state and ZIP code"
+ *   - Filing status checkboxes (Single, Married, Head of household)
+ * 
+ * Step 2: Multiple Jobs (checkbox field 9)
+ * 
+ * Step 3: Dependents
+ *   - "fill_14" = qualifying children amount ($2000 each)
+ *   - "fill_15" = other dependents amount ($500 each)
+ *   - "fill_16" = total (fill_14 + fill_15)
+ * 
+ * Step 4: Other Adjustments
+ *   - "fill_17" = other income (4a)
+ *   - "fill_22" = deductions (4b)
+ *   - "fill_23" = extra withholding (4c)
+ * 
+ * Step 5: Signature
+ *   - "Date"
+ *   - Signature image
+ * 
+ * Employer Section:
+ *   - "Employers name and address"
+ *   - "First date of employment"
+ *   - "Employer identification number EIN"
  */
 export async function fillW4(data, signatureDataUrl) {
   try {
@@ -70,11 +88,11 @@ export async function fillW4(data, signatureDataUrl) {
     const setText = (fieldName, value) => {
       try {
         const field = form.getTextField(fieldName);
-        if (field && value !== undefined && value !== null) {
+        if (field && value !== undefined && value !== null && value !== '') {
           field.setText(String(value));
         }
       } catch (e) {
-        console.log(`W-4 field "${fieldName}" error:`, e.message);
+        console.log(`W-4 field "${fieldName}" not found or error:`, e.message);
       }
     };
     
@@ -86,65 +104,97 @@ export async function fillW4(data, signatureDataUrl) {
           field.check();
         }
       } catch (e) {
-        console.log(`W-4 checkbox "${fieldName}" error:`, e.message);
+        console.log(`W-4 checkbox "${fieldName}" not found or error:`, e.message);
       }
     };
     
-    // Step 1a - Name
-    setText('a First name and middle initial', `${data.firstName || ''} ${data.middleName || ''}`.trim());
+    // ========== STEP 1: Personal Information ==========
+    // 1a - First name and middle initial
+    const firstMiddle = `${data.firstName || ''}${data.middleName ? ' ' + data.middleName : ''}`.trim();
+    setText('a First name and middle initial', firstMiddle);
+    
+    // 1a - Last name
     setText('Last name', data.lastName || '');
     
-    // Step 1b - SSN
+    // 1b - Social Security Number
     setText('b Social security number', data.ssn || '');
     
     // Address
     setText('Address', data.address || '');
-    setText('City or town state and ZIP code', `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`);
     
-    // Step 1c - Filing Status
+    // City, State, ZIP
+    const cityStateZip = `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`.trim();
+    setText('City or town state and ZIP code', cityStateZip);
+    
+    // 1c - Filing Status (checkboxes)
     const status = (data.filingStatus || '').toLowerCase();
-    if (status === 'single' || status === 'married_separate') {
+    if (status === 'single' || status === 'married_separate' || status === 'single or married filing separately') {
       setCheck('Single or Married filing separately', true);
-    } else if (status === 'married' || status === 'married_joint') {
+    } else if (status === 'married' || status === 'married_joint' || status === 'married filing jointly') {
       setCheck('Married filing jointly or Qualifying surviving spouse', true);
-    } else if (status === 'head') {
+    } else if (status === 'head' || status === 'head_of_household' || status === 'head of household') {
       setCheck('Head of household Check only if youre unmarried and pay more than half the costs of keeping up a home for yourself and a qualifying individual', true);
     }
     
-    // Step 3 - Dependents (fill_14 = children x $2000, fill_15 = other x $500)
-    if (data.qualifyingChildren) {
-      const childAmount = parseInt(data.qualifyingChildren) * 2000;
-      setText('fill_14', childAmount > 0 ? String(childAmount) : '');
-    }
-    if (data.otherDependents) {
-      const otherAmount = parseInt(data.otherDependents) * 500;
-      setText('fill_15', otherAmount > 0 ? String(otherAmount) : '');
-    }
-    
-    // Step 4a - Other income
-    if (data.otherIncome) {
-      setText('fill_16', data.otherIncome);
+    // ========== STEP 2: Multiple Jobs or Spouse Works ==========
+    // Field 9 is the "two jobs" checkbox area - we can set text here if needed
+    if (data.multipleJobs) {
+      // The checkbox for "two jobs only" is embedded in the form - try to check it
+      try {
+        // This is a text field that may have a checkbox nearby
+        setText('option is generally more accurate than Step 2b if pay at the lower paying job is more than half of the pay at', 'X');
+      } catch (e) {
+        // Field may not exist or be accessible
+      }
     }
     
-    // Step 4b - Deductions
-    if (data.deductions) {
-      setText('fill_17', data.deductions);
+    // ========== STEP 3: Claim Dependents ==========
+    // Qualifying children under 17 - $2,000 each (field fill_14)
+    const childrenCount = parseInt(data.qualifyingChildren) || 0;
+    const childrenAmount = childrenCount * 2000;
+    if (childrenAmount > 0) {
+      setText('fill_14', String(childrenAmount));
     }
     
-    // Step 4c - Extra withholding
-    if (data.extraWithholding) {
-      setText('fill_22', data.extraWithholding);
+    // Other dependents - $500 each (field fill_15)
+    const otherDepsCount = parseInt(data.otherDependents) || 0;
+    const otherDepsAmount = otherDepsCount * 500;
+    if (otherDepsAmount > 0) {
+      setText('fill_15', String(otherDepsAmount));
     }
     
+    // Total dependents (fill_16) - sum of fill_14 and fill_15
+    const totalDependents = childrenAmount + otherDepsAmount;
+    if (totalDependents > 0) {
+      setText('fill_16', String(totalDependents));
+    }
+    
+    // ========== STEP 4: Other Adjustments ==========
+    // 4a - Other income (not from jobs) - fill_17
+    if (data.otherIncome && data.otherIncome !== '0' && data.otherIncome !== '') {
+      setText('fill_17', String(data.otherIncome));
+    }
+    
+    // 4b - Deductions - fill_22
+    if (data.deductions && data.deductions !== '0' && data.deductions !== '') {
+      setText('fill_22', String(data.deductions));
+    }
+    
+    // 4c - Extra withholding - fill_23
+    if (data.extraWithholding && data.extraWithholding !== '0' && data.extraWithholding !== '') {
+      setText('fill_23', String(data.extraWithholding));
+    }
+    
+    // ========== STEP 5: Sign Here ==========
     // Date
-    setText('Date', new Date().toLocaleDateString());
+    setText('Date', new Date().toLocaleDateString('en-US'));
     
-    // Employer info
+    // ========== EMPLOYER SECTION (for office use) ==========
     setText('Employers name and address', 'LYT Communications, LLC\n12130 State Highway 3\nWebster, TX 77598');
-    setText('Employer identification number EIN', '');
-    setText('First date of employment', new Date().toLocaleDateString());
+    setText('First date of employment', new Date().toLocaleDateString('en-US'));
+    // Leave EIN blank - employer fills this
     
-    // Embed signature image
+    // ========== EMBED SIGNATURE IMAGE ==========
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -154,7 +204,7 @@ export async function fillW4(data, signatureDataUrl) {
           const firstPage = pages[0];
           
           // W-4 signature line is near bottom of first page
-          // Position: approximately x=72, y=195, width=180, height=45
+          // Approximate position based on standard W-4 layout
           firstPage.drawImage(sigImage, {
             x: 72,
             y: 188,
@@ -167,7 +217,7 @@ export async function fillW4(data, signatureDataUrl) {
       }
     }
     
-    // Flatten form
+    // Flatten form to prevent further editing
     form.flatten();
     
     // Save and convert to base64
@@ -181,23 +231,46 @@ export async function fillW4(data, signatureDataUrl) {
 }
 
 /**
- * Fill IRS Form W-9 with contractor data
+ * Fill IRS Form W-9 with contractor data - ALL FIELDS
  * 
- * Field names from actual form:
- * - "1 Name of entityindividual..." (name/company)
- * - "2 Business namedisregarded entity name..." (DBA)
- * - "Individualsole proprietor" (checkbox)
- * - "C corporation" (checkbox)
- * - "S corporation" (checkbox)
- * - "Partnership" (checkbox)
- * - "LLC Enter the tax classification..." (checkbox)
- * - "undefined" (LLC classification letter)
- * - "5 Address..." (address)
- * - "6 City state and ZIP code" (city/state/zip)
- * - "Text11", "Text12" (EIN parts)
- * - "Social security number" (SSN)
- * - "Signature of US person Date" (date)
- * - "Signature1_es_:signer:signature" (signature)
+ * W-9 Field Reference:
+ * Line 1: Name (required)
+ *   - "1 Name of entityindividual..."
+ * 
+ * Line 2: Business name/DBA (if different)
+ *   - "2 Business namedisregarded entity name..."
+ * 
+ * Line 3a: Federal tax classification (checkboxes)
+ *   - "Individualsole proprietor"
+ *   - "C corporation"
+ *   - "S corporation"
+ *   - "Partnership"
+ *   - "Trustestate"
+ *   - "LLC Enter the tax classification..."
+ *   - "Other see instructions"
+ *   - "undefined" = LLC tax classification letter (C, S, or P)
+ * 
+ * Line 4: Exemptions (optional)
+ *   - "Exempt payee code if any"
+ *   - "Compliance Act FATCA reporting"
+ * 
+ * Line 5: Address
+ *   - "5 Address number street and apt or suite no..."
+ * 
+ * Line 6: City, state, ZIP
+ *   - "6 City state and ZIP code"
+ * 
+ * Line 7: Account numbers (optional)
+ *   - "7 List account numbers here optional"
+ * 
+ * Part I - TIN (Taxpayer Identification Number)
+ *   - "Social security number" (for SSN - 3 boxes or single field)
+ *   - "Text11" = First 2 digits of EIN
+ *   - "Text12" = Last 7 digits of EIN
+ * 
+ * Part II - Certification
+ *   - "Signature of US person Date"
+ *   - Signature image
  */
 export async function fillW9(data, signatureDataUrl) {
   try {
@@ -208,11 +281,11 @@ export async function fillW9(data, signatureDataUrl) {
     const setText = (fieldName, value) => {
       try {
         const field = form.getTextField(fieldName);
-        if (field && value !== undefined && value !== null) {
+        if (field && value !== undefined && value !== null && value !== '') {
           field.setText(String(value));
         }
       } catch (e) {
-        console.log(`W-9 field "${fieldName}" error:`, e.message);
+        console.log(`W-9 field "${fieldName}" not found or error:`, e.message);
       }
     };
     
@@ -223,56 +296,79 @@ export async function fillW9(data, signatureDataUrl) {
           field.check();
         }
       } catch (e) {
-        console.log(`W-9 checkbox "${fieldName}" error:`, e.message);
+        console.log(`W-9 checkbox "${fieldName}" not found or error:`, e.message);
       }
     };
     
-    // Line 1 - Name
-    setText('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', 
-      data.companyName || data.name || '');
+    // ========== LINE 1: Name ==========
+    const name = data.companyName || data.name || '';
+    setText('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', name);
     
-    // Line 2 - DBA
-    setText('2 Business namedisregarded entity name if different from above', data.dba || '');
+    // ========== LINE 2: Business name/DBA ==========
+    if (data.dba) {
+      setText('2 Business namedisregarded entity name if different from above', data.dba);
+    }
     
-    // Line 3 - Tax Classification
+    // ========== LINE 3a: Federal Tax Classification ==========
     const entityType = (data.entityType || '').toLowerCase();
-    if (entityType.includes('individual') || entityType.includes('sole')) {
+    
+    if (entityType.includes('individual') || entityType.includes('sole') || entityType === 'sole_proprietor') {
       setCheck('Individualsole proprietor', true);
-    } else if (entityType.includes('c corp') && !entityType.includes('s corp')) {
+    } else if (entityType.includes('c corp') || entityType === 'c_corporation') {
       setCheck('C corporation', true);
-    } else if (entityType.includes('s corp')) {
+    } else if (entityType.includes('s corp') || entityType === 's_corporation') {
       setCheck('S corporation', true);
-    } else if (entityType.includes('partner')) {
+    } else if (entityType.includes('partner') || entityType === 'partnership') {
       setCheck('Partnership', true);
     } else if (entityType.includes('trust') || entityType.includes('estate')) {
       setCheck('Trustestate', true);
     } else if (entityType.includes('llc')) {
       setCheck('LLC Enter the tax classification C  C corporation S  S corporation P  Partnership', true);
-      // LLC tax classification letter
-      if (data.taxClassification) {
-        setText('undefined', data.taxClassification.charAt(0).toUpperCase());
-      }
+      // LLC tax classification letter (C, S, or P)
+      const taxClass = (data.taxClassification || 'C').charAt(0).toUpperCase();
+      setText('undefined', taxClass);
+    } else if (entityType.includes('other')) {
+      setCheck('Other see instructions', true);
     }
     
-    // Line 5 - Address
+    // ========== LINE 4: Exemptions (usually blank) ==========
+    if (data.exemptPayeeCode) {
+      setText('Exempt payee code if any', data.exemptPayeeCode);
+    }
+    if (data.fatcaCode) {
+      setText('Compliance Act FATCA reporting', data.fatcaCode);
+    }
+    
+    // ========== LINE 5: Address ==========
     setText('5 Address number street and apt or suite no See instructions', data.address || '');
     
-    // Line 6 - City, State, ZIP
-    setText('6 City state and ZIP code', `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`);
+    // ========== LINE 6: City, State, ZIP ==========
+    const cityStateZip = `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`.trim();
+    setText('6 City state and ZIP code', cityStateZip);
     
-    // Part I - TIN
+    // ========== LINE 7: Account numbers (optional) ==========
+    if (data.accountNumbers) {
+      setText('7 List account numbers here optional', data.accountNumbers);
+    }
+    
+    // ========== PART I: Taxpayer Identification Number ==========
     if (data.ein) {
+      // EIN format: XX-XXXXXXX
       const ein = (data.ein || '').replace(/\D/g, '');
-      setText('Text11', ein.substring(0, 2));
-      setText('Text12', ein.substring(2));
+      if (ein.length >= 9) {
+        setText('Text11', ein.substring(0, 2));  // First 2 digits
+        setText('Text12', ein.substring(2, 9));  // Next 7 digits
+      }
     } else if (data.ssn) {
+      // SSN for sole proprietors
       setText('Social security number', data.ssn);
     }
     
-    // Signature date
-    setText('Signature of US person Date', new Date().toLocaleDateString());
+    // ========== PART II: Certification ==========
+    // Date
+    setText('Signature of US person Date', new Date().toLocaleDateString('en-US'));
     
-    // Embed signature
+    // ========== EMBED SIGNATURE IMAGE ==========
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -281,7 +377,7 @@ export async function fillW9(data, signatureDataUrl) {
           const pages = pdfDoc.getPages();
           const firstPage = pages[0];
           
-          // W-9 signature line position
+          // W-9 signature line position (bottom of first page)
           firstPage.drawImage(sigImage, {
             x: 72,
             y: 130,
@@ -306,7 +402,7 @@ export async function fillW9(data, signatureDataUrl) {
 
 /**
  * Sign MSA document
- * MSA has no form fields, so we add signature and info to last page
+ * MSA has no fillable form fields, so we add signature and info as drawn text
  */
 export async function fillMSA(data, signatureDataUrl) {
   try {
@@ -318,23 +414,22 @@ export async function fillMSA(data, signatureDataUrl) {
     const pages = pdfDoc.getPages();
     const lastPage = pages[pages.length - 1];
     
-    // Add contractor info to signature block area
-    // These positions need adjustment based on actual MSA layout
-    const sigBlockY = 180;
+    // Add contractor info to signature block area on last page
+    const sigBlockY = 200;
     
-    // Company Name
+    // Company Name (bold)
     lastPage.drawText(data.companyName || '', {
       x: 72,
-      y: sigBlockY + 100,
-      size: 11,
+      y: sigBlockY + 80,
+      size: 12,
       font: fontBold,
       color: rgb(0, 0, 0),
     });
     
-    // Printed Name
-    lastPage.drawText(`Name: ${data.contactName || ''}`, {
+    // Contact Name
+    lastPage.drawText(`By: ${data.contactName || ''}`, {
       x: 72,
-      y: sigBlockY + 60,
+      y: sigBlockY + 50,
       size: 10,
       font: font,
       color: rgb(0, 0, 0),
@@ -342,17 +437,17 @@ export async function fillMSA(data, signatureDataUrl) {
     
     // Title
     lastPage.drawText(`Title: ${data.contactTitle || data.title || ''}`, {
-      x: 300,
-      y: sigBlockY + 60,
+      x: 72,
+      y: sigBlockY + 35,
       size: 10,
       font: font,
       color: rgb(0, 0, 0),
     });
     
     // Date
-    lastPage.drawText(`Date: ${new Date().toLocaleDateString()}`, {
+    lastPage.drawText(`Date: ${new Date().toLocaleDateString('en-US')}`, {
       x: 72,
-      y: sigBlockY + 40,
+      y: sigBlockY + 20,
       size: 10,
       font: font,
       color: rgb(0, 0, 0),
@@ -365,8 +460,8 @@ export async function fillMSA(data, signatureDataUrl) {
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           lastPage.drawImage(sigImage, {
-            x: 72,
-            y: sigBlockY - 10,
+            x: 280,
+            y: sigBlockY + 20,
             width: 200,
             height: 50,
           });
@@ -387,6 +482,7 @@ export async function fillMSA(data, signatureDataUrl) {
 
 /**
  * Create a branded PDF for other forms (Direct Deposit, Emergency Contact, etc.)
+ * Uses ASCII characters [X] and [ ] for checkboxes to avoid encoding issues
  */
 export async function createFormPdf(title, sections, signatureDataUrl, signerName) {
   try {
@@ -479,6 +575,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
       
       if (section.checkboxes) {
         for (const cb of section.checkboxes) {
+          // Use ASCII checkboxes to avoid encoding issues
           const mark = cb.checked ? '[X]' : '[ ]';
           page.drawText(`${mark} ${cb.label}`, { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
           y -= 14;
