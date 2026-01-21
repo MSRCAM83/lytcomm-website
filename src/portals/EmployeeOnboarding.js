@@ -76,6 +76,42 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     deductions: '',
     extraWithholding: '',
     exempt: false,
+    // W-4 Page 3 Worksheet (Step 2b - Multiple Jobs)
+    worksheet: {
+      step2b_line1: '',
+      step2b_line2a: '',
+      step2b_line2b: '',
+      step2b_line2c: '',
+      step2b_line3: '',
+      step2b_line4: '',
+    },
+    // W-4 Page 4 Worksheet (Step 4b - Deductions)
+    deductionsWorksheet: {
+      line1a: '',
+      line1b: '',
+      line1c: '',
+      line1d: '',
+      line3a: '',
+      line3b: '',
+      line3c: '',
+      line5: '',
+      line6a: '',
+      line6b: '',
+      line6c: '',
+      line6d: '',
+      line6e: '',
+      line7: '',
+      line8a: '',
+      line8b: '',
+      line9: '',
+      line10: '',
+      line11: '',
+      line12: '',
+      line13: '',
+      line14: '',
+      line15: '',
+    },
+    showWorksheets: false,
     w4Signature: null,
     w4Date: new Date().toISOString().split('T')[0],
     // Direct Deposit
@@ -197,6 +233,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           otherIncome: formData.otherIncome,
           deductions: formData.deductions,
           extraWithholding: formData.extraWithholding,
+          worksheet: formData.worksheet,
+          deductionsWorksheet: formData.deductionsWorksheet,
         }, formData.w4Signature, signatureInfo);
         console.log('W-4 PDF filled successfully');
       } catch (e) {
@@ -691,6 +729,91 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             />
           </div>
         </div>
+      </div>
+
+      {/* Advanced Worksheets (Pages 3-4) - Collapsible */}
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
+        <button
+          type="button"
+          onClick={() => setFormData(prev => ({ ...prev, showWorksheets: !prev.showWorksheets }))}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <label style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>Advanced Worksheets (Optional - Pages 3-4)</label>
+          <span style={{ fontSize: '1.2rem' }}>{formData.showWorksheets ? '−' : '+'}</span>
+        </button>
+        
+        {formData.showWorksheets && (
+          <div style={{ marginTop: '16px' }}>
+            {/* Step 2(b) Worksheet - Multiple Jobs */}
+            <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+              <h4 style={{ marginBottom: '12px', fontSize: '0.95rem', fontWeight: '600' }}>Step 2(b) Worksheet - Multiple Jobs (Page 3)</h4>
+              <p style={{ fontSize: '0.8rem', color: colors.gray, marginBottom: '12px' }}>Use this if you have more than one job or your spouse works</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                {[
+                  { name: 'step2b_line1', label: 'Line 1' },
+                  { name: 'step2b_line2a', label: 'Line 2a' },
+                  { name: 'step2b_line2b', label: 'Line 2b' },
+                  { name: 'step2b_line2c', label: 'Line 2c' },
+                  { name: 'step2b_line3', label: 'Line 3' },
+                  { name: 'step2b_line4', label: 'Line 4' },
+                ].map(field => (
+                  <div key={field.name}>
+                    <label style={{ ...labelStyle, fontSize: '0.8rem' }}>{field.label}</label>
+                    <input
+                      type="number"
+                      value={formData.worksheet[field.name] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        worksheet: { ...prev.worksheet, [field.name]: e.target.value }
+                      }))}
+                      placeholder="$"
+                      style={{ ...inputStyle, padding: '8px' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 4(b) Worksheet - Deductions */}
+            <div style={{ padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+              <h4 style={{ marginBottom: '12px', fontSize: '0.95rem', fontWeight: '600' }}>Step 4(b) Worksheet - Deductions (Page 4)</h4>
+              <p style={{ fontSize: '0.8rem', color: colors.gray, marginBottom: '12px' }}>Use this to calculate deductions greater than the standard deduction</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
+                {[
+                  { name: 'line1a', label: '1a' }, { name: 'line1b', label: '1b' }, { name: 'line1c', label: '1c' }, { name: 'line1d', label: '1d' },
+                  { name: 'line3a', label: '3a' }, { name: 'line3b', label: '3b' }, { name: 'line3c', label: '3c' }, { name: 'line5', label: '5' },
+                  { name: 'line6a', label: '6a' }, { name: 'line6b', label: '6b' }, { name: 'line6c', label: '6c' }, { name: 'line6d', label: '6d' },
+                  { name: 'line6e', label: '6e' }, { name: 'line7', label: '7' }, { name: 'line8a', label: '8a' }, { name: 'line8b', label: '8b' },
+                  { name: 'line9', label: '9' }, { name: 'line10', label: '10' }, { name: 'line11', label: '11' }, { name: 'line12', label: '12' },
+                  { name: 'line13', label: '13' }, { name: 'line14', label: '14' }, { name: 'line15', label: '15' },
+                ].map(field => (
+                  <div key={field.name}>
+                    <label style={{ ...labelStyle, fontSize: '0.75rem' }}>{field.label}</label>
+                    <input
+                      type="number"
+                      value={formData.deductionsWorksheet[field.name] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        deductionsWorksheet: { ...prev.deductionsWorksheet, [field.name]: e.target.value }
+                      }))}
+                      placeholder="$"
+                      style={{ ...inputStyle, padding: '6px', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Exempt */}
