@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Users, Building2, Lock, CheckCircle } from 'lucide-react';
-import { colors, INVITE_CODE, LYT_INFO } from '../config/constants';
+import { ArrowLeft, Users, Building2, Lock, CheckCircle, Shield } from 'lucide-react';
+import { colors, INVITE_CODE, NDA_INVITE_CODE, LYT_INFO } from '../config/constants';
 
 function InviteCodePage({ setCurrentPage, darkMode }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [codeVerified, setCodeVerified] = useState(false);
+  const [codeType, setCodeType] = useState(null); // 'onboarding' or 'nda'
 
   // Dynamic colors based on theme
   const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
   const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentNDA = darkMode ? '#c850c0' : '#0077B6';         // Pink vs Blue for NDA
   const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
@@ -21,8 +23,14 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
     e.preventDefault();
     setError('');
     
-    if (code.toLowerCase().trim() === INVITE_CODE.toLowerCase()) {
+    const trimmedCode = code.toLowerCase().trim();
+    
+    if (trimmedCode === INVITE_CODE.toLowerCase()) {
       setCodeVerified(true);
+      setCodeType('onboarding');
+    } else if (trimmedCode === NDA_INVITE_CODE.toLowerCase()) {
+      setCodeVerified(true);
+      setCodeType('nda');
     } else {
       setError('Invalid invite code. Please check with your administrator.');
     }
@@ -31,8 +39,10 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
   const handleTypeSelect = (type) => {
     if (type === 'employee') {
       setCurrentPage('employee-onboarding');
-    } else {
+    } else if (type === 'contractor') {
       setCurrentPage('contractor-onboarding');
+    } else if (type === 'nda') {
+      setCurrentPage('nda-sign');
     }
   };
 
@@ -72,7 +82,7 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                   Welcome to Onboarding
                 </h1>
                 <p style={{ color: mutedColor }}>
-                  Enter your invite code to begin the onboarding process
+                  Enter your invite code to begin
                 </p>
               </div>
 
@@ -127,8 +137,82 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                 </a>
               </p>
             </div>
+          ) : codeType === 'nda' ? (
+            /* NDA Only - Direct to NDA signing */
+            <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentNDA}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <CheckCircle size={32} color={accentNDA} />
+                </div>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
+                  Code Verified
+                </h1>
+                <p style={{ color: mutedColor }}>
+                  You've been invited to sign an NDA
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <button
+                  onClick={() => handleTypeSelect('nda')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px',
+                    backgroundColor: darkMode ? '#111827' : '#f8fafc',
+                    border: `2px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = accentNDA;
+                    e.currentTarget.style.backgroundColor = `${accentNDA}10`;
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = darkMode ? '#374151' : '#e5e7eb';
+                    e.currentTarget.style.backgroundColor = darkMode ? colors.dark : '#f8fafc';
+                  }}
+                >
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentNDA}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Shield size={24} color={accentNDA} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor, marginBottom: '4px' }}>
+                      Non-Disclosure Agreement
+                    </h3>
+                    <p style={{ color: mutedColor, fontSize: '0.9rem' }}>
+                      Review and sign the confidentiality agreement
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  setCodeVerified(false);
+                  setCodeType(null);
+                  setCode('');
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginTop: '24px',
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: mutedColor,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
+              >
+                ← Back to code entry
+              </button>
+            </div>
           ) : (
-            /* Type Selection */
+            /* Employee/Contractor Type Selection */
             <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
               <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
@@ -194,16 +278,16 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
                     textAlign: 'left',
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = accentError;
-                    e.currentTarget.style.backgroundColor = `${accentError}10`;
+                    e.currentTarget.style.borderColor = accentSecondary;
+                    e.currentTarget.style.backgroundColor = `${accentSecondary}10`;
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.borderColor = darkMode ? '#374151' : '#e5e7eb';
                     e.currentTarget.style.backgroundColor = darkMode ? colors.dark : '#f8fafc';
                   }}
                 >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentError}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Building2 size={24} color={accentError} />
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Building2 size={24} color={accentSecondary} />
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor, marginBottom: '4px' }}>
@@ -217,7 +301,11 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
               </div>
 
               <button
-                onClick={() => setCodeVerified(false)}
+                onClick={() => {
+                  setCodeVerified(false);
+                  setCodeType(null);
+                  setCode('');
+                }}
                 style={{
                   display: 'block',
                   width: '100%',
