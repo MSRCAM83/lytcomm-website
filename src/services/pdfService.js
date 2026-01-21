@@ -1,10 +1,9 @@
 /**
- * LYT Communications - PDF Service v2.0
- * 
+ * pdfService.js - PDF Form Filling Service v2.47
  * Fills actual IRS W-4, W-9 forms and LYT MSA with user data and signatures.
  * Uses pdf-lib to manipulate PDF form fields.
  * 
- * v2.0 - Complete field filling for all W-4 and W-9 fields
+ * FIXED: Correct field name mapping for W-4 pages 3-4
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -22,11 +21,14 @@ const PDF_URLS = {
 function dataUrlToBytes(dataUrl) {
   if (!dataUrl) return null;
   try {
-    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    // Handle both data:image/png;base64, and raw base64
+    const base64 = dataUrl.includes('base64,') 
+      ? dataUrl.split('base64,')[1] 
+      : dataUrl;
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
     return bytes;
   } catch (e) {
@@ -48,35 +50,60 @@ async function loadPdf(url) {
 /**
  * Fill IRS Form W-4 with employee data - ALL FIELDS
  * 
- * W-4 Field Reference:
- * Step 1: Personal Info
+ * W-4 ACTUAL FIELD NAMES (from PDF inspection):
+ * 
+ * PAGE 1 - Step 1: Personal Info
  *   - "a First name and middle initial"
  *   - "Last name"
  *   - "b Social security number"
  *   - "Address"
  *   - "City or town state and ZIP code"
- *   - Filing status checkboxes (Single, Married, Head of household)
+ *   - "Single or Married filing separately" (checkbox)
+ *   - "Married filing jointly or Qualifying surviving spouse" (checkbox)
+ *   - "Head of household..." (checkbox)
  * 
- * Step 2: Multiple Jobs (checkbox field 9)
+ * PAGE 1 - Step 2: Multiple Jobs
+ *   - "option is generally more accurate..." (checkbox for 2c)
  * 
- * Step 3: Dependents
- *   - "fill_14" = qualifying children amount ($2000 each)
- *   - "fill_15" = other dependents amount ($500 each)
- *   - "fill_16" = total (fill_14 + fill_15)
+ * PAGE 1 - Step 3: Dependents
+ *   - "fill_22" (qualifying children amount)
+ *   - "fill_23" (other dependents amount)
+ *   - "fill_14" (total dependents)
  * 
- * Step 4: Other Adjustments
- *   - "fill_17" = other income (4a)
- *   - "fill_22" = deductions (4b)
- *   - "fill_23" = extra withholding (4c)
+ * PAGE 1 - Step 4: Other Adjustments
+ *   - "fill_15" (other income)
+ *   - "fill_16" (deductions)
+ *   - "fill_17" (extra withholding)
+ *   - "undefined" (exempt checkbox text)
  * 
- * Step 5: Signature
+ * PAGE 1 - Step 5: Signature
  *   - "Date"
- *   - Signature image
+ *   - Signature drawn as image
  * 
- * Employer Section:
+ * PAGE 1 - Employer Section
  *   - "Employers name and address"
  *   - "First date of employment"
  *   - "Employer identification number EIN"
+ * 
+ * PAGE 3 - Step 2(b) Worksheet (Multiple Jobs)
+ *   - "undefined_2" (Line 1)
+ *   - "2a" (Line 2a)
+ *   - "2b" (Line 2b)
+ *   - "2c" (Line 2c)
+ *   - "3" (Line 3)
+ *   - "undefined_3" (Line 4)
+ * 
+ * PAGE 4 - Step 4(b) Worksheet (Deductions)
+ *   - "1a", "1b", "1c" (Lines 1a-1c)
+ *   - "undefined_4" (Line 1d)
+ *   - "3a", "3b" (Lines 3a-3b)
+ *   - "undefined_5" (Line 3c)
+ *   - "undefined_6" (Line 5)
+ *   - "6a", "6b", "6c", "6d", "6e" (Lines 6a-6e)
+ *   - "undefined_7" (Line 7)
+ *   - "8a", "8b" (Lines 8a-8b)
+ *   - "undefined_9" (Line 9)
+ *   - "10", "11", "12", "13", "14", "15" (Lines 10-15)
  */
 export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
   try {
@@ -108,247 +135,174 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
       }
     };
     
-    // ========== STEP 1: Personal Information ==========
+    // ===== PAGE 1 - STEP 1: PERSONAL INFO =====
+    
     // 1a - First name and middle initial
-    const firstMiddle = `${data.firstName || ''}${data.middleName ? ' ' + data.middleName : ''}`.trim();
-    setText('a First name and middle initial', firstMiddle);
+    const firstName = data.firstName || '';
+    const middleInitial = data.middleInitial || '';
+    setText('a First name and middle initial', `${firstName} ${middleInitial}`.trim());
     
     // 1a - Last name
     setText('Last name', data.lastName || '');
     
-    // 1b - Social Security Number - Draw individual digits
-    // W-4 SSN field is at x=476, y=91, w=100, h=17
-    // SSN format: XXX-XX-XXXX with boxes spaced evenly
-    const ssn = (data.ssn || '').replace(/\D/g, '');
-    if (ssn.length === 9) {
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-      const pageHeight = 792;
-      
-      // W-4 SSN boxes start at x=476, each digit ~10px apart
-      // Y position from top is 91, so from bottom: 792 - 91 - 17 = 684
-      const ssnY = pageHeight - 91 - 12;
-      const ssnStartX = 480;
-      const digitSpacing = 10.5;
-      
-      for (let i = 0; i < 9; i++) {
-        let xOffset = i * digitSpacing;
-        // Add gaps for dashes (after 3rd and 5th digits)
-        if (i >= 3) xOffset += 4;
-        if (i >= 5) xOffset += 4;
-        
-        firstPage.drawText(ssn[i], {
-          x: ssnStartX + xOffset,
-          y: ssnY,
-          size: 11,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-      }
+    // 1b - Social Security Number - Draw individual digits with proper spacing
+    if (data.ssn) {
+      const ssnClean = data.ssn.replace(/\D/g, '');
+      // Format: XXX-XX-XXXX with dashes
+      const ssnFormatted = `${ssnClean.slice(0,3)}-${ssnClean.slice(3,5)}-${ssnClean.slice(5,9)}`;
+      setText('b Social security number', ssnFormatted);
     }
     
-    // Address
+    // 1c - Address
     setText('Address', data.address || '');
     
     // City, State, ZIP
-    const cityStateZip = `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`.trim();
+    const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
     setText('City or town state and ZIP code', cityStateZip);
     
     // 1c - Filing Status (checkboxes)
-    const status = (data.filingStatus || '').toLowerCase();
-    if (status === 'single' || status === 'married_separate' || status === 'single or married filing separately') {
+    if (data.filingStatus === 'single') {
       setCheck('Single or Married filing separately', true);
-    } else if (status === 'married' || status === 'married_joint' || status === 'married filing jointly') {
+    } else if (data.filingStatus === 'married') {
       setCheck('Married filing jointly or Qualifying surviving spouse', true);
-    } else if (status === 'head' || status === 'head_of_household' || status === 'head of household') {
+    } else if (data.filingStatus === 'head') {
       setCheck('Head of household Check only if youre unmarried and pay more than half the costs of keeping up a home for yourself and a qualifying individual', true);
     }
     
-    // ========== STEP 2: Multiple Jobs or Spouse Works ==========
-    // Field 9 is the "two jobs" checkbox area - we can set text here if needed
+    // ===== PAGE 1 - STEP 2: MULTIPLE JOBS =====
     if (data.multipleJobs) {
-      // The checkbox for "two jobs only" is embedded in the form - try to check it
-      try {
-        // This is a text field that may have a checkbox nearby
-        setText('option is generally more accurate than Step 2b if pay at the lower paying job is more than half of the pay at', 'X');
-      } catch (e) {
-        // Field may not exist or be accessible
-      }
+      setCheck('option is generally more accurate than Step 2b if pay at the lower paying job is more than half of the pay at', true);
     }
     
-    // ========== STEP 3: Claim Dependents ==========
-    // Qualifying children under 17 - $2,000 each (field fill_14)
-    const childrenCount = parseInt(data.qualifyingChildren) || 0;
-    const childrenAmount = childrenCount * 2000;
-    if (childrenAmount > 0) {
-      setText('fill_14', String(childrenAmount));
+    // ===== PAGE 1 - STEP 3: DEPENDENTS =====
+    // Qualifying children ($2,000 each)
+    if (data.qualifyingChildren && data.qualifyingChildren > 0) {
+      const childAmount = parseInt(data.qualifyingChildren) * 2000;
+      setText('fill_22', childAmount.toString());
     }
     
-    // Other dependents - $500 each (field fill_15)
-    const otherDepsCount = parseInt(data.otherDependents) || 0;
-    const otherDepsAmount = otherDepsCount * 500;
-    if (otherDepsAmount > 0) {
-      setText('fill_15', String(otherDepsAmount));
+    // Other dependents ($500 each)
+    if (data.otherDependents && data.otherDependents > 0) {
+      const otherAmount = parseInt(data.otherDependents) * 500;
+      setText('fill_23', otherAmount.toString());
     }
     
-    // Total dependents (fill_16) - sum of fill_14 and fill_15
-    const totalDependents = childrenAmount + otherDepsAmount;
+    // Total dependents claim
+    const totalDependents = 
+      (parseInt(data.qualifyingChildren || 0) * 2000) + 
+      (parseInt(data.otherDependents || 0) * 500);
     if (totalDependents > 0) {
-      setText('fill_16', String(totalDependents));
+      setText('fill_14', totalDependents.toString());
     }
     
-    // ========== STEP 4: Other Adjustments ==========
-    // 4a - Other income (not from jobs) - fill_17
-    if (data.otherIncome && data.otherIncome !== '0' && data.otherIncome !== '') {
-      setText('fill_17', String(data.otherIncome));
+    // ===== PAGE 1 - STEP 4: OTHER ADJUSTMENTS =====
+    // 4a - Other income
+    if (data.otherIncome) {
+      setText('fill_15', data.otherIncome);
     }
     
-    // 4b - Deductions - fill_22
-    if (data.deductions && data.deductions !== '0' && data.deductions !== '') {
-      setText('fill_22', String(data.deductions));
+    // 4b - Deductions
+    if (data.deductions) {
+      setText('fill_16', data.deductions);
     }
     
-    // 4c - Extra withholding - fill_23
-    if (data.extraWithholding && data.extraWithholding !== '0' && data.extraWithholding !== '') {
-      setText('fill_23', String(data.extraWithholding));
+    // 4c - Extra withholding
+    if (data.extraWithholding) {
+      setText('fill_17', data.extraWithholding);
     }
     
-    // ========== PAGE 3: Step 2(b) Worksheet (Multiple Jobs) ==========
-    // These fields are on the right side of page 3
+    // Exempt status
+    if (data.exempt) {
+      setText('undefined', 'EXEMPT');
+    }
+    
+    // ===== PAGE 1 - STEP 5: DATE =====
+    setText('Date', data.w4Date || new Date().toLocaleDateString());
+    
+    // ===== PAGE 1 - EMPLOYER SECTION =====
+    setText('Employers name and address', data.employerName || 'LYT Communications, LLC');
+    setText('First date of employment', data.hireDate || '');
+    setText('Employer identification number EIN', data.employerEIN || '');
+    
+    // ===== PAGE 3 - STEP 2(b) WORKSHEET (Multiple Jobs) =====
+    // CORRECT FIELD MAPPING:
+    // Line 1 -> "undefined_2"
+    // Line 2a -> "2a"
+    // Line 2b -> "2b"  
+    // Line 2c -> "2c"
+    // Line 3 -> "3"
+    // Line 4 -> "undefined_3"
+    
     if (data.worksheet) {
-      // Line 1 - undefined_2 (Step 2b line 1)
-      if (data.worksheet.step2b_line1) {
-        setText('undefined_2', String(data.worksheet.step2b_line1));
-      }
-      // Line 2a
-      if (data.worksheet.step2b_line2a) {
-        setText('2a', String(data.worksheet.step2b_line2a));
-      }
-      // Line 2b
-      if (data.worksheet.step2b_line2b) {
-        setText('2b', String(data.worksheet.step2b_line2b));
-      }
-      // Line 2c
-      if (data.worksheet.step2b_line2c) {
-        setText('2c', String(data.worksheet.step2b_line2c));
-      }
-      // Line 3
-      if (data.worksheet.step2b_line3) {
-        setText('3', String(data.worksheet.step2b_line3));
-      }
-      // Line 4 - undefined_3
-      if (data.worksheet.step2b_line4) {
-        setText('undefined_3', String(data.worksheet.step2b_line4));
-      }
+      if (data.worksheet.step2b_line1) setText('undefined_2', data.worksheet.step2b_line1);
+      if (data.worksheet.step2b_line2a) setText('2a', data.worksheet.step2b_line2a);
+      if (data.worksheet.step2b_line2b) setText('2b', data.worksheet.step2b_line2b);
+      if (data.worksheet.step2b_line2c) setText('2c', data.worksheet.step2b_line2c);
+      if (data.worksheet.step2b_line3) setText('3', data.worksheet.step2b_line3);
+      if (data.worksheet.step2b_line4) setText('undefined_3', data.worksheet.step2b_line4);
     }
     
-    // ========== PAGE 4: Step 4(b) Deductions Worksheet ==========
+    // ===== PAGE 4 - STEP 4(b) WORKSHEET (Deductions) =====
+    // CORRECT FIELD MAPPING:
+    // Line 1a -> "1a"
+    // Line 1b -> "1b"
+    // Line 1c -> "1c"
+    // Line 1d -> "undefined_4"
+    // Line 3a -> "3a"
+    // Line 3b -> "3b"
+    // Line 3c -> "undefined_5"
+    // Line 5 -> "undefined_6"
+    // Line 6a-6e -> "6a", "6b", "6c", "6d", "6e"
+    // Line 7 -> "undefined_7"
+    // Line 8a -> "8a"
+    // Line 8b -> "8b"
+    // Line 9 -> "undefined_9"
+    // Line 10-15 -> "10", "11", "12", "13", "14", "15"
+    
     if (data.deductionsWorksheet) {
-      // Line 1a
-      if (data.deductionsWorksheet.line1a) {
-        setText('1a', String(data.deductionsWorksheet.line1a));
-      }
-      // Line 1b
-      if (data.deductionsWorksheet.line1b) {
-        setText('1b', String(data.deductionsWorksheet.line1b));
-      }
-      // Line 1c
-      if (data.deductionsWorksheet.line1c) {
-        setText('1c', String(data.deductionsWorksheet.line1c));
-      }
-      // Line 1d - undefined_4
-      if (data.deductionsWorksheet.line1d) {
-        setText('undefined_4', String(data.deductionsWorksheet.line1d));
-      }
-      // Line 3a
-      if (data.deductionsWorksheet.line3a) {
-        setText('3a', String(data.deductionsWorksheet.line3a));
-      }
-      // Line 3b
-      if (data.deductionsWorksheet.line3b) {
-        setText('3b', String(data.deductionsWorksheet.line3b));
-      }
-      // Line 3c - undefined_5
-      if (data.deductionsWorksheet.line3c) {
-        setText('undefined_5', String(data.deductionsWorksheet.line3c));
-      }
-      // Line 5 - undefined_6
-      if (data.deductionsWorksheet.line5) {
-        setText('undefined_6', String(data.deductionsWorksheet.line5));
-      }
-      // Line 6a
-      if (data.deductionsWorksheet.line6a) {
-        setText('6a', String(data.deductionsWorksheet.line6a));
-      }
-      // Line 6b
-      if (data.deductionsWorksheet.line6b) {
-        setText('6b', String(data.deductionsWorksheet.line6b));
-      }
-      // Line 6c
-      if (data.deductionsWorksheet.line6c) {
-        setText('6c', String(data.deductionsWorksheet.line6c));
-      }
-      // Line 6d
-      if (data.deductionsWorksheet.line6d) {
-        setText('6d', String(data.deductionsWorksheet.line6d));
-      }
-      // Line 6e
-      if (data.deductionsWorksheet.line6e) {
-        setText('6e', String(data.deductionsWorksheet.line6e));
-      }
-      // Line 7 - undefined_7
-      if (data.deductionsWorksheet.line7) {
-        setText('undefined_7', String(data.deductionsWorksheet.line7));
-      }
-      // Line 8a
-      if (data.deductionsWorksheet.line8a) {
-        setText('8a', String(data.deductionsWorksheet.line8a));
-      }
-      // Line 8b
-      if (data.deductionsWorksheet.line8b) {
-        setText('8b', String(data.deductionsWorksheet.line8b));
-      }
-      // Line 9 - undefined_9
-      if (data.deductionsWorksheet.line9) {
-        setText('undefined_9', String(data.deductionsWorksheet.line9));
-      }
-      // Line 10
-      if (data.deductionsWorksheet.line10) {
-        setText('10', String(data.deductionsWorksheet.line10));
-      }
-      // Line 11
-      if (data.deductionsWorksheet.line11) {
-        setText('11', String(data.deductionsWorksheet.line11));
-      }
-      // Line 12
-      if (data.deductionsWorksheet.line12) {
-        setText('12', String(data.deductionsWorksheet.line12));
-      }
-      // Line 13
-      if (data.deductionsWorksheet.line13) {
-        setText('13', String(data.deductionsWorksheet.line13));
-      }
-      // Line 14
-      if (data.deductionsWorksheet.line14) {
-        setText('14', String(data.deductionsWorksheet.line14));
-      }
-      // Line 15
-      if (data.deductionsWorksheet.line15) {
-        setText('15', String(data.deductionsWorksheet.line15));
-      }
+      const dw = data.deductionsWorksheet;
+      
+      // Lines 1a-1d
+      if (dw.line1a) setText('1a', dw.line1a);
+      if (dw.line1b) setText('1b', dw.line1b);
+      if (dw.line1c) setText('1c', dw.line1c);
+      if (dw.line1d) setText('undefined_4', dw.line1d);  // FIXED
+      
+      // Lines 3a-3c
+      if (dw.line3a) setText('3a', dw.line3a);
+      if (dw.line3b) setText('3b', dw.line3b);
+      if (dw.line3c) setText('undefined_5', dw.line3c);  // FIXED
+      
+      // Line 5
+      if (dw.line5) setText('undefined_6', dw.line5);    // FIXED
+      
+      // Lines 6a-6e
+      if (dw.line6a) setText('6a', dw.line6a);
+      if (dw.line6b) setText('6b', dw.line6b);
+      if (dw.line6c) setText('6c', dw.line6c);
+      if (dw.line6d) setText('6d', dw.line6d);
+      if (dw.line6e) setText('6e', dw.line6e);
+      
+      // Line 7
+      if (dw.line7) setText('undefined_7', dw.line7);    // FIXED
+      
+      // Lines 8a-8b
+      if (dw.line8a) setText('8a', dw.line8a);
+      if (dw.line8b) setText('8b', dw.line8b);
+      
+      // Line 9
+      if (dw.line9) setText('undefined_9', dw.line9);    // FIXED
+      
+      // Lines 10-15
+      if (dw.line10) setText('10', dw.line10);
+      if (dw.line11) setText('11', dw.line11);
+      if (dw.line12) setText('12', dw.line12);
+      if (dw.line13) setText('13', dw.line13);
+      if (dw.line14) setText('14', dw.line14);
+      if (dw.line15) setText('15', dw.line15);
     }
     
-    // ========== STEP 5: Sign Here ==========
-    // Date
-    setText('Date', new Date().toLocaleDateString('en-US'));
-    
-    // ========== EMPLOYER SECTION (for office use) ==========
-    setText('Employers name and address', 'LYT Communications, LLC\n12130 State Highway 3\nWebster, TX 77598');
-    setText('First date of employment', new Date().toLocaleDateString('en-US'));
-    // Leave EIN blank - employer fills this
-    
-    // ========== EMBED SIGNATURE IMAGE ==========
+    // ===== SIGNATURE =====
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -358,22 +312,21 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
           const firstPage = pages[0];
           const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
-          // W-4 signature line is near bottom of first page
-          // Signature field is at approximately x=100, y=676 (from top)
-          // In pdf-lib coords (from bottom): 792 - 676 - 26 = 90
+          // W-4 signature line - position based on PDF layout
+          // Signature line is approximately at y=90 from bottom
           firstPage.drawImage(sigImage, {
             x: 105,
             y: 92,
-            width: 160,
-            height: 40,
+            width: 150,
+            height: 35,
           });
           
-          // Add signature verification info BELOW the signature (not overlapping form)
+          // Add signature verification BELOW signature
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
               x: 105,
-              y: 80,
+              y: 78,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
@@ -390,7 +343,8 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
     
     // Save and convert to base64
     const pdfBytes = await pdfDoc.save();
-    return uint8ArrayToBase64(pdfBytes);
+    const base64 = btoa(String.fromCharCode(...pdfBytes));
+    return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
     console.error('Error filling W-4:', error);
@@ -398,54 +352,34 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
   }
 }
 
+
 /**
  * Fill IRS Form W-9 with contractor data - ALL FIELDS
  * 
- * W-9 Field Reference:
- * Line 1: Name (required)
- *   - "1 Name of entityindividual..."
+ * W-9 ACTUAL FIELD NAMES (from PDF inspection):
  * 
- * Line 2: Business name/DBA (if different)
- *   - "2 Business namedisregarded entity name..."
- * 
- * Line 3a: Federal tax classification (checkboxes)
- *   - "Individualsole proprietor"
- *   - "C corporation"
- *   - "S corporation"
- *   - "Partnership"
- *   - "Trustestate"
- *   - "LLC Enter the tax classification..."
- *   - "Other see instructions"
- *   - "undefined" = LLC tax classification letter (C, S, or P)
- * 
- * Line 4: Exemptions (optional)
- *   - "Exempt payee code if any"
- *   - "Compliance Act FATCA reporting"
- * 
- * Line 5: Address
- *   - "5 Address number street and apt or suite no..."
- * 
- * Line 6: City, state, ZIP
- *   - "6 City state and ZIP code"
- * 
- * Line 7: Account numbers (optional)
- *   - "7 List account numbers here optional"
- * 
- * Part I - TIN (Taxpayer Identification Number)
- *   - "Social security number" (for SSN - 3 boxes or single field)
- *   - "Text11" = First 2 digits of EIN
- *   - "Text12" = Last 7 digits of EIN
- * 
- * Part II - Certification
- *   - "Signature of US person Date"
- *   - Signature image
+ * Line 1: Name -> "Name"
+ * Line 2: Business name/DBA -> "Business namedisregarded entity name if different from above"
+ * Line 3: Entity type checkboxes -> "IndividualSole proprietor or", etc.
+ * Line 4: Exemptions -> "Exempt payee code if any", "Exemption from FATCA reporting"
+ * Line 5: Address -> "Address number street and apt or suite no See instructions"
+ * Line 6: City/State/ZIP -> "City state and ZIP code"
+ * Line 7: Account numbers -> "List account numbers here optional"
+ * SSN boxes (Part I) -> Individual digit fields
+ * EIN boxes (Part I) -> Individual digit fields
+ * Signature -> drawn as image
+ * Date -> "Date"
  */
 export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading W-9 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.W9);
     const form = pdfDoc.getForm();
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     
+    // Helper to safely set text field
     const setText = (fieldName, value) => {
       try {
         const field = form.getTextField(fieldName);
@@ -457,6 +391,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     };
     
+    // Helper to safely check checkbox
     const setCheck = (fieldName, checked) => {
       try {
         const field = form.getCheckBox(fieldName);
@@ -468,136 +403,122 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     };
     
-    // ========== LINE 1: Name ==========
-    const name = data.companyName || data.name || '';
-    setText('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', name);
+    // Line 1 - Name
+    const name = data.companyName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
+    setText('Name', name);
     
-    // ========== LINE 2: Business name/DBA ==========
+    // Line 2 - Business name/DBA
     if (data.dba) {
-      setText('2 Business namedisregarded entity name if different from above', data.dba);
+      setText('Business namedisregarded entity name if different from above', data.dba);
     }
     
-    // ========== LINE 3a: Federal Tax Classification ==========
+    // Line 3 - Federal tax classification (checkboxes)
     const entityType = (data.entityType || '').toLowerCase();
-    
-    if (entityType.includes('individual') || entityType.includes('sole') || entityType === 'sole_proprietor') {
-      setCheck('Individualsole proprietor', true);
-    } else if (entityType.includes('c corp') || entityType === 'c_corporation') {
-      setCheck('C corporation', true);
-    } else if (entityType.includes('s corp') || entityType === 's_corporation') {
-      setCheck('S corporation', true);
-    } else if (entityType.includes('partner') || entityType === 'partnership') {
+    if (entityType === 'individual' || entityType === 'sole_proprietor') {
+      setCheck('IndividualSole proprietor or', true);
+    } else if (entityType === 'c_corp' || entityType === 'c corporation') {
+      setCheck('C Corporation', true);
+    } else if (entityType === 's_corp' || entityType === 's corporation') {
+      setCheck('S Corporation', true);
+    } else if (entityType === 'partnership') {
       setCheck('Partnership', true);
-    } else if (entityType.includes('trust') || entityType.includes('estate')) {
+    } else if (entityType === 'trust' || entityType === 'estate') {
       setCheck('Trustestate', true);
-    } else if (entityType.includes('llc')) {
-      setCheck('LLC Enter the tax classification C  C corporation S  S corporation P  Partnership', true);
-      // LLC tax classification letter (C, S, or P)
-      const taxClass = (data.taxClassification || 'C').charAt(0).toUpperCase();
-      setText('undefined', taxClass);
-    } else if (entityType.includes('other')) {
+    } else if (entityType === 'llc') {
+      setCheck('Limited liability company Enter the tax classification C C corporation S S corporation P Partnership', true);
+      // LLC tax classification letter
+      if (data.llcClassification) {
+        setText('undefined', data.llcClassification);
+      }
+    } else if (entityType === 'other') {
       setCheck('Other see instructions', true);
     }
     
-    // ========== LINE 4: Exemptions (usually blank) ==========
+    // Line 4 - Exemptions
     if (data.exemptPayeeCode) {
       setText('Exempt payee code if any', data.exemptPayeeCode);
     }
     if (data.fatcaCode) {
-      setText('Compliance Act FATCA reporting', data.fatcaCode);
+      setText('Exemption from FATCA reporting', data.fatcaCode);
     }
     
-    // ========== LINE 5: Address ==========
-    setText('5 Address number street and apt or suite no See instructions', data.address || '');
+    // Line 5 - Address
+    setText('Address number street and apt or suite no See instructions', data.address || '');
     
-    // ========== LINE 6: City, State, ZIP ==========
-    const cityStateZip = `${data.city || ''}, ${data.state || ''} ${data.zip || ''}`.trim();
-    setText('6 City state and ZIP code', cityStateZip);
+    // Line 6 - City, State, ZIP
+    const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
+    setText('City state and ZIP code', cityStateZip);
     
-    // ========== LINE 7: Account numbers (optional) ==========
+    // Line 7 - Account numbers (optional)
     if (data.accountNumbers) {
-      setText('7 List account numbers here optional', data.accountNumbers);
+      setText('List account numbers here optional', data.accountNumbers);
     }
     
-    // ========== PART I: Taxpayer Identification Number ==========
-    // W-9 has individual boxes for each digit
-    // SSN boxes (9 total) at y≈372: x positions [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8]
-    // EIN boxes (9 total) at y≈420: x positions [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3]
+    // Part I - TIN (SSN or EIN)
+    // SSN - Draw each digit in its own box
+    // W-9 SSN box positions (x coords from left): approximately 417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8
+    // Y position: approximately 372
+    if (data.ssn && (entityType === 'individual' || entityType === 'sole_proprietor' || !data.ein)) {
+      const ssnClean = data.ssn.replace(/\D/g, '');
+      const ssnBoxX = [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8];
+      const ssnY = 372;
+      
+      for (let i = 0; i < Math.min(ssnClean.length, 9); i++) {
+        firstPage.drawText(ssnClean[i], {
+          x: ssnBoxX[i],
+          y: ssnY,
+          size: 12,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
     
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const pageHeight = 792;
-    
-    // SSN box positions (x coordinates, sorted left to right)
-    const ssnBoxX = [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8];
-    const ssnBoxY = pageHeight - 372 - 18; // Convert from top to bottom coordinate
-    
-    // EIN box positions (x coordinates, sorted left to right)
-    const einBoxX = [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3];
-    const einBoxY = pageHeight - 420 - 18;
-    
+    // EIN - Draw each digit in its own box
+    // W-9 EIN box positions (x coords): approximately 417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3
+    // Y position: approximately 420 (above SSN boxes)
     if (data.ein) {
-      // EIN format: XX-XXXXXXX - draw each digit in its own box
-      const ein = (data.ein || '').replace(/\D/g, '');
-      if (ein.length >= 9) {
-        for (let i = 0; i < 9 && i < ein.length; i++) {
-          firstPage.drawText(ein[i], {
-            x: einBoxX[i] + 3, // Center in box
-            y: einBoxY,
-            size: 14,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
-        }
-      }
-    } else if (data.ssn) {
-      // SSN format: XXX-XX-XXXX - draw each digit in its own box
-      const ssn = (data.ssn || '').replace(/\D/g, '');
-      if (ssn.length >= 9) {
-        for (let i = 0; i < 9 && i < ssn.length; i++) {
-          firstPage.drawText(ssn[i], {
-            x: ssnBoxX[i] + 3, // Center in box
-            y: ssnBoxY,
-            size: 14,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
-        }
+      const einClean = data.ein.replace(/\D/g, '');
+      const einBoxX = [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3];
+      const einY = 420;
+      
+      for (let i = 0; i < Math.min(einClean.length, 9); i++) {
+        firstPage.drawText(einClean[i], {
+          x: einBoxX[i],
+          y: einY,
+          size: 12,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
       }
     }
     
-    // ========== PART II: Certification ==========
     // Date
-    setText('Signature of US person Date', new Date().toLocaleDateString('en-US'));
+    setText('Date', data.w9Date || new Date().toLocaleDateString());
     
-    // ========== EMBED SIGNATURE IMAGE ==========
+    // Signature - Draw as image
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
-          const pages = pdfDoc.getPages();
-          const firstPage = pages[0];
-          const fontForSig = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
-          // W-9 signature line is at approximately y=466 from top
-          // In pdf-lib coords: 792 - 466 - 30 = 296
+          // W-9 signature line position
           firstPage.drawImage(sigImage, {
             x: 45,
             y: 296,
-            width: 160,
-            height: 35,
+            width: 150,
+            height: 30,
           });
           
-          // Add signature verification info BELOW the signature line
+          // Add signature verification below
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
               x: 45,
-              y: 285,
+              y: 283,
               size: 6,
-              font: fontForSig,
+              font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
           }
@@ -607,9 +528,13 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     }
     
+    // Flatten form
     form.flatten();
+    
+    // Save and convert to base64
     const pdfBytes = await pdfDoc.save();
-    return uint8ArrayToBase64(pdfBytes);
+    const base64 = btoa(String.fromCharCode(...pdfBytes));
+    return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
     console.error('Error filling W-9:', error);
@@ -617,101 +542,92 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
   }
 }
 
+
 /**
- * Sign MSA document
- * MSA has Adobe Sign placeholders that need to be covered and replaced with actual values
- * 
- * Page 1 placeholders:
- *   - {{EffectiveDate_es_:signer1:date}} at x=176, y=137
- *   - {{SubcontractorName_es_:signer2:text}} at x=176, y=197
- *   - {{EntityType_es_:signer2:text}} at x=176, y=223
- * 
- * Page 15 (Signature page) - SUBCONTRACTOR section:
- *   - {{Sig_signer2_es_:signer2:signature}} at x=224, y=380
- *   - {{Name_signer2_es_:signer2:fullname}} at x=156, y=424
- *   - {{Title_signer2_es_:signer2:text}} at x=156, y=450
- *   - {{Date_signer2_es_:signer2:date}} at x=156, y=476
+ * Fill MSA PDF with contractor data
+ * Replaces {{placeholder}} text with actual values
  */
 export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading MSA PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.MSA);
+    const pages = pdfDoc.getPages();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
+    // Get the last page for contractor signature
     const lastPage = pages[pages.length - 1];
-    const pageHeight = 792; // Letter size
+    const { width, height } = lastPage.getSize();
     
-    const currentDate = new Date().toLocaleDateString('en-US');
+    // Fill contractor info on signature page
+    // Position these based on the MSA layout
+    const contractorName = data.companyName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
+    const contactName = data.contactName || data.printedName || '';
+    const title = data.title || '';
+    const effectiveDate = data.effectiveDate || new Date().toLocaleDateString();
     
-    // Helper to convert bbox Y (from top) to pdf-lib Y (from bottom)
-    const toY = (bboxY, height = 10) => pageHeight - bboxY - height;
+    // Draw contractor information
+    // Company Name
+    lastPage.drawText(contractorName, {
+      x: 72,
+      y: height - 180,
+      size: 11,
+      font: font,
+      color: rgb(0, 0, 0),
+    });
     
-    // Helper to cover placeholder text with white rectangle and draw new text
-    const replacePlaceholder = (page, x, bboxY, width, height, newText, fontSize = 10) => {
-      const y = toY(bboxY, height);
-      // Cover the placeholder with white
-      page.drawRectangle({
-        x: x - 2,
-        y: y - 2,
-        width: width + 4,
-        height: height + 4,
-        color: rgb(1, 1, 1), // white
-      });
-      // Draw the new text
-      page.drawText(newText || '', {
-        x: x,
-        y: y,
-        size: fontSize,
+    // Printed Name
+    if (contactName) {
+      lastPage.drawText(contactName, {
+        x: 72,
+        y: height - 220,
+        size: 11,
         font: font,
         color: rgb(0, 0, 0),
       });
-    };
+    }
     
-    // ========== PAGE 1: Header Info ==========
+    // Title
+    if (title) {
+      lastPage.drawText(title, {
+        x: 72,
+        y: height - 260,
+        size: 11,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
     // Effective Date
-    replacePlaceholder(firstPage, 176, 137, 110, 12, currentDate);
+    lastPage.drawText(effectiveDate, {
+      x: 72,
+      y: height - 300,
+      size: 11,
+      font: font,
+      color: rgb(0, 0, 0),
+    });
     
-    // Subcontractor Name
-    replacePlaceholder(firstPage, 176, 197, 130, 12, data.companyName || '');
-    
-    // Entity Type
-    replacePlaceholder(firstPage, 176, 223, 100, 12, data.entityType || 'LLC');
-    
-    // ========== PAGE 15: Signature Page ==========
-    // Subcontractor Printed Name
-    replacePlaceholder(lastPage, 156, 424, 130, 12, data.contactName || '');
-    
-    // Subcontractor Title
-    replacePlaceholder(lastPage, 156, 450, 110, 12, data.contactTitle || data.title || '');
-    
-    // Subcontractor Date
-    replacePlaceholder(lastPage, 156, 476, 110, 12, currentDate);
-    
-    // ========== Embed Subcontractor Signature ==========
+    // Signature
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
-          // Draw signature image (no white rectangle - signature should have transparent bg)
-          // Signature placeholder is at x=224, y=380 from top
+          // Draw signature
           lastPage.drawImage(sigImage, {
-            x: 224,
-            y: toY(380, 45),
-            width: 160,
-            height: 40,
+            x: 72,
+            y: height - 380,
+            width: 150,
+            height: 35,
           });
           
-          // Add signature verification info below signature (in the margin area)
+          // Add signature verification below
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             lastPage.drawText(verifyText, {
-              x: 224,
-              y: toY(380, 45) - 10,
+              x: 72,
+              y: height - 395,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
@@ -723,181 +639,130 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
       }
     }
     
+    // Save and return
     const pdfBytes = await pdfDoc.save();
-    return uint8ArrayToBase64(pdfBytes);
+    const base64 = btoa(String.fromCharCode(...pdfBytes));
+    return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
-    console.error('Error signing MSA:', error);
+    console.error('Error filling MSA:', error);
     throw error;
   }
 }
 
+
 /**
- * Create a branded PDF for other forms (Direct Deposit, Emergency Contact, etc.)
- * Uses ASCII characters [X] and [ ] for checkboxes to avoid encoding issues
+ * Create a simple form PDF (for non-IRS forms like Direct Deposit, Safety, etc.)
  */
-export async function createFormPdf(title, sections, signatureDataUrl, signerName, signatureInfo = {}) {
+export async function createFormPdf(title, content, signatureDataUrl, signatureInfo = {}) {
   try {
     const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([612, 792]); // Letter size
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    const page = pdfDoc.addPage([612, 792]); // Letter size
     const { width, height } = page.getSize();
-    
     let y = height - 50;
     
-    // Blue header
-    page.drawRectangle({
-      x: 0,
-      y: height - 60,
-      width: width,
-      height: 60,
-      color: rgb(0, 0.467, 0.714), // #0077B6
-    });
-    
-    page.drawText('LYT Communications, LLC', {
-      x: 50,
-      y: height - 38,
-      size: 18,
-      font: fontBold,
-      color: rgb(1, 1, 1),
-    });
-    
-    y = height - 90;
-    
-    // Document title
+    // Title
     page.drawText(title, {
       x: 50,
       y: y,
-      size: 14,
+      size: 16,
       font: fontBold,
-      color: rgb(0, 0, 0),
+      color: rgb(0, 0.467, 0.714), // LYT Blue
     });
-    
     y -= 30;
     
-    // Sections
-    for (const section of sections) {
-      if (section.title) {
-        page.drawText(section.title, {
-          x: 50,
-          y: y,
-          size: 11,
-          font: fontBold,
-          color: rgb(0, 0.467, 0.714),
-        });
-        y -= 18;
+    // Draw horizontal line
+    page.drawLine({
+      start: { x: 50, y: y },
+      end: { x: width - 50, y: y },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+    y -= 20;
+    
+    // Content - split by newlines and render
+    const lines = content.split('\n');
+    for (const line of lines) {
+      if (y < 120) {
+        // Add new page if needed
+        break;
       }
       
-      if (section.fields) {
-        for (const field of section.fields) {
-          page.drawText(`${field.label}: ${field.value || ''}`, {
-            x: 50,
-            y: y,
-            size: 10,
-            font: font,
-            color: rgb(0, 0, 0),
-          });
-          y -= 15;
-        }
-      }
+      const isBold = line.startsWith('**') || line.includes(':');
+      const cleanLine = line.replace(/\*\*/g, '');
       
-      if (section.paragraphs) {
-        for (const para of section.paragraphs) {
-          // Simple word wrap
-          const words = para.split(' ');
-          let line = '';
-          for (const word of words) {
-            if ((line + word).length > 90) {
-              page.drawText(line.trim(), { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
-              y -= 12;
-              line = word + ' ';
-            } else {
-              line += word + ' ';
-            }
-          }
-          if (line.trim()) {
-            page.drawText(line.trim(), { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
-            y -= 12;
-          }
-          y -= 5;
-        }
-      }
-      
-      if (section.checkboxes) {
-        for (const cb of section.checkboxes) {
-          // Use ASCII checkboxes to avoid encoding issues
-          const mark = cb.checked ? '[X]' : '[ ]';
-          page.drawText(`${mark} ${cb.label}`, { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
-          y -= 14;
-        }
-      }
-      
-      y -= 10;
+      page.drawText(cleanLine, {
+        x: 50,
+        y: y,
+        size: 10,
+        font: isBold ? fontBold : font,
+        color: rgb(0, 0, 0),
+        maxWidth: width - 100,
+      });
+      y -= 14;
     }
     
-    // E-Sign consent
-    y -= 10;
-    page.drawLine({ start: { x: 50, y: y }, end: { x: width - 50, y: y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
-    y -= 15;
-    
-    page.drawText('ELECTRONIC SIGNATURE CONSENT', { x: 50, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-    y -= 12;
-    
-    page.drawText('By signing, I consent to electronic transaction per ESIGN Act and UETA.', { x: 50, y: y, size: 7, font: font, color: rgb(0.4, 0.4, 0.4) });
-    y -= 25;
-    
-    // Signature area
-    page.drawText('Signature:', { x: 50, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
-    
+    // Signature if provided
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
-          page.drawImage(sigImage, { x: 120, y: y - 15, width: 150, height: 40 });
+          
+          y = Math.max(y, 100) - 50;
+          
+          page.drawText('Signature:', {
+            x: 50,
+            y: y + 45,
+            size: 10,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+          
+          page.drawImage(sigImage, {
+            x: 50,
+            y: y,
+            width: 150,
+            height: 35,
+          });
+          
+          // Verification info
+          if (signatureInfo.timestamp || signatureInfo.ip) {
+            const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
+            page.drawText(verifyText, {
+              x: 50,
+              y: y - 15,
+              size: 6,
+              font: font,
+              color: rgb(0.4, 0.4, 0.4),
+            });
+          }
         }
-      } catch (e) {
-        console.log('Signature error:', e);
+      } catch (sigErr) {
+        console.error('Form signature embed error:', sigErr);
       }
     }
     
-    y -= 50;
-    page.drawText(`Printed Name: ${signerName || ''}`, { x: 50, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
-    page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: 300, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
-    
-    y -= 15;
-    page.drawText(`Time: ${new Date().toLocaleTimeString()}`, { x: 300, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
-    
-    if (signatureInfo.ip) {
-      page.drawText(`IP: ${signatureInfo.ip}`, { x: 420, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
-    }
-    
     // Footer
-    page.drawText(`Document ID: LYT-${Date.now()} | Generated: ${new Date().toISOString()}`, {
-      x: 50, y: 30, size: 7, font: font, color: rgb(0.5, 0.5, 0.5)
+    page.drawText('LYT Communications, LLC - Confidential', {
+      x: 50,
+      y: 30,
+      size: 8,
+      font: font,
+      color: rgb(0.5, 0.5, 0.5),
     });
     
     const pdfBytes = await pdfDoc.save();
-    return uint8ArrayToBase64(pdfBytes);
+    const base64 = btoa(String.fromCharCode(...pdfBytes));
+    return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
     console.error('Error creating form PDF:', error);
     throw error;
   }
-}
-
-/**
- * Convert Uint8Array to base64 string
- */
-function uint8ArrayToBase64(bytes) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
 
 export default {
