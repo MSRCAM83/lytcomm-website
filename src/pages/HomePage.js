@@ -130,19 +130,6 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             />
           </div>
 
-          {/* Tagline */}
-          <p style={{ 
-            fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', 
-            color: darkMode ? '#94a3b8' : '#64748b', 
-            marginBottom: '40px', 
-            lineHeight: '1.7',
-            maxWidth: '650px',
-            margin: '0 auto 40px',
-          }}>
-            Expert fiber optic construction across the Gulf Coast.
-            From Texas to Florida, we connect communities with precision and safety.
-          </p>
-
           {/* CTA Buttons */}
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '40px' }}>
             <button
