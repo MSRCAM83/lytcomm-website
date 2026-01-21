@@ -38,6 +38,9 @@ export const URLS = {
 // Onboarding invite code
 export const INVITE_CODE = 'welcome2lyt';
 
+// NDA signing invite code
+export const NDA_INVITE_CODE = 'lytnda2026';
+
 // Admin configuration
 export const ADMIN_CONFIG = {
   primaryAdmin: 'matt@lytcomm.com',
