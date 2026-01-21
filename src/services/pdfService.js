@@ -476,7 +476,18 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
 
 /**
  * Sign MSA document
- * MSA has no fillable form fields, so we add signature and info as drawn text
+ * MSA has Adobe Sign placeholders that need to be covered and replaced with actual values
+ * 
+ * Page 1 placeholders:
+ *   - {{EffectiveDate_es_:signer1:date}} at x=176, y=137
+ *   - {{SubcontractorName_es_:signer2:text}} at x=176, y=197
+ *   - {{EntityType_es_:signer2:text}} at x=176, y=223
+ * 
+ * Page 15 (Signature page) - SUBCONTRACTOR section:
+ *   - {{Sig_signer2_es_:signer2:signature}} at x=224, y=380
+ *   - {{Name_signer2_es_:signer2:fullname}} at x=156, y=424
+ *   - {{Title_signer2_es_:signer2:text}} at x=156, y=450
+ *   - {{Date_signer2_es_:signer2:date}} at x=156, y=476
  */
 export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
@@ -486,93 +497,102 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
     const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
     const lastPage = pages[pages.length - 1];
+    const pageHeight = 792; // Letter size
     
-    // Add contractor info to signature block area on last page
-    const sigBlockY = 200;
+    const currentDate = new Date().toLocaleDateString('en-US');
     
-    // Company Name (bold)
-    lastPage.drawText(data.companyName || '', {
-      x: 72,
-      y: sigBlockY + 80,
-      size: 12,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
+    // Helper to convert bbox Y (from top) to pdf-lib Y (from bottom)
+    const toY = (bboxY, height = 10) => pageHeight - bboxY - height;
     
-    // Contact Name
-    lastPage.drawText(`By: ${data.contactName || ''}`, {
-      x: 72,
-      y: sigBlockY + 50,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    // Helper to cover placeholder text with white rectangle and draw new text
+    const replacePlaceholder = (page, x, bboxY, width, height, newText, fontSize = 10) => {
+      const y = toY(bboxY, height);
+      // Cover the placeholder with white
+      page.drawRectangle({
+        x: x - 2,
+        y: y - 2,
+        width: width + 4,
+        height: height + 4,
+        color: rgb(1, 1, 1), // white
+      });
+      // Draw the new text
+      page.drawText(newText || '', {
+        x: x,
+        y: y,
+        size: fontSize,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    };
     
-    // Title
-    lastPage.drawText(`Title: ${data.contactTitle || data.title || ''}`, {
-      x: 72,
-      y: sigBlockY + 35,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    // ========== PAGE 1: Header Info ==========
+    // Effective Date
+    replacePlaceholder(firstPage, 176, 137, 110, 12, currentDate);
     
-    // Date
-    lastPage.drawText(`Date: ${new Date().toLocaleDateString('en-US')}`, {
-      x: 72,
-      y: sigBlockY + 20,
-      size: 10,
-      font: font,
-      color: rgb(0, 0, 0),
-    });
+    // Subcontractor Name
+    replacePlaceholder(firstPage, 176, 197, 130, 12, data.companyName || '');
     
-    // Embed signature
+    // Entity Type
+    replacePlaceholder(firstPage, 176, 223, 100, 12, data.entityType || 'LLC');
+    
+    // ========== PAGE 15: Signature Page ==========
+    // Subcontractor Printed Name
+    replacePlaceholder(lastPage, 156, 424, 130, 12, data.contactName || '');
+    
+    // Subcontractor Title
+    replacePlaceholder(lastPage, 156, 450, 110, 12, data.contactTitle || data.title || '');
+    
+    // Subcontractor Date
+    replacePlaceholder(lastPage, 156, 476, 110, 12, currentDate);
+    
+    // ========== Embed Subcontractor Signature ==========
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
-          lastPage.drawImage(sigImage, {
-            x: 280,
-            y: sigBlockY + 20,
+          
+          // Cover the signature placeholder
+          lastPage.drawRectangle({
+            x: 220,
+            y: toY(380, 50) - 10,
             width: 200,
-            height: 50,
+            height: 60,
+            color: rgb(1, 1, 1),
+          });
+          
+          // Draw signature image
+          lastPage.drawImage(sigImage, {
+            x: 224,
+            y: toY(380, 45),
+            width: 180,
+            height: 45,
           });
           
           // Add signature verification info below signature
-          const verifyY = sigBlockY - 5;
-          const fontSize = 7;
-          const lineHeight = 9;
-          
           if (signatureInfo.timestamp || signatureInfo.ip) {
+            const verifyY = toY(380, 45) - 12;
             lastPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
-              x: 280,
+              x: 224,
               y: verifyY,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
             
-            if (signatureInfo.timestamp) {
-              lastPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
-                x: 280,
-                y: verifyY - lineHeight,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
+            let infoText = '';
+            if (signatureInfo.timestamp) infoText += `Signed: ${signatureInfo.timestamp}`;
+            if (signatureInfo.ip) infoText += `  |  IP: ${signatureInfo.ip}`;
             
-            if (signatureInfo.ip) {
-              lastPage.drawText(`IP: ${signatureInfo.ip}`, {
-                x: 400,
-                y: verifyY - lineHeight,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
+            lastPage.drawText(infoText, {
+              x: 224,
+              y: verifyY - 9,
+              size: 7,
+              font: font,
+              color: rgb(0.3, 0.3, 0.3),
+            });
           }
         }
       } catch (sigErr) {
