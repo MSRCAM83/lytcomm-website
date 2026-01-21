@@ -69,35 +69,6 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
     setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
   };
 
-  // Run Employee Test
-  // ==================== TEST FUNCTIONS ====================
-  const [testing, setTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState('');
-  const [testLog, setTestLog] = useState([]);
-
-  const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  const randomNum = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-  const randomSSN = () => `${randomNum(100,999)}-${randomNum(10,99)}-${randomNum(1000,9999)}`;
-  const randomEIN = () => `${randomNum(10,99)}-${randomNum(1000000,9999999)}`;
-  const randomPhone = () => `(${randomNum(200,999)}) ${randomNum(200,999)}-${randomNum(1000,9999)}`;
-  const randomRouting = () => String(randomNum(100000000, 999999999));
-  const randomAccount = () => String(randomNum(10000000, 9999999999));
-  const randomZip = () => String(randomNum(10000, 99999));
-
-  const firstNames = ['James', 'Michael', 'Robert', 'David', 'William', 'Sarah', 'Jennifer', 'Emily', 'Jessica', 'Amanda'];
-  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Martinez', 'Wilson'];
-  const streets = ['123 Main St', '456 Oak Ave', '789 Pine Rd', '321 Elm Blvd', '654 Cedar Ln', '987 Maple Dr'];
-  const cities = ['Houston', 'Dallas', 'Austin', 'San Antonio', 'New Orleans', 'Baton Rouge'];
-  const states = ['TX', 'TX', 'TX', 'TX', 'LA', 'LA'];
-  const banks = ['Chase Bank', 'Wells Fargo', 'Bank of America', 'Capital One', 'USAA', 'Regions Bank'];
-  const companies = ['Apex Fiber Solutions', 'Gulf Coast Telecom', 'Bayou Networks', 'Lone Star Communications', 'Delta Cabling'];
-  const titles = ['Owner', 'President', 'CEO', 'Operations Manager', 'Project Manager'];
-
-  const log = (msg) => {
-    console.log(msg);
-    setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
-
   // Run Employee Test - COMPREHENSIVE
   const runEmployeeTest = async () => {
     setTesting(true);
@@ -126,6 +97,10 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       const signatureTimestamp = new Date().toISOString();
       const signature = generateSignature(fullName);
+      const signatureInfo = {
+        timestamp: new Date().toLocaleString(),
+        ip: ipAddress
+      };
       log('Signature generated');
       
       // COMPLETE form data matching all fields in EmployeeOnboarding
@@ -187,7 +162,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           otherIncome: formData.otherIncome,
           deductions: formData.deductions,
           extraWithholding: formData.extraWithholding,
-        }, signature);
+        }, signature, signatureInfo);
         log(w4Pdf ? '✅ W-4 PDF filled successfully!' : '❌ W-4 returned null');
       } catch (e) {
         log(`❌ W-4 ERROR: ${e.message}`);
@@ -452,6 +427,10 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       const signatureTimestamp = new Date().toISOString();
       const signature = generateSignature(contactName);
+      const signatureInfo = {
+        timestamp: new Date().toLocaleString(),
+        ip: ipAddress
+      };
       log('Signature generated');
       
       // COMPLETE form data matching all fields in ContractorOnboarding
@@ -506,7 +485,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           zip: formData.zip,
           ein: formData.ein,
           ssn: formData.ssn,
-        }, signature);
+        }, signature, signatureInfo);
         log(w9Pdf ? '✅ W-9 PDF filled successfully!' : '❌ W-9 returned null');
       } catch (e) {
         log(`❌ W-9 ERROR: ${e.message}`);
@@ -522,7 +501,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`,
           phone: formData.phone,
           email: formData.email,
-        }, signature);
+        }, signature, signatureInfo);
         log(msaPdf ? '✅ MSA PDF signed successfully!' : '❌ MSA returned null');
       } catch (e) {
         log(`❌ MSA ERROR: ${e.message}`);
@@ -752,7 +731,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel</h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.44</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
