@@ -327,6 +327,11 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
       // ========== GENERATE FILLED PDFs ==========
       console.log('Generating contractor PDFs...');
       
+      const signatureInfo = {
+        timestamp: new Date().toLocaleString(),
+        ip: ipAddress
+      };
+      
       // 1. Fill actual IRS W-9 form
       let w9Pdf = null;
       try {
@@ -341,7 +346,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           zip: formData.zip,
           ein: formData.taxIdType === 'ein' ? formData.ein : '',
           ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
-        }, formData.w9Signature);
+        }, formData.w9Signature, signatureInfo);
         console.log('W-9 PDF filled successfully');
       } catch (e) {
         console.error('W-9 error:', e);
@@ -355,7 +360,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           contactName: formData.contactName,
           contactTitle: formData.contactTitle,
           title: formData.contactTitle,
-        }, formData.msaSignature);
+        }, formData.msaSignature, signatureInfo);
         console.log('MSA signed successfully');
       } catch (e) {
         console.error('MSA error:', e);
@@ -384,7 +389,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.rateCardSignature,
-          formData.contactName
+          formData.contactName,
+          signatureInfo
         );
         console.log('Rate Card PDF created');
       } catch (e) {
@@ -416,7 +422,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.bankingSignature,
-          formData.contactName
+          formData.contactName,
+          signatureInfo
         );
         console.log('Direct Deposit PDF created');
       } catch (e) {
@@ -450,7 +457,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.safetySignature,
-          formData.contactName
+          formData.contactName,
+          signatureInfo
         );
         console.log('Safety PDF created');
       } catch (e) {
