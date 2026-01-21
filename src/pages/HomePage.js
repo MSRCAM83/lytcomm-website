@@ -162,6 +162,41 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           otherIncome: formData.otherIncome,
           deductions: formData.deductions,
           extraWithholding: formData.extraWithholding,
+          // W-4 Page 3 - Step 2(b) Multiple Jobs Worksheet
+          worksheet: {
+            step2b_line1: '52000',   // Job 1 wages - goes to undefined_2
+            step2b_line2a: '35000',  // Job 2 wages - goes to 2a
+            step2b_line2b: '87000',  // Total (line 1 + 2a) - goes to 2b
+            step2b_line2c: '4000',   // From table - goes to 2c
+            step2b_line3: '26',      // Pay periods - goes to 3
+            step2b_line4: '154',     // Result (2c / line 3) - goes to undefined_3
+          },
+          // W-4 Page 4 - Step 4(b) Deductions Worksheet
+          deductionsWorksheet: {
+            line1a: '15000',   // Itemized deductions estimate
+            line1b: '14600',   // Standard deduction
+            line1c: '400',     // Line 1a minus 1b (if greater)
+            line1d: '400',     // RESULT LINE - goes to undefined_4
+            line3a: '2500',    // Student loan interest
+            line3b: '1000',    // Deductible IRA contributions  
+            line3c: '3500',    // RESULT LINE - goes to undefined_5
+            line5: '3900',     // TOTAL (1d + 3c) - goes to undefined_6
+            line6a: '50000',   // Pay periods remaining
+            line6b: '25000',   // Spouse income
+            line6c: '0',       // Other income
+            line6d: '75000',   // Total income
+            line6e: '12000',   // Deductions
+            line7: '63000',    // RESULT - goes to undefined_7
+            line8a: '0',       // Tax credits
+            line8b: '0',       // Child tax credits
+            line9: '0',        // RESULT - goes to undefined_9
+            line10: '0',
+            line11: '0',
+            line12: '0',
+            line13: '0',
+            line14: '0',
+            line15: '0',
+          },
         }, signature, signatureInfo);
         log(w4Pdf ? '✅ W-4 PDF filled successfully!' : '❌ W-4 returned null');
       } catch (e) {
@@ -732,7 +767,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.49</span></h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.52</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
