@@ -70,6 +70,35 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
   };
 
   // Run Employee Test
+  // ==================== TEST FUNCTIONS ====================
+  const [testing, setTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState('');
+  const [testLog, setTestLog] = useState([]);
+
+  const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const randomNum = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const randomSSN = () => `${randomNum(100,999)}-${randomNum(10,99)}-${randomNum(1000,9999)}`;
+  const randomEIN = () => `${randomNum(10,99)}-${randomNum(1000000,9999999)}`;
+  const randomPhone = () => `(${randomNum(200,999)}) ${randomNum(200,999)}-${randomNum(1000,9999)}`;
+  const randomRouting = () => String(randomNum(100000000, 999999999));
+  const randomAccount = () => String(randomNum(10000000, 9999999999));
+  const randomZip = () => String(randomNum(10000, 99999));
+
+  const firstNames = ['James', 'Michael', 'Robert', 'David', 'William', 'Sarah', 'Jennifer', 'Emily', 'Jessica', 'Amanda'];
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Martinez', 'Wilson'];
+  const streets = ['123 Main St', '456 Oak Ave', '789 Pine Rd', '321 Elm Blvd', '654 Cedar Ln', '987 Maple Dr'];
+  const cities = ['Houston', 'Dallas', 'Austin', 'San Antonio', 'New Orleans', 'Baton Rouge'];
+  const states = ['TX', 'TX', 'TX', 'TX', 'LA', 'LA'];
+  const banks = ['Chase Bank', 'Wells Fargo', 'Bank of America', 'Capital One', 'USAA', 'Regions Bank'];
+  const companies = ['Apex Fiber Solutions', 'Gulf Coast Telecom', 'Bayou Networks', 'Lone Star Communications', 'Delta Cabling'];
+  const titles = ['Owner', 'President', 'CEO', 'Operations Manager', 'Project Manager'];
+
+  const log = (msg) => {
+    console.log(msg);
+    setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  };
+
+  // Run Employee Test - COMPREHENSIVE
   const runEmployeeTest = async () => {
     setTesting(true);
     setTestLog([]);
@@ -79,6 +108,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       const firstName = randomFrom(firstNames);
       const lastName = randomFrom(lastNames) + ' DELETE';
       const fullName = `${firstName} ${lastName}`;
+      const middleName = randomFrom(['A', 'B', 'J', 'M', 'R', '']);
       const cityIdx = randomNum(0, cities.length - 1);
       
       log(`Creating test employee: ${fullName}`);
@@ -98,8 +128,11 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       const signature = generateSignature(fullName);
       log('Signature generated');
       
+      // COMPLETE form data matching all fields in EmployeeOnboarding
       const formData = {
+        // Personal Info
         firstName,
+        middleName,
         lastName,
         email: `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(' delete','')}@test.com`,
         phone: randomPhone(),
@@ -109,18 +142,30 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         zip: randomZip(),
         dateOfBirth: `${randomNum(1970,1995)}-${String(randomNum(1,12)).padStart(2,'0')}-${String(randomNum(1,28)).padStart(2,'0')}`,
         ssn: randomSSN(),
+        // W-4 Info
         filingStatus: randomFrom(['single', 'married', 'head']),
+        multipleJobs: randomFrom([true, false]),
+        qualifyingChildren: randomNum(0, 3),
+        otherDependents: randomNum(0, 2),
+        otherIncome: randomFrom(['', '500', '1000', '']),
+        deductions: randomFrom(['', '2000', '']),
+        extraWithholding: randomFrom(['', '50', '100', '']),
+        // Bank Info
         bankName: randomFrom(banks),
         routingNumber: randomRouting(),
         accountNumber: randomAccount(),
         accountType: randomFrom(['checking', 'savings']),
+        // Emergency Contact
         emergencyName: `${randomFrom(firstNames)} ${randomFrom(lastNames)}`,
         emergencyRelation: randomFrom(['Spouse', 'Parent', 'Sibling', 'Friend']),
         emergencyPhone: randomPhone(),
-        emergencyEmail: 'emergency@test.com',
+        emergencyEmail: `emergency${randomNum(1,999)}@test.com`,
       };
       
-      log('Form data prepared');
+      log('Form data prepared with ALL fields');
+      log(`Address: ${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`);
+      log(`SSN: ${formData.ssn}, DOB: ${formData.dateOfBirth}`);
+      log(`Bank: ${formData.bankName}, Routing: ${formData.routingNumber}, Account: ${formData.accountNumber}`);
       
       // Generate PDFs
       log('Generating W-4 PDF...');
@@ -128,7 +173,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       try {
         w4Pdf = await fillW4({
           firstName: formData.firstName,
-          middleName: '',
+          middleName: formData.middleName,
           lastName: formData.lastName,
           ssn: formData.ssn,
           address: formData.address,
@@ -136,6 +181,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           state: formData.state,
           zip: formData.zip,
           filingStatus: formData.filingStatus,
+          multipleJobs: formData.multipleJobs,
+          qualifyingChildren: formData.qualifyingChildren,
+          otherDependents: formData.otherDependents,
+          otherIncome: formData.otherIncome,
+          deductions: formData.deductions,
+          extraWithholding: formData.extraWithholding,
         }, signature);
         log(w4Pdf ? '✅ W-4 PDF filled successfully!' : '❌ W-4 returned null');
       } catch (e) {
@@ -148,9 +199,11 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         directDepositPdf = await createFormPdf(
           'Direct Deposit Authorization',
           [
-            { title: 'EMPLOYEE', fields: [
-              { label: 'Name', value: fullName },
+            { title: 'EMPLOYEE INFORMATION', fields: [
+              { label: 'Full Name', value: fullName },
               { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
+              { label: 'Address', value: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}` },
             ]},
             { title: 'BANK INFORMATION', fields: [
               { label: 'Bank Name', value: formData.bankName },
@@ -158,9 +211,14 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
               { label: 'Account Number', value: formData.accountNumber },
               { label: 'Account Type', value: formData.accountType },
             ]},
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to initiate credit entries to my account at the financial institution listed above.',
+              'This authorization remains in effect until I provide written notice to discontinue.',
+            ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
               { label: 'Timestamp', value: signatureTimestamp },
+              { label: 'User Agent', value: navigator.userAgent.substring(0, 80) + '...' },
             ]}
           ],
           signature,
@@ -171,19 +229,51 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         log(`❌ Direct Deposit ERROR: ${e.message}`);
       }
       
+      log('Generating Emergency Contact PDF...');
+      let emergencyContactPdf = null;
+      try {
+        emergencyContactPdf = await createFormPdf(
+          'Emergency Contact Information',
+          [
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Phone', value: formData.phone },
+              { label: 'Address', value: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}` },
+            ]},
+            { title: 'EMERGENCY CONTACT', fields: [
+              { label: 'Contact Name', value: formData.emergencyName },
+              { label: 'Relationship', value: formData.emergencyRelation },
+              { label: 'Phone', value: formData.emergencyPhone },
+              { label: 'Email', value: formData.emergencyEmail },
+            ]}
+          ],
+          null,
+          fullName
+        );
+        log(emergencyContactPdf ? '✅ Emergency Contact PDF created' : '❌ Emergency Contact returned null');
+      } catch (e) {
+        log(`❌ Emergency Contact ERROR: ${e.message}`);
+      }
+      
       log('Generating Background Check PDF...');
       let backgroundCheckPdf = null;
       try {
         backgroundCheckPdf = await createFormPdf(
           'Background Check Authorization',
           [
-            { title: 'APPLICANT', fields: [
-              { label: 'Name', value: fullName },
-              { label: 'DOB', value: formData.dateOfBirth },
+            { title: 'APPLICANT INFORMATION', fields: [
+              { label: 'Full Name', value: fullName },
+              { label: 'Date of Birth', value: formData.dateOfBirth },
               { label: 'SSN', value: formData.ssn },
+              { label: 'Address', value: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}` },
             ]},
-            { title: 'AUTHORIZATION', checkboxes: [
-              { label: 'I authorize this background check', checked: true }
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to conduct a background investigation including criminal records, employment verification, education verification, and reference checks.',
+              'I understand that this information will be used for employment purposes only.',
+            ]},
+            { checkboxes: [
+              { label: 'I authorize this background check investigation', checked: true },
+              { label: 'I certify all information provided is accurate', checked: true },
             ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
@@ -198,17 +288,60 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         log(`❌ Background Check ERROR: ${e.message}`);
       }
       
-      log('Generating Safety PDF...');
+      log('Generating Drug Test Consent PDF...');
+      let drugTestPdf = null;
+      try {
+        drugTestPdf = await createFormPdf(
+          'Drug and Alcohol Testing Consent',
+          [
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Date of Birth', value: formData.dateOfBirth },
+            ]},
+            { title: 'CONSENT', paragraphs: [
+              'I consent to drug and alcohol testing as required by company policy and applicable law.',
+            ]},
+            { checkboxes: [
+              { label: 'Pre-employment testing required', checked: true },
+              { label: 'Random testing may be conducted', checked: true },
+              { label: 'Post-accident testing may be required', checked: true },
+              { label: 'Reasonable suspicion testing', checked: true },
+              { label: 'I consent to all testing requirements', checked: true },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          fullName
+        );
+        log(drugTestPdf ? '✅ Drug Test PDF created' : '❌ Drug Test returned null');
+      } catch (e) {
+        log(`❌ Drug Test ERROR: ${e.message}`);
+      }
+      
+      log('Generating Safety Acknowledgment PDF...');
       let safetyPdf = null;
       try {
         safetyPdf = await createFormPdf(
-          'HSE Safety Acknowledgment',
+          'HSE Safety Manual Acknowledgment',
           [
-            { title: 'EMPLOYEE', fields: [{ label: 'Name', value: fullName }]},
-            { title: 'ACKNOWLEDGMENT', checkboxes: [
-              { label: 'Follow all safety procedures', checked: true },
-              { label: 'Use required PPE', checked: true },
-              { label: 'I acknowledge the HSE Manual', checked: true }
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Date', value: new Date().toLocaleDateString() },
+            ]},
+            { title: 'ACKNOWLEDGMENT', paragraphs: [
+              'I have received, read, and understand the LYT Communications Health, Safety, and Environmental (HSE) Manual.',
+              'I agree to comply with all safety policies, procedures, and regulations.',
+            ]},
+            { checkboxes: [
+              { label: 'Follow all safety procedures and protocols', checked: true },
+              { label: 'Use required Personal Protective Equipment (PPE)', checked: true },
+              { label: 'Report all injuries and incidents immediately', checked: true },
+              { label: 'Participate in required safety training', checked: true },
+              { label: 'Report unsafe conditions to supervisor', checked: true },
+              { label: 'I acknowledge receipt of the HSE Manual', checked: true },
             ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
@@ -232,6 +365,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           email: formData.email,
           phone: formData.phone,
           ssn: formData.ssn,
+          dateOfBirth: formData.dateOfBirth,
           address: formData.address,
           city: formData.city,
           state: formData.state,
@@ -243,6 +377,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           emergencyName: formData.emergencyName,
           emergencyPhone: formData.emergencyPhone,
           emergencyRelation: formData.emergencyRelation,
+          emergencyEmail: formData.emergencyEmail,
         },
         signatureVerification: {
           ipAddress,
@@ -252,14 +387,16 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         filledPdfs: {
           w4: w4Pdf,
           directDeposit: directDepositPdf,
+          emergencyContact: emergencyContactPdf,
           backgroundCheck: backgroundCheckPdf,
+          drugTest: drugTestPdf,
           safety: safetyPdf,
         },
         submittedAt: new Date().toISOString(),
       };
       
       log('Submitting to backend...');
-      log(`PDFs included: W4=${!!w4Pdf}, DD=${!!directDepositPdf}, BG=${!!backgroundCheckPdf}, Safety=${!!safetyPdf}`);
+      log(`PDFs: W4=${!!w4Pdf}, DD=${!!directDepositPdf}, EC=${!!emergencyContactPdf}, BG=${!!backgroundCheckPdf}, DT=${!!drugTestPdf}, Safety=${!!safetyPdf}`);
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
@@ -286,7 +423,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
     }
   };
 
-  // Run Contractor Test
+  // Run Contractor Test - COMPREHENSIVE
   const runContractorTest = async () => {
     setTesting(true);
     setTestLog([]);
@@ -298,6 +435,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       const contactLast = randomFrom(lastNames);
       const contactName = `${contactFirst} ${contactLast}`;
       const cityIdx = randomNum(0, cities.length - 1);
+      const usesEIN = Math.random() > 0.3; // 70% use EIN, 30% use SSN
       
       log(`Creating test contractor: ${companyName}`);
       
@@ -316,9 +454,11 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       const signature = generateSignature(contactName);
       log('Signature generated');
       
+      // COMPLETE form data matching all fields in ContractorOnboarding
       const formData = {
+        // Company Info
         companyName,
-        dba: '',
+        dba: Math.random() > 0.7 ? `${contactLast} Services` : '',
         contactName,
         contactTitle: randomFrom(titles),
         email: `${contactFirst.toLowerCase()}@${companyName.toLowerCase().replace(/ delete/g,'').replace(/ /g,'')}.com`,
@@ -327,16 +467,28 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         city: cities[cityIdx],
         state: states[cityIdx],
         zip: randomZip(),
-        entityType: randomFrom(['llc', 'corporation', 'sole_proprietor']),
-        taxIdType: 'ein',
-        ein: randomEIN(),
+        // Tax Info
+        entityType: randomFrom(['llc', 'c_corporation', 's_corporation', 'partnership', 'sole_proprietor']),
+        taxClassification: randomFrom(['C', 'S', 'P']),
+        taxIdType: usesEIN ? 'ein' : 'ssn',
+        ein: usesEIN ? randomEIN() : '',
+        ssn: usesEIN ? '' : randomSSN(),
+        // Bank Info
         bankName: randomFrom(banks),
         routingNumber: randomRouting(),
         accountNumber: randomAccount(),
-        accountType: 'checking',
+        accountType: randomFrom(['checking', 'savings']),
+        // Insurance
+        liabilityAmount: '$1,000,000',
+        workersCompAmount: '$500,000',
       };
       
-      log('Form data prepared');
+      log('Form data prepared with ALL fields');
+      log(`Company: ${formData.companyName}, Contact: ${formData.contactName} (${formData.contactTitle})`);
+      log(`Address: ${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`);
+      log(`Entity: ${formData.entityType}, Tax ID Type: ${formData.taxIdType}`);
+      log(`${formData.taxIdType === 'ein' ? 'EIN' : 'SSN'}: ${formData.taxIdType === 'ein' ? formData.ein : formData.ssn}`);
+      log(`Bank: ${formData.bankName}, Routing: ${formData.routingNumber}, Account: ${formData.accountNumber}`);
       
       // Generate PDFs
       log('Generating W-9 PDF...');
@@ -344,13 +496,16 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       try {
         w9Pdf = await fillW9({
           companyName: formData.companyName,
+          name: formData.companyName,
           dba: formData.dba,
           entityType: formData.entityType,
+          taxClassification: formData.taxClassification,
           address: formData.address,
           city: formData.city,
           state: formData.state,
           zip: formData.zip,
           ein: formData.ein,
+          ssn: formData.ssn,
         }, signature);
         log(w9Pdf ? '✅ W-9 PDF filled successfully!' : '❌ W-9 returned null');
       } catch (e) {
@@ -364,25 +519,37 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           companyName: formData.companyName,
           contactName: formData.contactName,
           contactTitle: formData.contactTitle,
+          address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`,
+          phone: formData.phone,
+          email: formData.email,
         }, signature);
         log(msaPdf ? '✅ MSA PDF signed successfully!' : '❌ MSA returned null');
       } catch (e) {
         log(`❌ MSA ERROR: ${e.message}`);
       }
       
-      log('Generating Rate Card PDF...');
+      log('Generating Rate Card Acceptance PDF...');
       let rateCardPdf = null;
       try {
         rateCardPdf = await createFormPdf(
-          'Rate Card Acceptance',
+          'Rate Card Acceptance Agreement',
           [
-            { title: 'CONTRACTOR', fields: [
-              { label: 'Company', value: formData.companyName },
-              { label: 'Contact', value: formData.contactName },
+            { title: 'CONTRACTOR INFORMATION', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'Contact Name', value: formData.contactName },
+              { label: 'Title', value: formData.contactTitle },
+              { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
             ]},
             { title: 'PAYMENT TERMS', checkboxes: [
-              { label: 'Net 30 from invoice approval', checked: true },
-              { label: '10% retainage until project completion', checked: true },
+              { label: 'Net 30 payment from invoice approval date', checked: true },
+              { label: '10% retainage held until project completion', checked: true },
+              { label: 'Lien waivers required with all payment applications', checked: true },
+              { label: 'Rates per current LYT Communications Rate Card', checked: true },
+              { label: 'Subject to change with 30-day written notice', checked: true },
+            ]},
+            { title: 'ACCEPTANCE', paragraphs: [
+              'By signing below, I acknowledge that I have reviewed and accept the rates and payment terms outlined in the LYT Communications Rate Card.',
             ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
@@ -403,14 +570,21 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         directDepositPdf = await createFormPdf(
           'Direct Deposit Authorization - Contractor',
           [
-            { title: 'COMPANY', fields: [
+            { title: 'COMPANY INFORMATION', fields: [
               { label: 'Company Name', value: formData.companyName },
-              { label: 'Contact', value: formData.contactName },
+              { label: 'Contact Name', value: formData.contactName },
+              { label: 'Address', value: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}` },
+              { label: 'Tax ID (EIN/SSN)', value: formData.taxIdType === 'ein' ? formData.ein : formData.ssn },
             ]},
             { title: 'BANK INFORMATION', fields: [
               { label: 'Bank Name', value: formData.bankName },
               { label: 'Routing Number', value: formData.routingNumber },
               { label: 'Account Number', value: formData.accountNumber },
+              { label: 'Account Type', value: formData.accountType },
+            ]},
+            { title: 'AUTHORIZATION', paragraphs: [
+              'I authorize LYT Communications, LLC to initiate ACH credit entries to the account listed above for payment of services rendered.',
+              'This authorization remains in effect until I provide written notice to discontinue.',
             ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
@@ -425,19 +599,28 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         log(`❌ Direct Deposit ERROR: ${e.message}`);
       }
       
-      log('Generating Safety PDF...');
+      log('Generating Safety Program Acknowledgment PDF...');
       let safetyPdf = null;
       try {
         safetyPdf = await createFormPdf(
-          'Safety Program Acknowledgment',
+          'Safety Program Acknowledgment - Contractor',
           [
-            { title: 'CONTRACTOR', fields: [
-              { label: 'Company', value: formData.companyName },
-              { label: 'Contact', value: formData.contactName },
+            { title: 'CONTRACTOR INFORMATION', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'Contact Name', value: formData.contactName },
+              { label: 'Title', value: formData.contactTitle },
             ]},
             { title: 'SAFETY REQUIREMENTS', checkboxes: [
-              { label: 'Complete site-specific safety orientation', checked: true },
-              { label: 'Required PPE at all times', checked: true },
+              { label: 'Complete site-specific safety orientation before work begins', checked: true },
+              { label: 'Required PPE at all times on job sites (hard hat, safety vest, glasses)', checked: true },
+              { label: 'Report all incidents and near-misses immediately', checked: true },
+              { label: 'Daily toolbox safety meetings required', checked: true },
+              { label: 'Comply with OSHA regulations and LYT safety policies', checked: true },
+              { label: 'Maintain current safety certifications for all personnel', checked: true },
+            ]},
+            { title: 'INSURANCE REQUIREMENTS', fields: [
+              { label: 'General Liability Minimum', value: formData.liabilityAmount },
+              { label: 'Workers Compensation', value: formData.workersCompAmount },
             ]},
             { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
               { label: 'IP Address', value: ipAddress },
@@ -469,6 +652,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           entityType: formData.entityType,
           taxIdType: formData.taxIdType,
           ein: formData.ein,
+          ssn: formData.ssn,
           bankName: formData.bankName,
           routingNumber: formData.routingNumber,
           accountNumber: formData.accountNumber,
@@ -490,7 +674,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       };
       
       log('Submitting to backend...');
-      log(`PDFs included: W9=${!!w9Pdf}, MSA=${!!msaPdf}, RC=${!!rateCardPdf}, DD=${!!directDepositPdf}, Safety=${!!safetyPdf}`);
+      log(`PDFs: W9=${!!w9Pdf}, MSA=${!!msaPdf}, RC=${!!rateCardPdf}, DD=${!!directDepositPdf}, Safety=${!!safetyPdf}`);
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
@@ -516,7 +700,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       setTesting(false);
     }
   };
-  
+  // ==================== END TEST FUNCTIONS ====================
   // Logo - PNG with transparent background
   // Dark mode: pink/purple/orange logo
   // Light mode: blue/teal/green logo (no box needed)
