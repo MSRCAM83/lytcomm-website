@@ -116,8 +116,37 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
     // 1a - Last name
     setText('Last name', data.lastName || '');
     
-    // 1b - Social Security Number
-    setText('b Social security number', data.ssn || '');
+    // 1b - Social Security Number - Draw individual digits
+    // W-4 SSN field is at x=476, y=91, w=100, h=17
+    // SSN format: XXX-XX-XXXX with boxes spaced evenly
+    const ssn = (data.ssn || '').replace(/\D/g, '');
+    if (ssn.length === 9) {
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const pageHeight = 792;
+      
+      // W-4 SSN boxes start at x=476, each digit ~10px apart
+      // Y position from top is 91, so from bottom: 792 - 91 - 17 = 684
+      const ssnY = pageHeight - 91 - 12;
+      const ssnStartX = 480;
+      const digitSpacing = 10.5;
+      
+      for (let i = 0; i < 9; i++) {
+        let xOffset = i * digitSpacing;
+        // Add gaps for dashes (after 3rd and 5th digits)
+        if (i >= 3) xOffset += 4;
+        if (i >= 5) xOffset += 4;
+        
+        firstPage.drawText(ssn[i], {
+          x: ssnStartX + xOffset,
+          y: ssnY,
+          size: 11,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
     
     // Address
     setText('Address', data.address || '');
@@ -185,6 +214,131 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
       setText('fill_23', String(data.extraWithholding));
     }
     
+    // ========== PAGE 3: Step 2(b) Worksheet (Multiple Jobs) ==========
+    // These fields are on the right side of page 3
+    if (data.worksheet) {
+      // Line 1 - undefined_2 (Step 2b line 1)
+      if (data.worksheet.step2b_line1) {
+        setText('undefined_2', String(data.worksheet.step2b_line1));
+      }
+      // Line 2a
+      if (data.worksheet.step2b_line2a) {
+        setText('2a', String(data.worksheet.step2b_line2a));
+      }
+      // Line 2b
+      if (data.worksheet.step2b_line2b) {
+        setText('2b', String(data.worksheet.step2b_line2b));
+      }
+      // Line 2c
+      if (data.worksheet.step2b_line2c) {
+        setText('2c', String(data.worksheet.step2b_line2c));
+      }
+      // Line 3
+      if (data.worksheet.step2b_line3) {
+        setText('3', String(data.worksheet.step2b_line3));
+      }
+      // Line 4 - undefined_3
+      if (data.worksheet.step2b_line4) {
+        setText('undefined_3', String(data.worksheet.step2b_line4));
+      }
+    }
+    
+    // ========== PAGE 4: Step 4(b) Deductions Worksheet ==========
+    if (data.deductionsWorksheet) {
+      // Line 1a
+      if (data.deductionsWorksheet.line1a) {
+        setText('1a', String(data.deductionsWorksheet.line1a));
+      }
+      // Line 1b
+      if (data.deductionsWorksheet.line1b) {
+        setText('1b', String(data.deductionsWorksheet.line1b));
+      }
+      // Line 1c
+      if (data.deductionsWorksheet.line1c) {
+        setText('1c', String(data.deductionsWorksheet.line1c));
+      }
+      // Line 1d - undefined_4
+      if (data.deductionsWorksheet.line1d) {
+        setText('undefined_4', String(data.deductionsWorksheet.line1d));
+      }
+      // Line 3a
+      if (data.deductionsWorksheet.line3a) {
+        setText('3a', String(data.deductionsWorksheet.line3a));
+      }
+      // Line 3b
+      if (data.deductionsWorksheet.line3b) {
+        setText('3b', String(data.deductionsWorksheet.line3b));
+      }
+      // Line 3c - undefined_5
+      if (data.deductionsWorksheet.line3c) {
+        setText('undefined_5', String(data.deductionsWorksheet.line3c));
+      }
+      // Line 5 - undefined_6
+      if (data.deductionsWorksheet.line5) {
+        setText('undefined_6', String(data.deductionsWorksheet.line5));
+      }
+      // Line 6a
+      if (data.deductionsWorksheet.line6a) {
+        setText('6a', String(data.deductionsWorksheet.line6a));
+      }
+      // Line 6b
+      if (data.deductionsWorksheet.line6b) {
+        setText('6b', String(data.deductionsWorksheet.line6b));
+      }
+      // Line 6c
+      if (data.deductionsWorksheet.line6c) {
+        setText('6c', String(data.deductionsWorksheet.line6c));
+      }
+      // Line 6d
+      if (data.deductionsWorksheet.line6d) {
+        setText('6d', String(data.deductionsWorksheet.line6d));
+      }
+      // Line 6e
+      if (data.deductionsWorksheet.line6e) {
+        setText('6e', String(data.deductionsWorksheet.line6e));
+      }
+      // Line 7 - undefined_7
+      if (data.deductionsWorksheet.line7) {
+        setText('undefined_7', String(data.deductionsWorksheet.line7));
+      }
+      // Line 8a
+      if (data.deductionsWorksheet.line8a) {
+        setText('8a', String(data.deductionsWorksheet.line8a));
+      }
+      // Line 8b
+      if (data.deductionsWorksheet.line8b) {
+        setText('8b', String(data.deductionsWorksheet.line8b));
+      }
+      // Line 9 - undefined_9
+      if (data.deductionsWorksheet.line9) {
+        setText('undefined_9', String(data.deductionsWorksheet.line9));
+      }
+      // Line 10
+      if (data.deductionsWorksheet.line10) {
+        setText('10', String(data.deductionsWorksheet.line10));
+      }
+      // Line 11
+      if (data.deductionsWorksheet.line11) {
+        setText('11', String(data.deductionsWorksheet.line11));
+      }
+      // Line 12
+      if (data.deductionsWorksheet.line12) {
+        setText('12', String(data.deductionsWorksheet.line12));
+      }
+      // Line 13
+      if (data.deductionsWorksheet.line13) {
+        setText('13', String(data.deductionsWorksheet.line13));
+      }
+      // Line 14
+      if (data.deductionsWorksheet.line14) {
+        setText('14', String(data.deductionsWorksheet.line14));
+      }
+      // Line 15
+      if (data.deductionsWorksheet.line15) {
+        setText('15', String(data.deductionsWorksheet.line15));
+      }
+    }
+    
     // ========== STEP 5: Sign Here ==========
     // Date
     setText('Date', new Date().toLocaleDateString('en-US'));
@@ -205,48 +359,25 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
           const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
           // W-4 signature line is near bottom of first page
-          // Approximate position based on standard W-4 layout
+          // Signature field is at approximately x=100, y=676 (from top)
+          // In pdf-lib coords (from bottom): 792 - 676 - 26 = 90
           firstPage.drawImage(sigImage, {
-            x: 72,
-            y: 188,
-            width: 180,
-            height: 45,
+            x: 105,
+            y: 92,
+            width: 160,
+            height: 40,
           });
           
-          // Add signature verification info to the right of signature
-          const verifyX = 260;
-          const verifyY = 208;
-          const fontSize = 7;
-          const lineHeight = 9;
-          
+          // Add signature verification info BELOW the signature (not overlapping form)
           if (signatureInfo.timestamp || signatureInfo.ip) {
-            firstPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
-              x: verifyX,
-              y: verifyY + lineHeight * 2,
+            const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
+            firstPage.drawText(verifyText, {
+              x: 105,
+              y: 80,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
-            
-            if (signatureInfo.timestamp) {
-              firstPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
-                x: verifyX,
-                y: verifyY + lineHeight,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
-            
-            if (signatureInfo.ip) {
-              firstPage.drawText(`IP: ${signatureInfo.ip}`, {
-                x: verifyX,
-                y: verifyY,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
           }
         }
       } catch (sigErr) {
@@ -389,16 +520,51 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
     }
     
     // ========== PART I: Taxpayer Identification Number ==========
+    // W-9 has individual boxes for each digit
+    // SSN boxes (9 total) at y≈372: x positions [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8]
+    // EIN boxes (9 total) at y≈420: x positions [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3]
+    
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pageHeight = 792;
+    
+    // SSN box positions (x coordinates, sorted left to right)
+    const ssnBoxX = [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8];
+    const ssnBoxY = pageHeight - 372 - 18; // Convert from top to bottom coordinate
+    
+    // EIN box positions (x coordinates, sorted left to right)
+    const einBoxX = [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3];
+    const einBoxY = pageHeight - 420 - 18;
+    
     if (data.ein) {
-      // EIN format: XX-XXXXXXX
+      // EIN format: XX-XXXXXXX - draw each digit in its own box
       const ein = (data.ein || '').replace(/\D/g, '');
       if (ein.length >= 9) {
-        setText('Text11', ein.substring(0, 2));  // First 2 digits
-        setText('Text12', ein.substring(2, 9));  // Next 7 digits
+        for (let i = 0; i < 9 && i < ein.length; i++) {
+          firstPage.drawText(ein[i], {
+            x: einBoxX[i] + 3, // Center in box
+            y: einBoxY,
+            size: 14,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
       }
     } else if (data.ssn) {
-      // SSN for sole proprietors
-      setText('Social security number', data.ssn);
+      // SSN format: XXX-XX-XXXX - draw each digit in its own box
+      const ssn = (data.ssn || '').replace(/\D/g, '');
+      if (ssn.length >= 9) {
+        for (let i = 0; i < 9 && i < ssn.length; i++) {
+          firstPage.drawText(ssn[i], {
+            x: ssnBoxX[i] + 3, // Center in box
+            y: ssnBoxY,
+            size: 14,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        }
+      }
     }
     
     // ========== PART II: Certification ==========
@@ -413,50 +579,27 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           const pages = pdfDoc.getPages();
           const firstPage = pages[0];
-          const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+          const fontForSig = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
-          // W-9 signature line position (bottom of first page)
+          // W-9 signature line is at approximately y=466 from top
+          // In pdf-lib coords: 792 - 466 - 30 = 296
           firstPage.drawImage(sigImage, {
-            x: 72,
-            y: 130,
-            width: 180,
-            height: 45,
+            x: 45,
+            y: 296,
+            width: 160,
+            height: 35,
           });
           
-          // Add signature verification info to the right of signature
-          const verifyX = 260;
-          const verifyY = 150;
-          const fontSize = 7;
-          const lineHeight = 9;
-          
+          // Add signature verification info BELOW the signature line
           if (signatureInfo.timestamp || signatureInfo.ip) {
-            firstPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
-              x: verifyX,
-              y: verifyY + lineHeight * 2,
+            const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
+            firstPage.drawText(verifyText, {
+              x: 45,
+              y: 285,
               size: 6,
-              font: font,
+              font: fontForSig,
               color: rgb(0.4, 0.4, 0.4),
             });
-            
-            if (signatureInfo.timestamp) {
-              firstPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
-                x: verifyX,
-                y: verifyY + lineHeight,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
-            
-            if (signatureInfo.ip) {
-              firstPage.drawText(`IP: ${signatureInfo.ip}`, {
-                x: verifyX,
-                y: verifyY,
-                size: fontSize,
-                font: font,
-                color: rgb(0.3, 0.3, 0.3),
-              });
-            }
           }
         }
       } catch (sigErr) {
@@ -554,44 +697,24 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
-          // Cover the signature placeholder
-          lastPage.drawRectangle({
-            x: 220,
-            y: toY(380, 50) - 10,
-            width: 200,
-            height: 60,
-            color: rgb(1, 1, 1),
-          });
-          
-          // Draw signature image
+          // Draw signature image (no white rectangle - signature should have transparent bg)
+          // Signature placeholder is at x=224, y=380 from top
           lastPage.drawImage(sigImage, {
             x: 224,
             y: toY(380, 45),
-            width: 180,
-            height: 45,
+            width: 160,
+            height: 40,
           });
           
-          // Add signature verification info below signature
+          // Add signature verification info below signature (in the margin area)
           if (signatureInfo.timestamp || signatureInfo.ip) {
-            const verifyY = toY(380, 45) - 12;
-            lastPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
+            const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
+            lastPage.drawText(verifyText, {
               x: 224,
-              y: verifyY,
+              y: toY(380, 45) - 10,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
-            });
-            
-            let infoText = '';
-            if (signatureInfo.timestamp) infoText += `Signed: ${signatureInfo.timestamp}`;
-            if (signatureInfo.ip) infoText += `  |  IP: ${signatureInfo.ip}`;
-            
-            lastPage.drawText(infoText, {
-              x: 224,
-              y: verifyY - 9,
-              size: 7,
-              font: font,
-              color: rgb(0.3, 0.3, 0.3),
             });
           }
         }
