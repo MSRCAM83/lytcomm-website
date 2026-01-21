@@ -1,6 +1,5 @@
 import React from 'react';
 import { CheckCircle, ChevronRight, HardDrive, Radio, Antenna, Wrench, Activity, ClipboardList, Truck, Settings } from 'lucide-react';
-import { colors } from '../config/constants';
 
 const ServicesPage = ({ setCurrentPage, darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
@@ -9,11 +8,19 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
   const cardBg = darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
 
+  // Dynamic accent colors to match logos (same as HomePage)
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
+  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';
+  const accentTertiary = darkMode ? '#e85a4f' : '#28a745';
+  const gradientColors = darkMode 
+    ? 'linear-gradient(135deg, #667eea 0%, #c850c0 50%, #ff6b35 100%)'
+    : 'linear-gradient(135deg, #0077B6 0%, #00b4d8 50%, #28a745 100%)';
+
   const services = [
     {
       icon: HardDrive,
       title: 'HDD Drilling',
-      color: colors.blue,
+      color: accentPrimary,
       description: 'Horizontal Directional Drilling for underground installations with minimal surface disruption.',
       details: [
         'Rock boring and crossing installations',
@@ -25,7 +32,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
     {
       icon: Radio,
       title: 'Fiber Splicing',
-      color: colors.teal,
+      color: accentSecondary,
       description: 'Precision fusion splicing with industry-leading loss specifications and certification.',
       details: [
         'Fusion splicing with <0.02dB loss',
@@ -37,7 +44,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
     {
       icon: Antenna,
       title: 'Aerial Construction',
-      color: colors.coral,
+      color: accentTertiary,
       description: 'Pole-to-pole fiber installation with comprehensive make-ready support.',
       details: [
         'Strand and lashing installation',
@@ -49,7 +56,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
     {
       icon: Wrench,
       title: 'Underground Construction',
-      color: colors.green,
+      color: accentSecondary,
       description: 'Complete underground fiber infrastructure from trenching to restoration.',
       details: [
         'Trenching and plowing',
@@ -61,7 +68,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
     {
       icon: Activity,
       title: 'Network Testing',
-      color: colors.blue,
+      color: accentPrimary,
       description: 'Comprehensive fiber testing and Tier 1/Tier 2 certification services.',
       details: [
         'OTDR trace analysis',
@@ -73,7 +80,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
     {
       icon: ClipboardList,
       title: 'Project Management',
-      color: colors.teal,
+      color: accentSecondary,
       description: 'End-to-end project coordination from permitting through closeout.',
       details: [
         'Permitting and ROW acquisition',
@@ -90,35 +97,57 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
       <section
         style={{
           padding: '100px 20px 80px',
-          background: darkMode
-            ? 'linear-gradient(135deg, #0d1b2a 0%, #1a365d 50%, #0d1b2a 100%)'
-            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%)',
+          background: bgColor,
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Decorative elements */}
+        {/* Animated Background */}
         <div style={{
           position: 'absolute',
-          top: '30%',
-          left: '5%',
-          width: '200px',
-          height: '200px',
-          background: `radial-gradient(circle, ${colors.blue}20 0%, transparent 70%)`,
-          borderRadius: '50%',
-          filter: 'blur(40px)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '20%',
-          right: '5%',
-          width: '250px',
-          height: '250px',
-          background: `radial-gradient(circle, ${colors.coral}20 0%, transparent 70%)`,
-          borderRadius: '50%',
-          filter: 'blur(40px)',
-        }} />
+          inset: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}>
+          {/* Gradient Orbs */}
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            left: '5%',
+            width: '300px',
+            height: '300px',
+            background: darkMode 
+              ? 'radial-gradient(circle, rgba(200,80,192,0.15) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(0,119,182,0.1) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '10%',
+            right: '5%',
+            width: '350px',
+            height: '350px',
+            background: darkMode
+              ? 'radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(57,181,74,0.1) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(50px)',
+          }} />
+          
+          {/* Grid Pattern */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: darkMode
+              ? `linear-gradient(rgba(200,80,192,0.03) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(200,80,192,0.03) 1px, transparent 1px)`
+              : `linear-gradient(rgba(0,119,182,0.05) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(0,119,182,0.05) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }} />
+        </div>
 
         <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{
@@ -126,12 +155,12 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
             alignItems: 'center',
             gap: '8px',
             padding: '8px 16px',
-            backgroundColor: darkMode ? 'rgba(0,180,216,0.15)' : 'rgba(0,119,182,0.1)',
+            backgroundColor: darkMode ? 'rgba(200,80,192,0.15)' : 'rgba(0,119,182,0.1)',
             borderRadius: '20px',
             marginBottom: '24px',
           }}>
-            <Settings size={16} color={colors.teal} />
-            <span style={{ color: colors.teal, fontSize: '0.9rem', fontWeight: '600' }}>Full-Service Solutions</span>
+            <Settings size={16} color={accentPrimary} />
+            <span style={{ color: accentPrimary, fontSize: '0.9rem', fontWeight: '600' }}>Full-Service Solutions</span>
           </div>
           <h1 style={{ 
             fontSize: 'clamp(2rem, 5vw, 3rem)', 
@@ -139,7 +168,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
             marginBottom: '16px',
             color: textColor,
           }}>
-            Our <span style={{ color: colors.teal }}>Services</span>
+            Our <span style={{ color: accentSecondary }}>Services</span>
           </h1>
           <p style={{ 
             fontSize: 'clamp(1rem, 2vw, 1.25rem)', 
@@ -154,8 +183,21 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
       </section>
 
       {/* Services Grid */}
-      <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <section style={{ padding: '80px 20px', backgroundColor: bgColor, position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle Grid Pattern */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: darkMode
+            ? `linear-gradient(rgba(200,80,192,0.015) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(200,80,192,0.015) 1px, transparent 1px)`
+            : `linear-gradient(rgba(0,119,182,0.02) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(0,119,182,0.02) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+          pointerEvents: 'none',
+        }} />
+        
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', 
@@ -182,7 +224,6 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                {/* Icon header */}
                 <div style={{
                   width: '64px',
                   height: '64px',
@@ -225,7 +266,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
                         color: mutedColor,
                       }}
                     >
-                      <CheckCircle size={16} color={colors.green} style={{ flexShrink: 0, marginTop: '3px' }} />
+                      <CheckCircle size={16} color={accentTertiary} style={{ flexShrink: 0, marginTop: '3px' }} />
                       <span>{detail}</span>
                     </li>
                   ))}
@@ -237,22 +278,35 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
       </section>
 
       {/* Equipment Section */}
-      <section style={{ padding: '60px 20px', backgroundColor: cardBg }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
+      <section style={{ padding: '60px 20px', backgroundColor: cardBg, position: 'relative', overflow: 'hidden' }}>
+        {/* Grid Pattern */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: darkMode
+            ? `linear-gradient(rgba(200,80,192,0.02) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(200,80,192,0.02) 1px, transparent 1px)`
+            : `linear-gradient(rgba(0,119,182,0.03) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(0,119,182,0.03) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+          pointerEvents: 'none',
+        }} />
+        
+        <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            backgroundColor: `${colors.teal}20`,
+            backgroundColor: `${accentSecondary}20`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
           }}>
-            <Truck size={24} color={colors.teal} />
+            <Truck size={24} color={accentSecondary} />
           </div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '12px' }}>
-            Our <span style={{ color: colors.teal }}>Equipment</span>
+            Our <span style={{ color: accentSecondary }}>Equipment</span>
           </h2>
           <p style={{ color: mutedColor, marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px' }}>
             Modern fleet of specialized equipment for any project requirement.
@@ -290,7 +344,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
       {/* CTA Section */}
       <section style={{ 
         padding: '80px 20px', 
-        background: `linear-gradient(135deg, ${colors.blue} 0%, ${colors.teal} 100%)`,
+        background: gradientColors,
       }}>
         <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: '700', color: '#fff', marginBottom: '16px' }}>
@@ -306,7 +360,7 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
               fontSize: '1rem',
               fontWeight: '600',
               backgroundColor: '#fff',
-              color: colors.blue,
+              color: darkMode ? '#c850c0' : '#0077B6',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -323,7 +377,6 @@ const ServicesPage = ({ setCurrentPage, darkMode }) => {
         </div>
       </section>
 
-      {/* Responsive Styles */}
       <style>{`
         @media (max-width: 600px) {
           section { padding: 60px 16px !important; }
