@@ -78,7 +78,7 @@ async function loadPdf(url) {
  *   - "First date of employment"
  *   - "Employer identification number EIN"
  */
-export async function fillW4(data, signatureDataUrl) {
+export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading W-4 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.W4);
@@ -202,6 +202,7 @@ export async function fillW4(data, signatureDataUrl) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           const pages = pdfDoc.getPages();
           const firstPage = pages[0];
+          const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
           // W-4 signature line is near bottom of first page
           // Approximate position based on standard W-4 layout
@@ -211,6 +212,42 @@ export async function fillW4(data, signatureDataUrl) {
             width: 180,
             height: 45,
           });
+          
+          // Add signature verification info to the right of signature
+          const verifyX = 260;
+          const verifyY = 208;
+          const fontSize = 7;
+          const lineHeight = 9;
+          
+          if (signatureInfo.timestamp || signatureInfo.ip) {
+            firstPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
+              x: verifyX,
+              y: verifyY + lineHeight * 2,
+              size: 6,
+              font: font,
+              color: rgb(0.4, 0.4, 0.4),
+            });
+            
+            if (signatureInfo.timestamp) {
+              firstPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
+                x: verifyX,
+                y: verifyY + lineHeight,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+            
+            if (signatureInfo.ip) {
+              firstPage.drawText(`IP: ${signatureInfo.ip}`, {
+                x: verifyX,
+                y: verifyY,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+          }
         }
       } catch (sigErr) {
         console.error('W-4 signature embed error:', sigErr);
@@ -272,7 +309,7 @@ export async function fillW4(data, signatureDataUrl) {
  *   - "Signature of US person Date"
  *   - Signature image
  */
-export async function fillW9(data, signatureDataUrl) {
+export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading W-9 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.W9);
@@ -376,6 +413,7 @@ export async function fillW9(data, signatureDataUrl) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           const pages = pdfDoc.getPages();
           const firstPage = pages[0];
+          const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
           // W-9 signature line position (bottom of first page)
           firstPage.drawImage(sigImage, {
@@ -384,6 +422,42 @@ export async function fillW9(data, signatureDataUrl) {
             width: 180,
             height: 45,
           });
+          
+          // Add signature verification info to the right of signature
+          const verifyX = 260;
+          const verifyY = 150;
+          const fontSize = 7;
+          const lineHeight = 9;
+          
+          if (signatureInfo.timestamp || signatureInfo.ip) {
+            firstPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
+              x: verifyX,
+              y: verifyY + lineHeight * 2,
+              size: 6,
+              font: font,
+              color: rgb(0.4, 0.4, 0.4),
+            });
+            
+            if (signatureInfo.timestamp) {
+              firstPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
+                x: verifyX,
+                y: verifyY + lineHeight,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+            
+            if (signatureInfo.ip) {
+              firstPage.drawText(`IP: ${signatureInfo.ip}`, {
+                x: verifyX,
+                y: verifyY,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+          }
         }
       } catch (sigErr) {
         console.error('W-9 signature embed error:', sigErr);
@@ -404,7 +478,7 @@ export async function fillW9(data, signatureDataUrl) {
  * Sign MSA document
  * MSA has no fillable form fields, so we add signature and info as drawn text
  */
-export async function fillMSA(data, signatureDataUrl) {
+export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading MSA PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.MSA);
@@ -465,6 +539,41 @@ export async function fillMSA(data, signatureDataUrl) {
             width: 200,
             height: 50,
           });
+          
+          // Add signature verification info below signature
+          const verifyY = sigBlockY - 5;
+          const fontSize = 7;
+          const lineHeight = 9;
+          
+          if (signatureInfo.timestamp || signatureInfo.ip) {
+            lastPage.drawText('ELECTRONIC SIGNATURE VERIFICATION', {
+              x: 280,
+              y: verifyY,
+              size: 6,
+              font: font,
+              color: rgb(0.4, 0.4, 0.4),
+            });
+            
+            if (signatureInfo.timestamp) {
+              lastPage.drawText(`Signed: ${signatureInfo.timestamp}`, {
+                x: 280,
+                y: verifyY - lineHeight,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+            
+            if (signatureInfo.ip) {
+              lastPage.drawText(`IP: ${signatureInfo.ip}`, {
+                x: 400,
+                y: verifyY - lineHeight,
+                size: fontSize,
+                font: font,
+                color: rgb(0.3, 0.3, 0.3),
+              });
+            }
+          }
         }
       } catch (sigErr) {
         console.error('MSA signature embed error:', sigErr);
@@ -484,7 +593,7 @@ export async function fillMSA(data, signatureDataUrl) {
  * Create a branded PDF for other forms (Direct Deposit, Emergency Contact, etc.)
  * Uses ASCII characters [X] and [ ] for checkboxes to avoid encoding issues
  */
-export async function createFormPdf(title, sections, signatureDataUrl, signerName) {
+export async function createFormPdf(title, sections, signatureDataUrl, signerName, signatureInfo = {}) {
   try {
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -617,6 +726,10 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
     
     y -= 15;
     page.drawText(`Time: ${new Date().toLocaleTimeString()}`, { x: 300, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
+    
+    if (signatureInfo.ip) {
+      page.drawText(`IP: ${signatureInfo.ip}`, { x: 420, y: y, size: 10, font: font, color: rgb(0, 0, 0) });
+    }
     
     // Footer
     page.drawText(`Document ID: LYT-${Date.now()} | Generated: ${new Date().toISOString()}`, {
