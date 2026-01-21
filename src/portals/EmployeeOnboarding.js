@@ -176,6 +176,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       
       // 1. Fill actual IRS W-4 form
       let w4Pdf = null;
+      const signatureInfo = {
+        timestamp: new Date().toLocaleString(),
+        ip: ipAddress
+      };
       try {
         w4Pdf = await fillW4({
           firstName: formData.firstName,
@@ -193,7 +197,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           otherIncome: formData.otherIncome,
           deductions: formData.deductions,
           extraWithholding: formData.extraWithholding,
-        }, formData.w4Signature);
+        }, formData.w4Signature, signatureInfo);
         console.log('W-4 PDF filled successfully');
       } catch (e) {
         console.error('W-4 error:', e);
@@ -226,7 +230,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.directDepositSignature,
-          fullName
+          fullName,
+          signatureInfo
         );
         console.log('Direct Deposit PDF created');
       } catch (e) {
@@ -251,7 +256,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           null,
-          fullName
+          fullName,
+          signatureInfo
         );
         console.log('Emergency Contact PDF created');
       } catch (e) {
@@ -280,7 +286,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.backgroundCheckSignature,
-          fullName
+          fullName,
+          signatureInfo
         );
         console.log('Background Check PDF created');
       } catch (e) {
@@ -308,7 +315,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.drugTestSignature,
-          fullName
+          fullName,
+          signatureInfo
         );
         console.log('Drug Test PDF created');
       } catch (e) {
@@ -337,7 +345,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             ]}
           ],
           formData.safetySignature,
-          fullName
+          fullName,
+          signatureInfo
         );
         console.log('Safety PDF created');
       } catch (e) {
