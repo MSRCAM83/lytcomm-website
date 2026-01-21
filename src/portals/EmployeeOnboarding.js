@@ -160,6 +160,17 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     try {
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       
+      // ========== CAPTURE IP ADDRESS FOR ESIGN COMPLIANCE ==========
+      let ipAddress = 'Unable to capture';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        ipAddress = ipData.ip;
+      } catch (ipErr) {
+        console.log('IP capture failed:', ipErr);
+      }
+      const signatureTimestamp = new Date().toISOString();
+      
       // ========== GENERATE FILLED PDFs ==========
       console.log('Generating filled PDFs...');
       
@@ -202,12 +213,16 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             { title: 'BANK INFORMATION', fields: [
               { label: 'Bank Name', value: formData.bankName },
               { label: 'Routing Number', value: formData.routingNumber },
-              { label: 'Account Number (last 4)', value: formData.accountNumber ? '****' + formData.accountNumber.slice(-4) : '' },
+              { label: 'Account Number', value: formData.accountNumber || '' },
               { label: 'Account Type', value: formData.accountType },
             ]},
             { title: 'AUTHORIZATION', paragraphs: [
               'I authorize LYT Communications, LLC to initiate credit entries to my account.',
               'This authorization remains in effect until I provide written notice to discontinue.',
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.directDepositSignature,
@@ -252,12 +267,16 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             { title: 'APPLICANT', fields: [
               { label: 'Name', value: fullName },
               { label: 'DOB', value: formData.dateOfBirth },
-              { label: 'SSN (last 4)', value: formData.ssn ? '***-**-' + formData.ssn.slice(-4) : '' },
+              { label: 'SSN', value: formData.ssn || '' },
             ]},
             { title: 'AUTHORIZATION', paragraphs: [
               'I authorize LYT Communications, LLC to conduct a background investigation including criminal records, employment verification, education verification, and reference checks.',
             ], checkboxes: [
               { label: 'I authorize this background check', checked: formData.backgroundCheckConsent }
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.backgroundCheckSignature,
@@ -282,6 +301,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
               { label: 'Random testing may be conducted', checked: true },
               { label: 'Post-accident testing may be required', checked: true },
               { label: 'I consent to testing', checked: formData.drugTestConsent }
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.drugTestSignature,
@@ -307,6 +330,10 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
               { label: 'Report injuries immediately', checked: true },
               { label: 'Participate in safety training', checked: true },
               { label: 'I acknowledge the HSE Manual', checked: formData.safetyAcknowledged }
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.safetySignature,
@@ -354,11 +381,24 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone,
-          ssnLast4: formData.ssn ? formData.ssn.slice(-4) : '',
+          ssn: formData.ssn,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
           bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountNumber: formData.accountNumber,
           accountType: formData.accountType,
           emergencyName: formData.emergencyName,
           emergencyPhone: formData.emergencyPhone,
+          emergencyRelation: formData.emergencyRelation,
+        },
+        // ESIGN compliance
+        signatureVerification: {
+          ipAddress: ipAddress,
+          timestamp: signatureTimestamp,
+          userAgent: navigator.userAgent,
         },
         // PRE-FILLED PDFs (base64)
         filledPdfs: {
