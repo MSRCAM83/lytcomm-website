@@ -1,11 +1,521 @@
-import React from 'react';
-import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Construction, Unplug, Radio } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Construction, Unplug, Radio, X, Play, Loader } from 'lucide-react';
+import { URLS } from '../config/constants';
+import { fillW4, fillW9, fillMSA, createFormPdf } from '../services/pdfService';
 
 const HomePage = ({ setCurrentPage, darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#0d1b2a';
   const cardBg = darkMode ? '#0d1b2a' : '#f8fafc';
   const cardBgAlt = darkMode ? '#112240' : '#ffffff';
+  
+  // Test panel state
+  const [showTestPanel, setShowTestPanel] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTimer, setTapTimer] = useState(null);
+  const [testStatus, setTestStatus] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testLog, setTestLog] = useState([]);
+
+  // Triple-click logo to show test panel
+  const handleLogoClick = () => {
+    if (tapTimer) clearTimeout(tapTimer);
+    const newCount = tapCount + 1;
+    setTapCount(newCount);
+    if (newCount >= 3) {
+      setShowTestPanel(true);
+      setTapCount(0);
+    } else {
+      const timer = setTimeout(() => setTapCount(0), 500);
+      setTapTimer(timer);
+    }
+  };
+
+  // Generate fake signature as base64 PNG
+  const generateSignature = (name) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 80;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 300, 80);
+    ctx.font = 'italic 28px "Brush Script MT", cursive, Georgia';
+    ctx.fillStyle = '#000066';
+    ctx.fillText(name, 20, 50);
+    return canvas.toDataURL('image/png');
+  };
+
+  // Random data generators
+  const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const randomNum = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const randomSSN = () => `${randomNum(100,999)}-${randomNum(10,99)}-${randomNum(1000,9999)}`;
+  const randomEIN = () => `${randomNum(10,99)}-${randomNum(1000000,9999999)}`;
+  const randomPhone = () => `(${randomNum(200,999)}) ${randomNum(200,999)}-${randomNum(1000,9999)}`;
+  const randomRouting = () => String(randomNum(100000000, 999999999));
+  const randomAccount = () => String(randomNum(10000000, 9999999999));
+  const randomZip = () => String(randomNum(10000, 99999));
+
+  const firstNames = ['James', 'Michael', 'Robert', 'David', 'William', 'Sarah', 'Jennifer', 'Emily', 'Jessica', 'Amanda'];
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Martinez', 'Wilson'];
+  const streets = ['123 Main St', '456 Oak Ave', '789 Pine Rd', '321 Elm Blvd', '654 Cedar Ln', '987 Maple Dr'];
+  const cities = ['Houston', 'Dallas', 'Austin', 'San Antonio', 'New Orleans', 'Baton Rouge'];
+  const states = ['TX', 'TX', 'TX', 'TX', 'LA', 'LA'];
+  const banks = ['Chase Bank', 'Wells Fargo', 'Bank of America', 'Capital One', 'USAA', 'Regions Bank'];
+  const companies = ['Apex Fiber Solutions', 'Gulf Coast Telecom', 'Bayou Networks', 'Lone Star Communications', 'Delta Cabling'];
+  const titles = ['Owner', 'President', 'CEO', 'Operations Manager', 'Project Manager'];
+
+  const log = (msg) => {
+    console.log(msg);
+    setTestLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  };
+
+  // Run Employee Test
+  const runEmployeeTest = async () => {
+    setTesting(true);
+    setTestLog([]);
+    setTestStatus('Running Employee Test...');
+    
+    try {
+      const firstName = randomFrom(firstNames);
+      const lastName = randomFrom(lastNames) + ' DELETE';
+      const fullName = `${firstName} ${lastName}`;
+      const cityIdx = randomNum(0, cities.length - 1);
+      
+      log(`Creating test employee: ${fullName}`);
+      
+      // Capture IP
+      let ipAddress = 'Test-IP';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        ipAddress = ipData.ip;
+        log(`IP captured: ${ipAddress}`);
+      } catch (e) {
+        log('IP capture failed, using placeholder');
+      }
+      
+      const signatureTimestamp = new Date().toISOString();
+      const signature = generateSignature(fullName);
+      log('Signature generated');
+      
+      const formData = {
+        firstName,
+        lastName,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(' delete','')}@test.com`,
+        phone: randomPhone(),
+        address: randomFrom(streets),
+        city: cities[cityIdx],
+        state: states[cityIdx],
+        zip: randomZip(),
+        dateOfBirth: `${randomNum(1970,1995)}-${String(randomNum(1,12)).padStart(2,'0')}-${String(randomNum(1,28)).padStart(2,'0')}`,
+        ssn: randomSSN(),
+        filingStatus: randomFrom(['single', 'married', 'head']),
+        bankName: randomFrom(banks),
+        routingNumber: randomRouting(),
+        accountNumber: randomAccount(),
+        accountType: randomFrom(['checking', 'savings']),
+        emergencyName: `${randomFrom(firstNames)} ${randomFrom(lastNames)}`,
+        emergencyRelation: randomFrom(['Spouse', 'Parent', 'Sibling', 'Friend']),
+        emergencyPhone: randomPhone(),
+        emergencyEmail: 'emergency@test.com',
+      };
+      
+      log('Form data prepared');
+      
+      // Generate PDFs
+      log('Generating W-4 PDF...');
+      let w4Pdf = null;
+      try {
+        w4Pdf = await fillW4({
+          firstName: formData.firstName,
+          middleName: '',
+          lastName: formData.lastName,
+          ssn: formData.ssn,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          filingStatus: formData.filingStatus,
+        }, signature);
+        log(w4Pdf ? '✅ W-4 PDF filled successfully!' : '❌ W-4 returned null');
+      } catch (e) {
+        log(`❌ W-4 ERROR: ${e.message}`);
+      }
+      
+      log('Generating Direct Deposit PDF...');
+      let directDepositPdf = null;
+      try {
+        directDepositPdf = await createFormPdf(
+          'Direct Deposit Authorization',
+          [
+            { title: 'EMPLOYEE', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'Email', value: formData.email },
+            ]},
+            { title: 'BANK INFORMATION', fields: [
+              { label: 'Bank Name', value: formData.bankName },
+              { label: 'Routing Number', value: formData.routingNumber },
+              { label: 'Account Number', value: formData.accountNumber },
+              { label: 'Account Type', value: formData.accountType },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          fullName
+        );
+        log(directDepositPdf ? '✅ Direct Deposit PDF created' : '❌ Direct Deposit returned null');
+      } catch (e) {
+        log(`❌ Direct Deposit ERROR: ${e.message}`);
+      }
+      
+      log('Generating Background Check PDF...');
+      let backgroundCheckPdf = null;
+      try {
+        backgroundCheckPdf = await createFormPdf(
+          'Background Check Authorization',
+          [
+            { title: 'APPLICANT', fields: [
+              { label: 'Name', value: fullName },
+              { label: 'DOB', value: formData.dateOfBirth },
+              { label: 'SSN', value: formData.ssn },
+            ]},
+            { title: 'AUTHORIZATION', checkboxes: [
+              { label: 'I authorize this background check', checked: true }
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          fullName
+        );
+        log(backgroundCheckPdf ? '✅ Background Check PDF created' : '❌ Background Check returned null');
+      } catch (e) {
+        log(`❌ Background Check ERROR: ${e.message}`);
+      }
+      
+      log('Generating Safety PDF...');
+      let safetyPdf = null;
+      try {
+        safetyPdf = await createFormPdf(
+          'HSE Safety Acknowledgment',
+          [
+            { title: 'EMPLOYEE', fields: [{ label: 'Name', value: fullName }]},
+            { title: 'ACKNOWLEDGMENT', checkboxes: [
+              { label: 'Follow all safety procedures', checked: true },
+              { label: 'Use required PPE', checked: true },
+              { label: 'I acknowledge the HSE Manual', checked: true }
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          fullName
+        );
+        log(safetyPdf ? '✅ Safety PDF created' : '❌ Safety returned null');
+      } catch (e) {
+        log(`❌ Safety ERROR: ${e.message}`);
+      }
+      
+      // Build payload
+      const payload = {
+        type: 'employee_onboarding',
+        formData: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          ssn: formData.ssn,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountNumber: formData.accountNumber,
+          accountType: formData.accountType,
+          emergencyName: formData.emergencyName,
+          emergencyPhone: formData.emergencyPhone,
+          emergencyRelation: formData.emergencyRelation,
+        },
+        signatureVerification: {
+          ipAddress,
+          timestamp: signatureTimestamp,
+          userAgent: navigator.userAgent,
+        },
+        filledPdfs: {
+          w4: w4Pdf,
+          directDeposit: directDepositPdf,
+          backgroundCheck: backgroundCheckPdf,
+          safety: safetyPdf,
+        },
+        submittedAt: new Date().toISOString(),
+      };
+      
+      log('Submitting to backend...');
+      log(`PDFs included: W4=${!!w4Pdf}, DD=${!!directDepositPdf}, BG=${!!backgroundCheckPdf}, Safety=${!!safetyPdf}`);
+      
+      const response = await fetch(URLS.appsScript, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      });
+      
+      const result = await response.json();
+      log(`Response: ${JSON.stringify(result)}`);
+      
+      if (result.success) {
+        setTestStatus(`✅ Employee test complete: ${fullName}`);
+        log(`✅ SUCCESS! Folder: ${result.folderUrl}`);
+      } else {
+        setTestStatus(`❌ Failed: ${result.error}`);
+        log(`❌ FAILED: ${result.error}`);
+      }
+      
+    } catch (err) {
+      log(`❌ EXCEPTION: ${err.message}`);
+      setTestStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  // Run Contractor Test
+  const runContractorTest = async () => {
+    setTesting(true);
+    setTestLog([]);
+    setTestStatus('Running Contractor Test...');
+    
+    try {
+      const companyName = randomFrom(companies) + ' DELETE';
+      const contactFirst = randomFrom(firstNames);
+      const contactLast = randomFrom(lastNames);
+      const contactName = `${contactFirst} ${contactLast}`;
+      const cityIdx = randomNum(0, cities.length - 1);
+      
+      log(`Creating test contractor: ${companyName}`);
+      
+      // Capture IP
+      let ipAddress = 'Test-IP';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        ipAddress = ipData.ip;
+        log(`IP captured: ${ipAddress}`);
+      } catch (e) {
+        log('IP capture failed, using placeholder');
+      }
+      
+      const signatureTimestamp = new Date().toISOString();
+      const signature = generateSignature(contactName);
+      log('Signature generated');
+      
+      const formData = {
+        companyName,
+        dba: '',
+        contactName,
+        contactTitle: randomFrom(titles),
+        email: `${contactFirst.toLowerCase()}@${companyName.toLowerCase().replace(/ delete/g,'').replace(/ /g,'')}.com`,
+        phone: randomPhone(),
+        address: randomFrom(streets),
+        city: cities[cityIdx],
+        state: states[cityIdx],
+        zip: randomZip(),
+        entityType: randomFrom(['llc', 'corporation', 'sole_proprietor']),
+        taxIdType: 'ein',
+        ein: randomEIN(),
+        bankName: randomFrom(banks),
+        routingNumber: randomRouting(),
+        accountNumber: randomAccount(),
+        accountType: 'checking',
+      };
+      
+      log('Form data prepared');
+      
+      // Generate PDFs
+      log('Generating W-9 PDF...');
+      let w9Pdf = null;
+      try {
+        w9Pdf = await fillW9({
+          companyName: formData.companyName,
+          dba: formData.dba,
+          entityType: formData.entityType,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          ein: formData.ein,
+        }, signature);
+        log(w9Pdf ? '✅ W-9 PDF filled successfully!' : '❌ W-9 returned null');
+      } catch (e) {
+        log(`❌ W-9 ERROR: ${e.message}`);
+      }
+      
+      log('Generating MSA PDF...');
+      let msaPdf = null;
+      try {
+        msaPdf = await fillMSA({
+          companyName: formData.companyName,
+          contactName: formData.contactName,
+          contactTitle: formData.contactTitle,
+        }, signature);
+        log(msaPdf ? '✅ MSA PDF signed successfully!' : '❌ MSA returned null');
+      } catch (e) {
+        log(`❌ MSA ERROR: ${e.message}`);
+      }
+      
+      log('Generating Rate Card PDF...');
+      let rateCardPdf = null;
+      try {
+        rateCardPdf = await createFormPdf(
+          'Rate Card Acceptance',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'PAYMENT TERMS', checkboxes: [
+              { label: 'Net 30 from invoice approval', checked: true },
+              { label: '10% retainage until project completion', checked: true },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          formData.contactName
+        );
+        log(rateCardPdf ? '✅ Rate Card PDF created' : '❌ Rate Card returned null');
+      } catch (e) {
+        log(`❌ Rate Card ERROR: ${e.message}`);
+      }
+      
+      log('Generating Direct Deposit PDF...');
+      let directDepositPdf = null;
+      try {
+        directDepositPdf = await createFormPdf(
+          'Direct Deposit Authorization - Contractor',
+          [
+            { title: 'COMPANY', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'BANK INFORMATION', fields: [
+              { label: 'Bank Name', value: formData.bankName },
+              { label: 'Routing Number', value: formData.routingNumber },
+              { label: 'Account Number', value: formData.accountNumber },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          formData.contactName
+        );
+        log(directDepositPdf ? '✅ Direct Deposit PDF created' : '❌ Direct Deposit returned null');
+      } catch (e) {
+        log(`❌ Direct Deposit ERROR: ${e.message}`);
+      }
+      
+      log('Generating Safety PDF...');
+      let safetyPdf = null;
+      try {
+        safetyPdf = await createFormPdf(
+          'Safety Program Acknowledgment',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'SAFETY REQUIREMENTS', checkboxes: [
+              { label: 'Complete site-specific safety orientation', checked: true },
+              { label: 'Required PPE at all times', checked: true },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          signature,
+          formData.contactName
+        );
+        log(safetyPdf ? '✅ Safety PDF created' : '❌ Safety returned null');
+      } catch (e) {
+        log(`❌ Safety ERROR: ${e.message}`);
+      }
+      
+      // Build payload
+      const payload = {
+        type: 'contractor_onboarding',
+        formData: {
+          companyName: formData.companyName,
+          dba: formData.dba,
+          contactName: formData.contactName,
+          contactTitle: formData.contactTitle,
+          contactEmail: formData.email,
+          contactPhone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          entityType: formData.entityType,
+          taxIdType: formData.taxIdType,
+          ein: formData.ein,
+          bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountNumber: formData.accountNumber,
+          accountType: formData.accountType,
+        },
+        signatureVerification: {
+          ipAddress,
+          timestamp: signatureTimestamp,
+          userAgent: navigator.userAgent,
+        },
+        filledPdfs: {
+          w9: w9Pdf,
+          msa: msaPdf,
+          rateCard: rateCardPdf,
+          directDeposit: directDepositPdf,
+          safety: safetyPdf,
+        },
+        submittedAt: new Date().toISOString(),
+      };
+      
+      log('Submitting to backend...');
+      log(`PDFs included: W9=${!!w9Pdf}, MSA=${!!msaPdf}, RC=${!!rateCardPdf}, DD=${!!directDepositPdf}, Safety=${!!safetyPdf}`);
+      
+      const response = await fetch(URLS.appsScript, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      });
+      
+      const result = await response.json();
+      log(`Response: ${JSON.stringify(result)}`);
+      
+      if (result.success) {
+        setTestStatus(`✅ Contractor test complete: ${companyName}`);
+        log(`✅ SUCCESS! Folder: ${result.folderUrl}`);
+      } else {
+        setTestStatus(`❌ Failed: ${result.error}`);
+        log(`❌ FAILED: ${result.error}`);
+      }
+      
+    } catch (err) {
+      log(`❌ EXCEPTION: ${err.message}`);
+      setTestStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
   
   // Logo - PNG with transparent background
   // Dark mode: pink/purple/orange logo
@@ -31,6 +541,132 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
 
   return (
     <div style={{ backgroundColor: bgColor, color: textColor }}>
+      
+      {/* TEST PANEL - Hidden until triple-click on logo */}
+      {showTestPanel && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            backgroundColor: '#1a1a2e',
+            borderRadius: '16px',
+            padding: '30px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            border: '2px solid #0077B6',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel</h2>
+              <button 
+                onClick={() => setShowTestPanel(false)}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
+              >
+                <X />
+              </button>
+            </div>
+            
+            <p style={{ color: '#aaa', marginBottom: '20px' }}>
+              Run automated tests with realistic fake data. All test entries will have "DELETE" in the name.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+              <button
+                onClick={runEmployeeTest}
+                disabled={testing}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: testing ? '#333' : '#0077B6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: testing ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                {testing ? <Loader style={{ animation: 'spin 1s linear infinite' }} size={18} /> : <Play size={18} />}
+                Test Employee
+              </button>
+              
+              <button
+                onClick={runContractorTest}
+                disabled={testing}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: testing ? '#333' : '#28a745',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: testing ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                {testing ? <Loader style={{ animation: 'spin 1s linear infinite' }} size={18} /> : <Play size={18} />}
+                Test Contractor
+              </button>
+            </div>
+            
+            {testStatus && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: testStatus.includes('✅') ? 'rgba(40,167,69,0.2)' : testStatus.includes('❌') ? 'rgba(220,53,69,0.2)' : 'rgba(0,119,182,0.2)',
+                borderRadius: '8px',
+                marginBottom: '15px',
+                color: '#fff',
+                fontWeight: '500',
+              }}>
+                {testStatus}
+              </div>
+            )}
+            
+            {testLog.length > 0 && (
+              <div style={{
+                backgroundColor: '#0a0a15',
+                borderRadius: '8px',
+                padding: '15px',
+                maxHeight: '300px',
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+              }}>
+                <div style={{ color: '#666', marginBottom: '10px' }}>Test Log:</div>
+                {testLog.map((line, i) => (
+                  <div key={i} style={{ 
+                    color: line.includes('✅') ? '#28a745' : line.includes('❌') ? '#dc3545' : '#aaa',
+                    marginBottom: '4px',
+                  }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Logo Centered */}
       <section
         style={{
@@ -98,64 +734,72 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             backgroundImage: darkMode
               ? `linear-gradient(rgba(0,180,216,0.03) 1px, transparent 1px),
                  linear-gradient(90deg, rgba(0,180,216,0.03) 1px, transparent 1px)`
-              : `linear-gradient(rgba(0,119,182,0.05) 1px, transparent 1px),
-                 linear-gradient(90deg, rgba(0,119,182,0.05) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
+              : `linear-gradient(rgba(0,119,182,0.03) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(0,119,182,0.03) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px',
           }} />
         </div>
 
         {/* Hero Content */}
-        <div style={{ 
-          position: 'relative', 
-          zIndex: 1, 
-          textAlign: 'center', 
-          padding: '0 20px',
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          textAlign: 'center',
+          padding: '40px 20px',
           maxWidth: '900px',
         }}>
-          {/* Logo */}
-          <div style={{ 
-            marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'center',
-          }}>
+          {/* Logo - Click to show test panel */}
+          <div 
+            onClick={handleLogoClick}
+            style={{ 
+              marginBottom: '40px',
+              cursor: 'default',
+              userSelect: 'none',
+            }}
+          >
             <img 
               src={logoSrc} 
-              alt="LYT Communications" 
-              style={{ 
-                maxWidth: '550px', 
+              alt="LYT Communications"
+              style={{
+                maxWidth: '550px',
                 width: '100%',
                 height: 'auto',
-                objectFit: 'contain',
-              }} 
+                filter: darkMode ? 'drop-shadow(0 0 30px rgba(200,80,192,0.3))' : 'drop-shadow(0 0 30px rgba(0,119,182,0.2))',
+              }}
             />
           </div>
 
           {/* CTA Buttons */}
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '40px' }}>
+          <div style={{
+            display: 'flex',
+            gap: '20px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}>
             <button
               onClick={() => setCurrentPage('contact')}
               style={{
-                padding: '16px 36px',
+                padding: '16px 40px',
                 fontSize: '1.1rem',
                 fontWeight: '600',
                 background: gradientColors,
-                color: '#fff',
+                color: '#ffffff',
                 border: 'none',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '10px',
+                boxShadow: '0 4px 20px rgba(0,119,182,0.3)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
-                boxShadow: `0 4px 20px ${accentPrimary}40`,
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = `0 8px 30px ${accentPrimary}50`;
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,119,182,0.4)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = `0 4px 20px ${accentPrimary}40`;
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,119,182,0.3)';
               }}
             >
               Get a Quote <ChevronRight size={20} />
@@ -163,22 +807,22 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             <button
               onClick={() => setCurrentPage('services')}
               style={{
-                padding: '16px 36px',
+                padding: '16px 40px',
                 fontSize: '1.1rem',
                 fontWeight: '600',
-                backgroundColor: 'transparent',
+                background: 'transparent',
                 color: textColor,
-                border: `2px solid ${darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}`,
+                border: `2px solid ${accentPrimary}`,
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = accentPrimary;
-                e.currentTarget.style.color = accentPrimary;
+                e.currentTarget.style.background = accentPrimary;
+                e.currentTarget.style.color = '#fff';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)';
+                e.currentTarget.style.background = 'transparent';
                 e.currentTarget.style.color = textColor;
               }}
             >
@@ -186,339 +830,268 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             </button>
           </div>
         </div>
-
       </section>
 
-      {/* Stats Section */}
-      <section style={{ 
-        background: gradientColors,
-        padding: '50px 20px',
+      {/* Services Preview */}
+      <section style={{
+        padding: '100px 20px',
+        backgroundColor: cardBgAlt,
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px', textAlign: 'center' }}>
-          {[
-            { value: '15+', label: 'Years Experience' },
-            { value: '500+', label: 'Projects Completed' },
-            { value: '1M+', label: 'Fiber Miles Installed' },
-            { value: '100%', label: 'Safety Focused' },
-          ].map((stat, idx) => (
-            <div key={idx}>
-              <div style={{ fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>{stat.value}</div>
-              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.8)', fontWeight: '500' }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Team Portal Access Section */}
-      <section style={{ padding: '100px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
-            Team <span style={{ color: accentSecondary }}>Portal</span>
-          </h2>
-          <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '60px', maxWidth: '600px', margin: '0 auto 60px' }}>
-            Access your dashboard, submit daily reports, and manage your work all in one place.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
-            {/* Employee/Contractor Login */}
-            <div style={{
-              padding: '40px',
-              backgroundColor: cardBgAlt,
-              borderRadius: '20px',
-              boxShadow: darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)',
-              border: `2px solid ${accentSecondary}`,
-              transition: 'transform 0.3s, box-shadow 0.3s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = `0 8px 40px ${accentSecondary}30`;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)';
-            }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-                <div style={{ 
-                  width: '60px', 
-                  height: '60px', 
-                  borderRadius: '16px', 
-                  background: `linear-gradient(135deg, ${accentSecondary}30, ${accentPrimary}20)`,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }}>
-                  <LogIn size={28} color={accentSecondary} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Team Login</h3>
-                  <p style={{ color: darkMode ? '#94a3b8' : '#64748b', fontSize: '0.9rem' }}>Employees & Contractors</p>
-                </div>
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0' }}>
-                {['Daily production logs', 'Time tracking', 'Equipment inspections', 'Safety briefings', 'OTDR test uploads'].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', color: darkMode ? '#94a3b8' : '#64748b' }}>
-                    <CheckCircle size={18} color={accentTertiary} /> {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => setCurrentPage('portal-login')}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  background: gradientColors,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'opacity 0.2s',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                <LogIn size={20} /> Sign In
-              </button>
-            </div>
-
-            {/* Onboarding Card */}
-            <div style={{
-              padding: '40px',
-              backgroundColor: cardBgAlt,
-              borderRadius: '20px',
-              boxShadow: darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)',
-              border: `2px solid ${accentTertiary}`,
-              transition: 'transform 0.3s, box-shadow 0.3s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = `0 8px 40px ${accentTertiary}30`;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = darkMode ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.08)';
-            }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-                <div style={{ 
-                  width: '60px', 
-                  height: '60px', 
-                  borderRadius: '16px', 
-                  background: `linear-gradient(135deg, ${accentTertiary}30, ${accentSecondary}20)`,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }}>
-                  <UserPlus size={28} color={accentTertiary} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>New Hire Onboarding</h3>
-                  <p style={{ color: darkMode ? '#94a3b8' : '#64748b', fontSize: '0.9rem' }}>Join the LYT team</p>
-                </div>
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0' }}>
-                {['Complete tax forms (W-4/W-9)', 'Submit certifications', 'Direct deposit setup', 'Safety acknowledgment', 'COI upload (contractors)'].map((item, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', color: darkMode ? '#94a3b8' : '#64748b' }}>
-                    <CheckCircle size={18} color={accentTertiary} /> {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => setCurrentPage('onboarding')}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  background: gradientColors,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'opacity 0.2s',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                <UserPlus size={20} /> Start Onboarding
-              </button>
-            </div>
+          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+            <h2 style={{ 
+              fontSize: 'clamp(2rem, 4vw, 2.8rem)', 
+              fontWeight: '700',
+              marginBottom: '20px',
+            }}>
+              Expert <span style={{ color: accentPrimary }}>Fiber Optic</span> Solutions
+            </h2>
+            <p style={{ fontSize: '1.2rem', color: darkMode ? '#94a3b8' : '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+              From underground construction to aerial builds, we deliver complete fiber infrastructure.
+            </p>
           </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us */}
-      <section style={{ padding: '100px 20px', backgroundColor: bgColor }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '16px' }}>
-            Why Choose <span style={{ color: accentSecondary }}>LYT</span>
-          </h2>
-          <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '60px', maxWidth: '600px', margin: '0 auto 60px' }}>
-            We combine industry expertise with a commitment to safety and quality that sets us apart.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
-            {[
-              { icon: Shield, title: 'Safety First', desc: 'Zero-incident culture with comprehensive HSE programs and daily safety briefings.', color: accentTertiary },
-              { icon: Award, title: 'Certified Experts', desc: 'Fully licensed and insured crews with manufacturer certifications.', color: accentSecondary },
-              { icon: Users, title: 'Experienced Team', desc: 'Skilled technicians with decades of combined field experience.', color: accentPrimary },
-              { icon: Zap, title: 'Fast Turnaround', desc: 'Efficient project execution without compromising quality.', color: accentTertiary },
-            ].map((item, idx) => (
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '30px',
+          }}>
+            {serviceIcons.map((service, index) => (
               <div
-                key={idx}
+                key={index}
                 style={{
-                  padding: '36px',
-                  backgroundColor: cardBgAlt,
+                  padding: '40px 30px',
+                  backgroundColor: cardBg,
                   borderRadius: '16px',
-                  boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.05)',
-                  textAlign: 'center',
-                  transition: 'transform 0.3s',
+                  border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                  cursor: 'pointer',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <div
-                  style={{
-                    width: '70px',
-                    height: '70px',
-                    borderRadius: '20px',
-                    background: `linear-gradient(135deg, ${item.color}25, ${item.color}10)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
-                  }}
-                >
-                  <item.icon size={32} color={item.color} />
-                </div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '12px' }}>{item.title}</h3>
-                <p style={{ color: darkMode ? '#94a3b8' : '#64748b', lineHeight: '1.7' }}>{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Services Preview - Icon Based, No Photos */}
-      <section style={{ padding: '100px 20px', backgroundColor: cardBg }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.5rem)', fontWeight: '700', textAlign: 'center', marginBottom: '60px' }}>
-            Our <span style={{ color: accentSecondary }}>Services</span>
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
-            {serviceIcons.map((service, idx) => (
-              <div
-                key={idx}
-                style={{
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  backgroundColor: cardBgAlt,
-                  boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.05)',
-                  transition: 'transform 0.3s',
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.boxShadow = `0 20px 40px ${darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'}`;
                 }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onClick={() => setCurrentPage('services')}
               >
-                {/* Icon Header Instead of Image */}
                 <div style={{
-                  height: '180px',
-                  background: `linear-gradient(135deg, ${service.color}20 0%, ${service.color}05 100%)`,
+                  width: '70px',
+                  height: '70px',
+                  borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${service.color}20, ${service.color}40)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  marginBottom: '25px',
                 }}>
-                  {/* Background Pattern */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundImage: `radial-gradient(${service.color}15 1px, transparent 1px)`,
-                    backgroundSize: '20px 20px',
-                  }} />
-                  <service.icon size={64} color={service.color} style={{ position: 'relative', zIndex: 1 }} />
+                  <service.icon size={32} style={{ color: service.color }} />
                 </div>
-                <div style={{ padding: '28px' }}>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '12px' }}>{service.title}</h3>
-                  <p style={{ color: darkMode ? '#94a3b8' : '#64748b', lineHeight: '1.7' }}>{service.desc}</p>
-                </div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '600', marginBottom: '15px' }}>
+                  {service.title}
+                </h3>
+                <p style={{ color: darkMode ? '#94a3b8' : '#64748b', lineHeight: '1.7' }}>
+                  {service.desc}
+                </p>
               </div>
             ))}
           </div>
+          
           <div style={{ textAlign: 'center', marginTop: '50px' }}>
             <button
               onClick={() => setCurrentPage('services')}
               style={{
-                padding: '16px 32px',
+                padding: '14px 36px',
                 fontSize: '1rem',
                 fontWeight: '600',
-                background: gradientColors,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
+                background: 'transparent',
+                color: accentPrimary,
+                border: `2px solid ${accentPrimary}`,
+                borderRadius: '10px',
                 cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: `0 4px 20px ${accentPrimary}40`,
-                transition: 'transform 0.2s',
+                transition: 'all 0.2s',
               }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = accentPrimary;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = accentPrimary;
+              }}
             >
-              View All Services <ChevronRight size={18} />
+              View All Services
             </button>
           </div>
         </div>
       </section>
 
-      {/* Service Areas */}
-      <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
+      {/* Stats Section */}
+      <section style={{
+        padding: '80px 20px',
+        background: gradientColors,
+      }}>
+        <div style={{ 
+          maxWidth: '1000px', 
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '40px',
+          textAlign: 'center',
+        }}>
+          {[
+            { value: '500+', label: 'Miles of Fiber Installed' },
+            { value: '15+', label: 'Years Experience' },
+            { value: '100%', label: 'Safety Record' },
+            { value: '24/7', label: 'Emergency Response' },
+          ].map((stat, index) => (
+            <div key={index}>
+              <div style={{ fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontWeight: '700', color: '#fff' }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', marginTop: '8px' }}>
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section style={{ padding: '100px 20px', backgroundColor: cardBg }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
-            <MapPin size={28} color={accentSecondary} />
-            <h3 style={{ fontSize: '1.6rem', fontWeight: '600' }}>Serving the Gulf Coast</h3>
+          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: '700', marginBottom: '20px' }}>
+              Why Choose <span style={{ color: accentPrimary }}>LYT</span>?
+            </h2>
           </div>
-          <p style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '30px' }}>
-            Professional fiber construction across five states
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '30px',
+          }}>
             {[
-              { state: 'Texas', cities: 'Houston • Webster • Galveston' },
-              { state: 'Louisiana', cities: 'New Orleans • Baton Rouge • Lafayette' },
-              { state: 'Mississippi', cities: 'Gulfport • Biloxi • Jackson' },
-              { state: 'Alabama', cities: 'Mobile • Gulf Shores' },
-              { state: 'Florida', cities: 'Pensacola • Panama City' },
-            ].map((region, i) => (
-              <div 
-                key={i} 
-                style={{ 
-                  padding: '16px 24px', 
-                  backgroundColor: cardBgAlt, 
-                  borderRadius: '12px', 
-                  border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
-                  textAlign: 'center',
-                  minWidth: '180px',
-                }}
-              >
-                <div style={{ fontWeight: '600', color: accentSecondary, marginBottom: '4px' }}>{region.state}</div>
-                <div style={{ fontSize: '0.85rem', color: darkMode ? '#64748b' : '#94a3b8' }}>{region.cities}</div>
+              { icon: Shield, title: 'Safety First', desc: 'OSHA compliant with zero-incident track record.' },
+              { icon: Award, title: 'Certified Team', desc: 'Factory-trained technicians with industry certifications.' },
+              { icon: Users, title: 'Local Experts', desc: 'Gulf Coast based, serving TX, LA, MS, FL, and AL.' },
+              { icon: Zap, title: 'Fast Turnaround', desc: 'Efficient project delivery without compromising quality.' },
+            ].map((item, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '20px',
+                padding: '25px',
+                backgroundColor: cardBgAlt,
+                borderRadius: '12px',
+                border: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+              }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '12px',
+                  background: `${accentPrimary}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <item.icon size={24} style={{ color: accentPrimary }} />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '8px' }}>{item.title}</h4>
+                  <p style={{ color: darkMode ? '#94a3b8' : '#64748b', fontSize: '0.95rem', lineHeight: '1.6' }}>{item.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Team Portal CTA */}
+      <section style={{
+        padding: '80px 20px',
+        backgroundColor: cardBgAlt,
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', fontWeight: '700', marginBottom: '20px' }}>
+            Team Member?
+          </h2>
+          <p style={{ fontSize: '1.1rem', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '30px' }}>
+            Access your dashboard or start your onboarding process.
+          </p>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setCurrentPage('portal-login')}
+              style={{
+                padding: '14px 32px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                backgroundColor: accentPrimary,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'transform 0.2s',
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <LogIn size={18} /> Team Login
+            </button>
+            <button
+              onClick={() => setCurrentPage('invite-code')}
+              style={{
+                padding: '14px 32px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                backgroundColor: 'transparent',
+                color: accentSecondary,
+                border: `2px solid ${accentSecondary}`,
+                borderRadius: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = accentSecondary;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = accentSecondary;
+              }}
+            >
+              <UserPlus size={18} /> New Onboarding
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Service Area */}
+      <section style={{ padding: '80px 20px', backgroundColor: cardBg }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+          <MapPin size={40} style={{ color: accentPrimary, marginBottom: '20px' }} />
+          <h2 style={{ fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', fontWeight: '700', marginBottom: '20px' }}>
+            Serving the Gulf Coast
+          </h2>
+          <p style={{ fontSize: '1.1rem', color: darkMode ? '#94a3b8' : '#64748b', lineHeight: '1.8' }}>
+            Texas • Louisiana • Mississippi • Florida • Alabama
+          </p>
+          <p style={{ fontSize: '1rem', color: darkMode ? '#64748b' : '#94a3b8', marginTop: '15px' }}>
+            Houston • Dallas • New Orleans • Baton Rouge • Mobile • Pensacola
+          </p>
+        </div>
+      </section>
+
+      {/* Final CTA */}
       <section
         style={{
           padding: '100px 20px',
@@ -570,6 +1143,10 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         @keyframes pulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
