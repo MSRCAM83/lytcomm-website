@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, MessageSquare } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
+import { LYT_INFO } from '../config/constants';
 
 const ContactPage = ({ darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
@@ -10,6 +10,14 @@ const ContactPage = ({ darkMode }) => {
   const cardBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
   const inputBg = darkMode ? 'rgba(255,255,255,0.05)' : '#ffffff';
   const inputBorder = darkMode ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
+
+  // Dynamic accent colors to match logos (same as HomePage)
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
+  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';
+  const accentTertiary = darkMode ? '#e85a4f' : '#28a745';
+  const gradientColors = darkMode 
+    ? 'linear-gradient(135deg, #667eea 0%, #c850c0 50%, #ff6b35 100%)'
+    : 'linear-gradient(135deg, #0077B6 0%, #00b4d8 50%, #28a745 100%)';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -58,25 +66,57 @@ const ContactPage = ({ darkMode }) => {
       <section
         style={{
           padding: '100px 20px 80px',
-          background: darkMode
-            ? 'linear-gradient(135deg, #0d1b2a 0%, #1a365d 50%, #0d1b2a 100%)'
-            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%)',
+          background: bgColor,
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Decorative elements */}
+        {/* Animated Background */}
         <div style={{
           position: 'absolute',
-          top: '30%',
-          right: '10%',
-          width: '200px',
-          height: '200px',
-          background: `radial-gradient(circle, ${colors.teal}20 0%, transparent 70%)`,
-          borderRadius: '50%',
-          filter: 'blur(40px)',
-        }} />
+          inset: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}>
+          {/* Gradient Orbs */}
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            right: '10%',
+            width: '300px',
+            height: '300px',
+            background: darkMode 
+              ? 'radial-gradient(circle, rgba(200,80,192,0.15) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(0,119,182,0.1) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '20%',
+            left: '5%',
+            width: '250px',
+            height: '250px',
+            background: darkMode
+              ? 'radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(57,181,74,0.1) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(50px)',
+          }} />
+          
+          {/* Grid Pattern */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: darkMode
+              ? `linear-gradient(rgba(200,80,192,0.03) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(200,80,192,0.03) 1px, transparent 1px)`
+              : `linear-gradient(rgba(0,119,182,0.05) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(0,119,182,0.05) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }} />
+        </div>
 
         <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{
@@ -84,12 +124,12 @@ const ContactPage = ({ darkMode }) => {
             alignItems: 'center',
             gap: '8px',
             padding: '8px 16px',
-            backgroundColor: darkMode ? 'rgba(0,180,216,0.15)' : 'rgba(0,119,182,0.1)',
+            backgroundColor: darkMode ? 'rgba(200,80,192,0.15)' : 'rgba(0,119,182,0.1)',
             borderRadius: '20px',
             marginBottom: '24px',
           }}>
-            <MessageSquare size={16} color={colors.teal} />
-            <span style={{ color: colors.teal, fontSize: '0.9rem', fontWeight: '600' }}>Let's Talk</span>
+            <MessageSquare size={16} color={accentPrimary} />
+            <span style={{ color: accentPrimary, fontSize: '0.9rem', fontWeight: '600' }}>Let's Talk</span>
           </div>
           <h1 style={{ 
             fontSize: 'clamp(2rem, 5vw, 3rem)', 
@@ -97,7 +137,7 @@ const ContactPage = ({ darkMode }) => {
             marginBottom: '16px',
             color: textColor,
           }}>
-            Contact <span style={{ color: colors.teal }}>Us</span>
+            Contact <span style={{ color: accentSecondary }}>Us</span>
           </h1>
           <p style={{ 
             fontSize: 'clamp(1rem, 2vw, 1.25rem)', 
@@ -112,18 +152,33 @@ const ContactPage = ({ darkMode }) => {
       </section>
 
       {/* Contact Info + Form */}
-      <section style={{ padding: '80px 20px', backgroundColor: bgColor }}>
+      <section style={{ padding: '80px 20px', backgroundColor: bgColor, position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle Grid Pattern */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: darkMode
+            ? `linear-gradient(rgba(200,80,192,0.015) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(200,80,192,0.015) 1px, transparent 1px)`
+            : `linear-gradient(rgba(0,119,182,0.02) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(0,119,182,0.02) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+          pointerEvents: 'none',
+        }} />
+        
         <div style={{ 
           maxWidth: '1100px', 
           margin: '0 auto', 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-          gap: '48px' 
+          gap: '48px',
+          position: 'relative',
+          zIndex: 1,
         }}>
           {/* Contact Info */}
           <div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '20px' }}>
-              Get in <span style={{ color: colors.teal }}>Touch</span>
+              Get in <span style={{ color: accentSecondary }}>Touch</span>
             </h2>
             <p style={{ color: mutedColor, lineHeight: '1.7', marginBottom: '32px' }}>
               Have questions about our services or want to discuss a project? 
@@ -132,10 +187,10 @@ const ContactPage = ({ darkMode }) => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {[
-                { icon: Phone, label: 'Phone', value: LYT_INFO.phone, href: `tel:${LYT_INFO.phone}`, color: colors.blue },
-                { icon: Mail, label: 'Email', value: LYT_INFO.email, href: `mailto:${LYT_INFO.email}`, color: colors.teal },
-                { icon: MapPin, label: 'Address', value: `${LYT_INFO.address}\n${LYT_INFO.city}, ${LYT_INFO.state} ${LYT_INFO.zip}`, href: null, color: colors.coral },
-                { icon: Clock, label: 'Hours', value: 'Mon - Fri: 7:00 AM - 5:00 PM\nEmergency: 24/7', href: null, color: colors.green },
+                { icon: Phone, label: 'Phone', value: LYT_INFO.phone, href: `tel:${LYT_INFO.phone}`, color: accentPrimary },
+                { icon: Mail, label: 'Email', value: LYT_INFO.email, href: `mailto:${LYT_INFO.email}`, color: accentSecondary },
+                { icon: MapPin, label: 'Address', value: `${LYT_INFO.address}\n${LYT_INFO.city}, ${LYT_INFO.state} ${LYT_INFO.zip}`, href: null, color: accentTertiary },
+                { icon: Clock, label: 'Hours', value: 'Mon - Fri: 7:00 AM - 5:00 PM\nEmergency: 24/7', href: null, color: accentSecondary },
               ].map((item, idx) => (
                 <div key={idx} style={{ 
                   display: 'flex', 
@@ -193,13 +248,13 @@ const ContactPage = ({ darkMode }) => {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  backgroundColor: `${colors.green}20`,
+                  backgroundColor: `${accentTertiary}20`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 16px',
                 }}>
-                  <CheckCircle size={32} color={colors.green} />
+                  <CheckCircle size={32} color={accentTertiary} />
                 </div>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '8px' }}>Message Sent!</h3>
                 <p style={{ color: mutedColor }}>
@@ -301,7 +356,7 @@ const ContactPage = ({ darkMode }) => {
                     padding: '14px',
                     fontSize: '1rem',
                     fontWeight: '600',
-                    backgroundColor: colors.coral,
+                    background: gradientColors,
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -310,15 +365,16 @@ const ContactPage = ({ darkMode }) => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    transition: 'transform 0.2s, background-color 0.2s',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    boxShadow: `0 4px 15px ${accentPrimary}30`,
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#d14940';
                     e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.boxShadow = `0 6px 20px ${accentPrimary}40`;
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = colors.coral;
                     e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = `0 4px 15px ${accentPrimary}30`;
                   }}
                 >
                   <Send size={18} /> Send Message
@@ -329,13 +385,12 @@ const ContactPage = ({ darkMode }) => {
         </div>
       </section>
 
-      {/* Responsive Styles */}
       <style>{`
         @media (max-width: 600px) {
           section { padding: 60px 16px !important; }
         }
         input:focus, select:focus, textarea:focus {
-          border-color: ${colors.teal} !important;
+          border-color: ${accentSecondary} !important;
         }
         select option {
           background-color: ${darkMode ? '#0d1b2a' : '#ffffff'};
