@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle, Upload, ChevronDown } from 'lucide-react';
 import { colors, LYT_INFO, URLS } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import SSNInput from '../components/SSNInput';
@@ -20,6 +20,39 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [showW4Pdf, setShowW4Pdf] = useState(false);
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  const [showStepDropdown, setShowStepDropdown] = useState(false);
+  
+  // Hidden skip feature - triple tap counter
+  const [skipTapCount, setSkipTapCount] = useState(0);
+  const [skipTapTimer, setSkipTapTimer] = useState(null);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // Hidden skip: triple-tap on header title to skip to next step
+  const handleHeaderTap = () => {
+    if (skipTapTimer) clearTimeout(skipTapTimer);
+    
+    const newCount = skipTapCount + 1;
+    setSkipTapCount(newCount);
+    
+    if (newCount >= 3) {
+      // Triple tap detected - skip to next step (or cycle back)
+      setCurrentStep((prev) => (prev + 1) % steps.length);
+      setSkipTapCount(0);
+    } else {
+      // Reset counter after 500ms of no taps
+      const timer = setTimeout(() => setSkipTapCount(0), 500);
+      setSkipTapTimer(timer);
+    }
+  };
 
   const [formData, setFormData] = useState({
     // Personal Info
@@ -438,7 +471,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
         <input type="text" name="address" value={formData.address} onChange={handleChange} required style={inputStyle} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr', gap: '16px' }}>
         <div>
           <label style={labelStyle}>City *</label>
           <input type="text" name="city" value={formData.city} onChange={handleChange} required style={inputStyle} />
@@ -482,7 +515,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             src={`${URLS.w4Pdf}#toolbar=0&navpanes=0&scrollbar=1`}
             style={{
               width: '100%',
-              height: '600px',
+              height: isMobile ? '350px' : '600px',
               border: 'none',
               backgroundColor: '#fff',
             }}
@@ -632,7 +665,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       <div style={{ marginBottom: '16px' }}>
         <SignaturePad onSignatureChange={handleW4SignatureChange} label="Employee Signature" darkMode={darkMode} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
         <div>
           <label style={labelStyle}>Date</label>
           <input type="date" name="w4Date" value={formData.w4Date} onChange={handleChange} style={inputStyle} />
@@ -1179,62 +1212,149 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor }}>
-      {/* Header */}
-      <header style={{ padding: '20px', backgroundColor: colors.dark, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Header - Triple tap title to skip steps (hidden feature) */}
+      <header style={{ padding: isMobile ? '12px 16px' : '20px', backgroundColor: colors.dark, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           onClick={() => setCurrentPage('portal-login')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', fontSize: isMobile ? '0.9rem' : '1rem', cursor: 'pointer' }}
         >
-          <ArrowLeft size={20} /> Back to Portal
+          <ArrowLeft size={isMobile ? 18 : 20} /> {!isMobile && 'Back to Portal'}
         </button>
-        <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff' }}>
+        <div 
+          onClick={handleHeaderTap}
+          style={{ fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '700', color: '#fff', cursor: 'default', userSelect: 'none' }}
+        >
           <span style={{ color: accentPrimary }}>Employee</span> Onboarding
         </div>
-        <div style={{ width: '120px' }} />
+        <div style={{ width: isMobile ? '40px' : '120px' }} />
       </header>
 
-      {/* Progress Steps */}
-      <div style={{ padding: '20px', backgroundColor: cardBg, borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between' }}>
-          {steps.map((step, idx) => (
-            <div
-              key={step.id}
-              style={{
+      {/* Progress Steps - Mobile: Dropdown, Desktop: Full bar */}
+      {isMobile ? (
+        <div style={{ padding: '12px 16px', backgroundColor: cardBg, borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+          <button
+            onClick={() => setShowStepDropdown(!showStepDropdown)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              backgroundColor: darkMode ? colors.dark : '#f1f5f9',
+              border: `1px solid ${darkMode ? '#374151' : '#e2e8f0'}`,
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              color: textColor,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: accentPrimary,
+                color: '#fff',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                flex: 1,
-                position: 'relative',
-              }}
-            >
+                justifyContent: 'center',
+                fontWeight: '600',
+                fontSize: '0.9rem',
+              }}>
+                {currentStep + 1}
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{steps[currentStep].title}</div>
+                <div style={{ fontSize: '0.75rem', color: colors.gray }}>Step {currentStep + 1} of {steps.length}</div>
+              </div>
+            </div>
+            <ChevronDown size={20} style={{ transform: showStepDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+          
+          {showStepDropdown && (
+            <div style={{
+              marginTop: '8px',
+              backgroundColor: darkMode ? colors.dark : '#fff',
+              border: `1px solid ${darkMode ? '#374151' : '#e2e8f0'}`,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            }}>
+              {steps.map((step, idx) => (
+                <div
+                  key={step.id}
+                  onClick={() => { setShowStepDropdown(false); }}
+                  style={{
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: idx === currentStep ? (darkMode ? '#374151' : '#f1f5f9') : 'transparent',
+                    borderBottom: idx < steps.length - 1 ? `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` : 'none',
+                  }}
+                >
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: idx < currentStep ? accentSecondary : idx === currentStep ? accentPrimary : (darkMode ? '#4b5563' : '#e5e7eb'),
+                    color: idx <= currentStep ? '#fff' : colors.gray,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                  }}>
+                    {idx < currentStep ? <CheckCircle size={16} /> : idx + 1}
+                  </div>
+                  <span style={{ color: idx <= currentStep ? textColor : colors.gray, fontSize: '0.9rem' }}>{step.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ padding: '20px', backgroundColor: cardBg, borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between' }}>
+            {steps.map((step, idx) => (
               <div
+                key={step.id}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: idx <= currentStep ? accentPrimary : (darkMode ? colors.dark : '#e5e7eb'),
-                  color: idx <= currentStep ? '#fff' : colors.gray,
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '600',
-                  marginBottom: '8px',
+                  flex: 1,
+                  position: 'relative',
                 }}
               >
-                {idx < currentStep ? <CheckCircle size={20} /> : idx + 1}
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: idx <= currentStep ? accentPrimary : (darkMode ? colors.dark : '#e5e7eb'),
+                    color: idx <= currentStep ? '#fff' : colors.gray,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '600',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {idx < currentStep ? <CheckCircle size={20} /> : idx + 1}
+                </div>
+                <span style={{ fontSize: '0.75rem', color: idx <= currentStep ? textColor : colors.gray, textAlign: 'center' }}>
+                  {step.title}
+                </span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: idx <= currentStep ? textColor : colors.gray, textAlign: 'center' }}>
-                {step.title}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Form Content */}
-      <main style={{ padding: '40px 20px' }}>
+      <main style={{ padding: isMobile ? '20px 12px' : '40px 20px' }}>
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '32px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: cardBg, borderRadius: isMobile ? '12px' : '16px', padding: isMobile ? '16px' : '32px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
             {renderStepContent()}
 
             {error && (
@@ -1244,13 +1364,13 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
             )}
 
             {/* Navigation */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isMobile ? '24px' : '32px', paddingTop: isMobile ? '16px' : '24px', borderTop: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, gap: '12px' }}>
               <button
                 onClick={prevStep}
                 disabled={currentStep === 0}
                 style={{
-                  padding: '12px 24px',
-                  fontSize: '1rem',
+                  padding: isMobile ? '10px 16px' : '12px 24px',
+                  fontSize: isMobile ? '0.9rem' : '1rem',
                   backgroundColor: 'transparent',
                   border: `1px solid ${currentStep === 0 ? '#ccc' : colors.gray}`,
                   color: currentStep === 0 ? '#ccc' : textColor,
@@ -1258,10 +1378,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                   cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
+                  flex: isMobile ? 1 : 'none',
+                  justifyContent: 'center',
                 }}
               >
-                <ArrowLeft size={18} /> Previous
+                <ArrowLeft size={isMobile ? 16 : 18} /> {isMobile ? 'Back' : 'Previous'}
               </button>
 
               {currentStep < steps.length - 1 ? (
@@ -1269,8 +1391,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                   onClick={nextStep}
                   disabled={!canProceed()}
                   style={{
-                    padding: '12px 24px',
-                    fontSize: '1rem',
+                    padding: isMobile ? '10px 16px' : '12px 24px',
+                    fontSize: isMobile ? '0.9rem' : '1rem',
                     backgroundColor: canProceed() ? accentPrimary : '#ccc',
                     color: '#fff',
                     border: 'none',
@@ -1278,18 +1400,20 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                     cursor: canProceed() ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
+                    flex: isMobile ? 1 : 'none',
+                    justifyContent: 'center',
                   }}
                 >
-                  Next <ArrowRight size={18} />
+                  Next <ArrowRight size={isMobile ? 16 : 18} />
                 </button>
               ) : (
                 <button
                   onClick={handleSubmit}
                   disabled={!canProceed() || submitting}
                   style={{
-                    padding: '12px 24px',
-                    fontSize: '1rem',
+                    padding: isMobile ? '10px 16px' : '12px 24px',
+                    fontSize: isMobile ? '0.9rem' : '1rem',
                     backgroundColor: canProceed() ? accentSecondary : '#ccc',
                     color: '#fff',
                     border: 'none',
@@ -1297,10 +1421,12 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
                     cursor: canProceed() && !submitting ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
+                    flex: isMobile ? 1 : 'none',
+                    justifyContent: 'center',
                   }}
                 >
-                  {submitting ? 'Submitting...' : 'Complete Onboarding'}
+                  {submitting ? 'Submitting...' : (isMobile ? 'Complete' : 'Complete Onboarding')}
                 </button>
               )}
             </div>
