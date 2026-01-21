@@ -13,8 +13,8 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true,
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // TRANSPARENT background - just clear the canvas, don't fill with white
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
       ctx.lineCap = 'round';
@@ -65,6 +65,7 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true,
       setIsDrawing(false);
       setHasSignature(true);
       const canvas = canvasRef.current;
+      // PNG format preserves transparency
       const dataUrl = canvas.toDataURL('image/png');
       if (onSignatureChange) {
         onSignatureChange(dataUrl);
@@ -75,8 +76,8 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true,
   const clearSignature = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // TRANSPARENT clear - not white fill
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
     if (onSignatureChange) {
       onSignatureChange(null);
@@ -93,6 +94,8 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true,
           border: `2px solid ${hasSignature ? colors.green : (darkMode ? '#4b5563' : '#ddd')}`,
           borderRadius: '8px',
           overflow: 'hidden',
+          // White background on the container for visibility while drawing
+          // but canvas itself is transparent
           backgroundColor: '#fff',
         }}
       >
@@ -105,6 +108,8 @@ const SignaturePad = ({ onSignatureChange, label = 'Signature', required = true,
             height: '150px',
             cursor: 'crosshair',
             touchAction: 'none',
+            // Canvas appears white due to container background
+            // but actual canvas data is transparent
           }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
