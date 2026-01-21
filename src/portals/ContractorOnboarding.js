@@ -313,6 +313,17 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
     setError(null);
 
     try {
+      // ========== CAPTURE IP ADDRESS FOR ESIGN COMPLIANCE ==========
+      let ipAddress = 'Unable to capture';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        ipAddress = ipData.ip;
+      } catch (ipErr) {
+        console.log('IP capture failed:', ipErr);
+      }
+      const signatureTimestamp = new Date().toISOString();
+      
       // ========== GENERATE FILLED PDFs ==========
       console.log('Generating contractor PDFs...');
       
@@ -366,7 +377,11 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
               { label: 'Lien waivers required with payment applications', checked: true },
               { label: 'Rates per LYT Communications Rate Card', checked: true },
             ]},
-            { paragraphs: ['By signing, I accept the rates and payment terms above.'] }
+            { paragraphs: ['By signing, I accept the rates and payment terms above.'] },
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
           ],
           formData.rateCardSignature,
           formData.contactName
@@ -389,11 +404,15 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             { title: 'BANK INFORMATION', fields: [
               { label: 'Bank Name', value: formData.bankName },
               { label: 'Routing Number', value: formData.routingNumber },
-              { label: 'Account (last 4)', value: formData.accountNumber ? '****' + formData.accountNumber.slice(-4) : '' },
+              { label: 'Account Number', value: formData.accountNumber || '' },
               { label: 'Account Type', value: formData.accountType },
             ]},
             { title: 'AUTHORIZATION', paragraphs: [
               'I authorize LYT Communications, LLC to initiate credit entries to the account above.',
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.bankingSignature,
@@ -424,6 +443,10 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             { title: 'INSURANCE', fields: [
               { label: 'General Liability', value: formData.liabilityAmount || 'Per COI' },
               { label: 'Workers Comp', value: formData.workersCompAmount || 'Per COI' },
+            ]},
+            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
           formData.safetySignature,
@@ -454,10 +477,29 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
         type: 'contractor_onboarding',
         formData: {
           companyName: formData.companyName,
+          dba: formData.dba,
           contactName: formData.contactName,
+          contactTitle: formData.contactTitle,
           contactEmail: formData.email,
           contactPhone: formData.phone,
-          einLast4: formData.ein ? formData.ein.slice(-4) : '',
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          entityType: formData.entityType,
+          taxIdType: formData.taxIdType,
+          ein: formData.taxIdType === 'ein' ? formData.ein : '',
+          ssn: formData.taxIdType === 'ssn' ? formData.ssn : '',
+          bankName: formData.bankName,
+          routingNumber: formData.routingNumber,
+          accountNumber: formData.accountNumber,
+          accountType: formData.accountType,
+        },
+        // ESIGN compliance
+        signatureVerification: {
+          ipAddress: ipAddress,
+          timestamp: signatureTimestamp,
+          userAgent: navigator.userAgent,
         },
         // PRE-FILLED PDFs (base64)
         filledPdfs: {
