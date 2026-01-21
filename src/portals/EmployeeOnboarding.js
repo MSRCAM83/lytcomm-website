@@ -112,6 +112,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
       line15: '',
     },
     showWorksheets: false,
+    showAdvanced: false,
     w4Signature: null,
     w4Date: new Date().toISOString().split('T')[0],
     // Direct Deposit
@@ -575,276 +576,419 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode }) => {
     </div>
   );
 
-  const renderW4Form = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>W-4 Employee's Withholding Certificate</h3>
-        <button
-          onClick={() => setShowW4Pdf(!showW4Pdf)}
-          style={{ 
-            padding: '8px 16px',
-            backgroundColor: showW4Pdf ? accentPrimary : 'transparent',
-            border: `1px solid ${accentPrimary}`,
-            borderRadius: '6px',
-            color: showW4Pdf ? '#fff' : accentPrimary,
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-          }}
-        >
-          {showW4Pdf ? 'Hide PDF' : 'View PDF Form'}
-        </button>
-      </div>
+  const renderW4Form = () => {
+    // Auto-calculate totals
+    const childCredit = (parseInt(formData.qualifyingChildren) || 0) * 2000;
+    const otherDependentCredit = (parseInt(formData.otherDependents) || 0) * 500;
+    const totalDependentCredit = childCredit + otherDependentCredit;
 
-      {/* Embedded PDF Viewer */}
-      {showW4Pdf && (
-        <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${darkMode ? '#374151' : '#ddd'}` }}>
-          <iframe
-            src={`${URLS.w4Pdf}#toolbar=0&navpanes=0&scrollbar=1`}
-            style={{
-              width: '100%',
-              height: isMobile ? '350px' : '600px',
-              border: 'none',
-              backgroundColor: '#fff',
-            }}
-            title="W-4 Form"
-          />
-          <div style={{ padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderTop: `1px solid ${darkMode ? '#374151' : '#ddd'}`, textAlign: 'center' }}>
-            <a
-              href={URLS.w4Pdf}
-              download="W-4_Form.pdf"
-              style={{ color: accentPrimary, fontSize: '0.85rem', textDecoration: 'none' }}
-            >
-              Download PDF
-            </a>
-          </div>
+    const helpTextStyle = {
+      fontSize: '0.85rem',
+      color: darkMode ? '#9ca3af' : '#6b7280',
+      marginTop: '8px',
+      lineHeight: '1.5',
+    };
+
+    const tipBoxStyle = {
+      backgroundColor: darkMode ? '#1e3a5f' : '#eff6ff',
+      border: `1px solid ${darkMode ? '#2563eb' : '#bfdbfe'}`,
+      borderRadius: '8px',
+      padding: '12px 16px',
+      marginTop: '12px',
+      fontSize: '0.85rem',
+      color: darkMode ? '#93c5fd' : '#1e40af',
+    };
+
+    const sectionStyle = {
+      marginBottom: '24px',
+      padding: '20px',
+      backgroundColor: darkMode ? '#111827' : '#f8fafc',
+      borderRadius: '8px',
+    };
+
+    return (
+      <div>
+        {/* Header */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '8px' }}>Tax Withholding Setup</h3>
+          <p style={helpTextStyle}>
+            This form tells us how much federal tax to take out of each paycheck. Don't worry - we'll walk you through it step by step. Most people only need to answer 2-3 simple questions.
+          </p>
         </div>
-      )}
 
-      {/* Filing Status */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 1(c): Filing Status *</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {[
-            { value: 'single', label: 'Single or Married filing separately' },
-            { value: 'married', label: 'Married filing jointly' },
-            { value: 'head', label: 'Head of household' },
-          ].map((option) => (
-            <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+        {/* View PDF Button */}
+        <div style={{ marginBottom: '24px' }}>
+          <button
+            onClick={() => setShowW4Pdf(!showW4Pdf)}
+            style={{ 
+              padding: '8px 16px',
+              backgroundColor: showW4Pdf ? accentPrimary : 'transparent',
+              border: `1px solid ${accentPrimary}`,
+              borderRadius: '6px',
+              color: showW4Pdf ? '#fff' : accentPrimary,
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+            }}
+          >
+            {showW4Pdf ? 'Hide Official Form' : 'View Official IRS Form'}
+          </button>
+        </div>
+
+        {showW4Pdf && (
+          <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${darkMode ? '#374151' : '#ddd'}` }}>
+            <iframe
+              src={`${URLS.w4Pdf}#toolbar=0&navpanes=0&scrollbar=1`}
+              style={{ width: '100%', height: isMobile ? '350px' : '600px', border: 'none', backgroundColor: '#fff' }}
+              title="W-4 Form"
+            />
+          </div>
+        )}
+
+        {/* QUESTION 1: Filing Status */}
+        <div style={sectionStyle}>
+          <label style={{ ...labelStyle, marginBottom: '4px', fontSize: '1.1rem' }}>
+            What's your tax filing status? *
+          </label>
+          <p style={helpTextStyle}>This is how you file (or plan to file) your federal tax return.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            {/* Single */}
+            <label style={{ 
+              display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '12px', 
+              backgroundColor: formData.filingStatus === 'single' ? (darkMode ? '#1e3a5f' : '#eff6ff') : 'transparent', 
+              borderRadius: '8px', border: `2px solid ${formData.filingStatus === 'single' ? accentPrimary : (darkMode ? '#374151' : '#e5e7eb')}` 
+            }}>
               <input
                 type="radio"
                 name="filingStatus"
-                value={option.value}
-                checked={formData.filingStatus === option.value}
+                value="single"
+                checked={formData.filingStatus === 'single'}
                 onChange={handleChange}
-                style={{ width: '18px', height: '18px' }}
+                style={{ width: '20px', height: '20px', marginTop: '2px' }}
               />
-              <span>{option.label}</span>
+              <div>
+                <span style={{ fontWeight: '500' }}>Single</span>
+                <p style={{ ...helpTextStyle, marginTop: '4px' }}>
+                  Choose this if you're not married. Also choose this if you're legally married but filing a separate return from your spouse.
+                </p>
+              </div>
             </label>
-          ))}
-        </div>
-      </div>
 
-      {/* Multiple Jobs */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 2: Multiple Jobs or Spouse Works</label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            name="multipleJobs"
-            checked={formData.multipleJobs}
-            onChange={handleChange}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Check if you have more than one job or your spouse works</span>
-        </label>
-      </div>
-
-      {/* Dependents */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 3: Claim Dependents</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div>
-            <label style={{ ...labelStyle, fontSize: '0.85rem' }}>Qualifying children under age 17 (×$2,000)</label>
-            <input
-              type="number"
-              name="qualifyingChildren"
-              value={formData.qualifyingChildren}
-              onChange={handleChange}
-              min={0}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ ...labelStyle, fontSize: '0.85rem' }}>Other dependents (×$500)</label>
-            <input
-              type="number"
-              name="otherDependents"
-              value={formData.otherDependents}
-              onChange={handleChange}
-              min={0}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-        <p style={{ marginTop: '12px', fontSize: '0.9rem', color: colors.gray }}>
-          Total claim amount: ${(formData.qualifyingChildren * 2000) + (formData.otherDependents * 500)}
-        </p>
-      </div>
-
-      {/* Other Adjustments */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <label style={{ ...labelStyle, marginBottom: '12px' }}>Step 4: Other Adjustments (Optional)</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div>
-            <label style={{ ...labelStyle, fontSize: '0.85rem' }}>4(a) Other income (not from jobs)</label>
-            <input
-              type="number"
-              name="otherIncome"
-              value={formData.otherIncome}
-              onChange={handleChange}
-              placeholder="$"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ ...labelStyle, fontSize: '0.85rem' }}>4(b) Deductions (if > standard)</label>
-            <input
-              type="number"
-              name="deductions"
-              value={formData.deductions}
-              onChange={handleChange}
-              placeholder="$"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ ...labelStyle, fontSize: '0.85rem' }}>4(c) Extra withholding per paycheck</label>
-            <input
-              type="number"
-              name="extraWithholding"
-              value={formData.extraWithholding}
-              onChange={handleChange}
-              placeholder="$"
-              style={inputStyle}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Advanced Worksheets (Pages 3-4) - Collapsible */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <button
-          type="button"
-          onClick={() => setFormData(prev => ({ ...prev, showWorksheets: !prev.showWorksheets }))}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
-          <label style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>Advanced Worksheets (Optional - Pages 3-4)</label>
-          <span style={{ fontSize: '1.2rem' }}>{formData.showWorksheets ? '−' : '+'}</span>
-        </button>
-        
-        {formData.showWorksheets && (
-          <div style={{ marginTop: '16px' }}>
-            {/* Step 2(b) Worksheet - Multiple Jobs */}
-            <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-              <h4 style={{ marginBottom: '12px', fontSize: '0.95rem', fontWeight: '600' }}>Step 2(b) Worksheet - Multiple Jobs (Page 3)</h4>
-              <p style={{ fontSize: '0.8rem', color: colors.gray, marginBottom: '12px' }}>Use this if you have more than one job or your spouse works</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                {[
-                  { name: 'step2b_line1', label: 'Line 1' },
-                  { name: 'step2b_line2a', label: 'Line 2a' },
-                  { name: 'step2b_line2b', label: 'Line 2b' },
-                  { name: 'step2b_line2c', label: 'Line 2c' },
-                  { name: 'step2b_line3', label: 'Line 3' },
-                  { name: 'step2b_line4', label: 'Line 4' },
-                ].map(field => (
-                  <div key={field.name}>
-                    <label style={{ ...labelStyle, fontSize: '0.8rem' }}>{field.label}</label>
-                    <input
-                      type="number"
-                      value={formData.worksheet[field.name] || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        worksheet: { ...prev.worksheet, [field.name]: e.target.value }
-                      }))}
-                      placeholder="$"
-                      style={{ ...inputStyle, padding: '8px' }}
-                    />
-                  </div>
-                ))}
+            {/* Married */}
+            <label style={{ 
+              display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '12px', 
+              backgroundColor: formData.filingStatus === 'married' ? (darkMode ? '#1e3a5f' : '#eff6ff') : 'transparent', 
+              borderRadius: '8px', border: `2px solid ${formData.filingStatus === 'married' ? accentPrimary : (darkMode ? '#374151' : '#e5e7eb')}` 
+            }}>
+              <input
+                type="radio"
+                name="filingStatus"
+                value="married"
+                checked={formData.filingStatus === 'married'}
+                onChange={handleChange}
+                style={{ width: '20px', height: '20px', marginTop: '2px' }}
+              />
+              <div>
+                <span style={{ fontWeight: '500' }}>Married Filing Jointly</span>
+                <p style={{ ...helpTextStyle, marginTop: '4px' }}>
+                  Choose this if you're legally married and you and your spouse file one tax return together. This usually gives the best tax benefits.
+                </p>
               </div>
-            </div>
+            </label>
 
-            {/* Step 4(b) Worksheet - Deductions */}
-            <div style={{ padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-              <h4 style={{ marginBottom: '12px', fontSize: '0.95rem', fontWeight: '600' }}>Step 4(b) Worksheet - Deductions (Page 4)</h4>
-              <p style={{ fontSize: '0.8rem', color: colors.gray, marginBottom: '12px' }}>Use this to calculate deductions greater than the standard deduction</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
-                {[
-                  { name: 'line1a', label: '1a' }, { name: 'line1b', label: '1b' }, { name: 'line1c', label: '1c' }, { name: 'line1d', label: '1d' },
-                  { name: 'line3a', label: '3a' }, { name: 'line3b', label: '3b' }, { name: 'line3c', label: '3c' }, { name: 'line5', label: '5' },
-                  { name: 'line6a', label: '6a' }, { name: 'line6b', label: '6b' }, { name: 'line6c', label: '6c' }, { name: 'line6d', label: '6d' },
-                  { name: 'line6e', label: '6e' }, { name: 'line7', label: '7' }, { name: 'line8a', label: '8a' }, { name: 'line8b', label: '8b' },
-                  { name: 'line9', label: '9' }, { name: 'line10', label: '10' }, { name: 'line11', label: '11' }, { name: 'line12', label: '12' },
-                  { name: 'line13', label: '13' }, { name: 'line14', label: '14' }, { name: 'line15', label: '15' },
-                ].map(field => (
-                  <div key={field.name}>
-                    <label style={{ ...labelStyle, fontSize: '0.75rem' }}>{field.label}</label>
-                    <input
-                      type="number"
-                      value={formData.deductionsWorksheet[field.name] || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        deductionsWorksheet: { ...prev.deductionsWorksheet, [field.name]: e.target.value }
-                      }))}
-                      placeholder="$"
-                      style={{ ...inputStyle, padding: '6px', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                ))}
+            {/* Head of Household */}
+            <label style={{ 
+              display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '12px', 
+              backgroundColor: formData.filingStatus === 'head' ? (darkMode ? '#1e3a5f' : '#eff6ff') : 'transparent', 
+              borderRadius: '8px', border: `2px solid ${formData.filingStatus === 'head' ? accentPrimary : (darkMode ? '#374151' : '#e5e7eb')}` 
+            }}>
+              <input
+                type="radio"
+                name="filingStatus"
+                value="head"
+                checked={formData.filingStatus === 'head'}
+                onChange={handleChange}
+                style={{ width: '20px', height: '20px', marginTop: '2px' }}
+              />
+              <div>
+                <span style={{ fontWeight: '500' }}>Head of Household</span>
+                <p style={{ ...helpTextStyle, marginTop: '4px' }}>
+                  Choose this if you're unmarried AND you pay more than half the cost of keeping up a home for yourself and a qualifying person (like a child or parent who lives with you).
+                </p>
               </div>
-            </div>
+            </label>
+          </div>
+
+          {/* What counts as married explanation */}
+          <div style={{ ...tipBoxStyle, marginTop: '16px' }}>
+            <strong>💍 What counts as "married"?</strong>
+            <p style={{ marginTop: '6px' }}>
+              You're considered married if you were legally married on the last day of the tax year. This includes:
+            </p>
+            <ul style={{ margin: '8px 0 0 16px', padding: 0 }}>
+              <li>Traditional marriage recognized by your state</li>
+              <li>Common-law marriage (if your state recognizes it)</li>
+              <li>Same-sex marriage</li>
+            </ul>
+            <p style={{ marginTop: '8px' }}>
+              You're considered unmarried if you're legally separated under a divorce or separate maintenance decree, or if your spouse didn't live in your home for the last 6 months of the year.
+            </p>
+          </div>
+        </div>
+
+        {/* QUESTION 2: Spouse Works (only if married) */}
+        {formData.filingStatus === 'married' && (
+          <div style={sectionStyle}>
+            <label style={{ ...labelStyle, marginBottom: '4px', fontSize: '1.1rem' }}>
+              Does your spouse also work?
+            </label>
+            <p style={helpTextStyle}>
+              If both you and your spouse have jobs, we need to adjust your withholding so you don't end up owing taxes at the end of the year.
+            </p>
+            
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginTop: '16px' }}>
+              <input
+                type="checkbox"
+                name="multipleJobs"
+                checked={formData.multipleJobs}
+                onChange={handleChange}
+                style={{ width: '20px', height: '20px' }}
+              />
+              <span>Yes, my spouse works (or I have more than one job myself)</span>
+            </label>
+            
+            {formData.multipleJobs && (
+              <div style={tipBoxStyle}>
+                <strong>💡 Tip:</strong> When both spouses work, the IRS recommends checking this box on BOTH of your W-4 forms (yours and your spouse's) to avoid owing taxes when you file your return.
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      {/* Exempt */}
-      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            name="exempt"
-            checked={formData.exempt}
-            onChange={handleChange}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>I claim exemption from withholding</span>
-        </label>
-        <p style={{ marginTop: '8px', fontSize: '0.85rem', color: colors.gray }}>
-          (Only check if you had no tax liability last year AND expect none this year)
-        </p>
-      </div>
+        {/* QUESTION 3: Kids / Dependents */}
+        <div style={sectionStyle}>
+          <label style={{ ...labelStyle, marginBottom: '4px', fontSize: '1.1rem' }}>
+            Do you have any dependents?
+          </label>
+          <p style={helpTextStyle}>
+            Claiming dependents reduces how much tax is taken from your paycheck. If you don't have any dependents, just leave these at 0.
+          </p>
 
-      {/* Signature */}
-      <div style={{ marginBottom: '16px' }}>
-        <SignaturePad onSignatureChange={handleW4SignatureChange} label="Employee Signature" darkMode={darkMode} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-        <div>
-          <label style={labelStyle}>Date</label>
-          <input type="date" name="w4Date" value={formData.w4Date} onChange={handleChange} style={inputStyle} />
+          {/* Detailed explanation of dependents */}
+          <div style={{ ...tipBoxStyle, marginTop: '12px', marginBottom: '20px' }}>
+            <strong>👨‍👩‍👧‍👦 Who counts as a dependent?</strong>
+            
+            <div style={{ marginTop: '12px' }}>
+              <strong>Qualifying Child (each = $2,000 credit):</strong>
+              <p style={{ marginTop: '4px' }}>Your child, stepchild, foster child, sibling, or their descendant who meets ALL of these:</p>
+              <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                <li>Under age 17 at the end of the year</li>
+                <li>Lived with you for more than half the year</li>
+                <li>Didn't pay for more than half of their own living expenses</li>
+                <li>Is a U.S. citizen, national, or resident</li>
+                <li>You're the only one claiming them</li>
+              </ul>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <strong>Other Dependent (each = $500 credit):</strong>
+              <p style={{ marginTop: '4px' }}>Someone who doesn't qualify as a "child" but meets these requirements:</p>
+              <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                <li>Is a relative (parent, grandparent, aunt, uncle, in-law, etc.) OR lived with you all year</li>
+                <li>Earned less than $4,700 in 2024</li>
+                <li>You provided more than half of their financial support</li>
+                <li>Is a U.S. citizen, national, or resident</li>
+              </ul>
+            </div>
+
+            <div style={{ marginTop: '16px', padding: '10px', backgroundColor: darkMode ? '#1e3a5f' : '#dbeafe', borderRadius: '6px' }}>
+              <strong>⚠️ Important:</strong> Your spouse is NEVER a dependent - they're handled by your filing status above, not here.
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+            <div>
+              <label style={{ ...labelStyle, fontSize: '0.95rem' }}>Children under 17</label>
+              <p style={{ ...helpTextStyle, marginBottom: '8px', marginTop: '4px' }}>$2,000 tax credit each</p>
+              <input
+                type="number"
+                name="qualifyingChildren"
+                value={formData.qualifyingChildren}
+                onChange={handleChange}
+                min={0}
+                max={20}
+                style={inputStyle}
+                placeholder="0"
+              />
+              {formData.qualifyingChildren > 0 && (
+                <p style={{ color: colors.green, marginTop: '8px', fontWeight: '600' }}>
+                  = ${childCredit.toLocaleString()} credit
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label style={{ ...labelStyle, fontSize: '0.95rem' }}>Other dependents</label>
+              <p style={{ ...helpTextStyle, marginBottom: '8px', marginTop: '4px' }}>$500 tax credit each</p>
+              <input
+                type="number"
+                name="otherDependents"
+                value={formData.otherDependents}
+                onChange={handleChange}
+                min={0}
+                max={20}
+                style={inputStyle}
+                placeholder="0"
+              />
+              {formData.otherDependents > 0 && (
+                <p style={{ color: colors.green, marginTop: '8px', fontWeight: '600' }}>
+                  = ${otherDependentCredit.toLocaleString()} credit
+                </p>
+              )}
+            </div>
+          </div>
+
+          {totalDependentCredit > 0 && (
+            <div style={{ marginTop: '20px', padding: '16px', backgroundColor: darkMode ? '#064e3b' : '#d1fae5', borderRadius: '8px', textAlign: 'center' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: '600', color: darkMode ? '#6ee7b7' : '#065f46' }}>
+                🎉 Total Dependent Tax Credit: ${totalDependentCredit.toLocaleString()}
+              </span>
+              <p style={{ fontSize: '0.85rem', color: darkMode ? '#a7f3d0' : '#047857', marginTop: '4px' }}>
+                This amount will reduce your tax bill!
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* QUESTION 4: Extra Withholding */}
+        <div style={sectionStyle}>
+          <label style={{ ...labelStyle, marginBottom: '4px', fontSize: '1.1rem' }}>
+            Want extra tax withheld? (Optional)
+          </label>
+          <p style={helpTextStyle}>
+            Most people skip this section. But if you've owed money when filing taxes before, you can have us take out a little extra from each paycheck to avoid that surprise.
+          </p>
+          
+          <div style={{ marginTop: '16px' }}>
+            <label style={{ ...labelStyle, fontSize: '0.95rem' }}>Extra amount per paycheck</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+              <span style={{ fontSize: '1.1rem' }}>$</span>
+              <input
+                type="number"
+                name="extraWithholding"
+                value={formData.extraWithholding}
+                onChange={handleChange}
+                min={0}
+                style={{ ...inputStyle, maxWidth: '150px' }}
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Options (hidden by default) */}
+        <div style={sectionStyle}>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, showAdvanced: !prev.showAdvanced }))}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              color: textColor,
+            }}
+          >
+            <span style={{ fontWeight: '500' }}>⚙️ Advanced Options (most people skip this)</span>
+            <span style={{ fontSize: '1.2rem' }}>{formData.showAdvanced ? '−' : '+'}</span>
+          </button>
+          
+          {formData.showAdvanced && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={helpTextStyle}>These options are for special situations. If you're not sure what they mean, leave them blank.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '0.9rem' }}>Other income (not from jobs)</label>
+                  <p style={{ ...helpTextStyle, fontSize: '0.8rem', marginBottom: '6px' }}>Interest, dividends, retirement distributions, etc.</p>
+                  <input
+                    type="number"
+                    name="otherIncome"
+                    value={formData.otherIncome}
+                    onChange={handleChange}
+                    placeholder="$0"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '0.9rem' }}>Itemized deductions</label>
+                  <p style={{ ...helpTextStyle, fontSize: '0.8rem', marginBottom: '6px' }}>Only if greater than standard deduction (~$14,600)</p>
+                  <input
+                    type="number"
+                    name="deductions"
+                    value={formData.deductions}
+                    onChange={handleChange}
+                    placeholder="$0"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Exempt checkbox */}
+              <div style={{ marginTop: '20px', padding: '12px', backgroundColor: darkMode ? '#7f1d1d' : '#fef2f2', borderRadius: '8px', border: `1px solid ${darkMode ? '#dc2626' : '#fecaca'}` }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    name="exempt"
+                    checked={formData.exempt}
+                    onChange={handleChange}
+                    style={{ width: '18px', height: '18px', marginTop: '2px' }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: '500', color: darkMode ? '#fca5a5' : '#b91c1c' }}>I claim EXEMPT from withholding</span>
+                    <p style={{ ...helpTextStyle, color: darkMode ? '#fca5a5' : '#991b1b', marginTop: '4px' }}>
+                      ⚠️ Only check this if BOTH are true: (1) Last year you got a full refund of ALL federal income tax withheld, AND (2) This year you expect the same. This is rare - most people should NOT check this.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Signature Section */}
+        <div style={sectionStyle}>
+          <label style={{ ...labelStyle, marginBottom: '4px', fontSize: '1.1rem' }}>
+            Sign to Complete *
+          </label>
+          <p style={helpTextStyle}>
+            By signing below, you certify that the information you've provided is true and correct to the best of your knowledge.
+          </p>
+          
+          <div style={{ marginTop: '16px' }}>
+            <SignaturePad onSignatureChange={handleW4SignatureChange} label="Your Signature" darkMode={darkMode} />
+          </div>
+
+          {/* Auto-filled info display */}
+          <div style={{ marginTop: '20px', padding: '16px', backgroundColor: darkMode ? '#1f2937' : '#f3f4f6', borderRadius: '8px' }}>
+            <p style={{ fontSize: '0.9rem', fontWeight: '500', marginBottom: '12px' }}>✅ These fields are auto-filled from your information:</p>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+              <div><strong>Name:</strong> {formData.firstName} {formData.middleName} {formData.lastName}</div>
+              <div><strong>SSN:</strong> ***-**-{(formData.ssn || '').slice(-4)}</div>
+              <div><strong>Address:</strong> {formData.address}</div>
+              <div><strong>City/State/ZIP:</strong> {formData.city}, {formData.state} {formData.zip}</div>
+              <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
+              <div><strong>Employer:</strong> LYT Communications, LLC</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDirectDeposit = () => (
     <div>
