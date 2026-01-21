@@ -360,6 +360,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           contactName: formData.contactName,
           contactTitle: formData.contactTitle,
           title: formData.contactTitle,
+          entityType: formData.entityType,
         }, formData.msaSignature, signatureInfo);
         console.log('MSA signed successfully');
       } catch (e) {
