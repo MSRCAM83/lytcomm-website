@@ -81,8 +81,12 @@ function App() {
 
     window.addEventListener('popstate', handlePopState);
 
-    // Set initial state
-    if (!window.history.state) {
+    // Check for hash in URL on initial load
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      setCurrentPage(hash);
+      window.history.replaceState({ page: hash }, '', `#${hash}`);
+    } else if (!window.history.state) {
       window.history.replaceState({ page: 'home' }, '', window.location.pathname);
     }
 
