@@ -479,7 +479,7 @@ export async function createFormPdf(title, sections, signatureDataUrl, signerNam
       
       if (section.checkboxes) {
         for (const cb of section.checkboxes) {
-          const mark = cb.checked ? '☑' : '☐';
+          const mark = cb.checked ? '[X]' : '[ ]';
           page.drawText(`${mark} ${cb.label}`, { x: 50, y: y, size: 9, font: font, color: rgb(0, 0, 0) });
           y -= 14;
         }
