@@ -5,7 +5,7 @@
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
- * v2.65 - Fix W-9 field names to match actual form fields
+ * v2.66 - Fix W-9 field names to match actual form fields
  * v2.64 - Add checkbox support to createFormPdf
  * v2.63 - Fix verification text positions - move to right of signature on all forms
  * v2.62 - REMOVED white rectangles - transparent PNG signatures draw directly on form
@@ -328,7 +328,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
     
     // EIN - Draw each digit in its own box
     const einBoxX = [417.6, 432.0, 460.9, 475.4, 489.9, 504.3, 518.5, 532.9, 547.3];
-    const einY = 420;
+    const einY = 355;
     
     if (data.ein) {
       const einClean = data.ein.replace(/\D/g, '');
@@ -343,7 +343,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     }
     
-    // SIGNATURE - v2.65: Draw transparent PNG directly
+    // SIGNATURE - v2.66: Draw transparent PNG directly
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
