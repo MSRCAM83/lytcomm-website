@@ -1,11 +1,11 @@
 /**
- * pdfService.js - PDF Form Filling Service v2.59
+ * pdfService.js - PDF Form Filling Service v2.60
  * Fills actual IRS W-4, W-9 forms and LYT MSA with user data and signatures.
  * Uses pdf-lib to manipulate PDF form fields.
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
- * v2.59 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
+ * v2.60 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -346,8 +346,8 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
           firstPage.drawImage(sigImage, {
-            x: 45,
-            y: 296,
+            x: 75,
+            y: 205,
             width: 150,
             height: 30,
           });
@@ -355,8 +355,8 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
-              x: 45,
-              y: 283,
+              x: 75,
+              y: 190,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
@@ -385,7 +385,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
  */
 export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
-    console.log('[v2.59] Loading MSA v4.0 PDF...');
+    console.log('[v2.60] Loading MSA v4.0 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.MSA);
     const pages = pdfDoc.getPages();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -423,7 +423,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
       font: font,
       color: rgb(0, 0, 0),
     });
-    console.log('[v2.59] Page 1: Effective Date at (150, 649)');
+    console.log('[v2.60] Page 1: Effective Date at (150, 649)');
     
     // Subcontractor Name: x=180, y=583
     page1.drawText(contractorName, {
@@ -433,7 +433,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
       font: font,
       color: rgb(0, 0, 0),
     });
-    console.log('[v2.59] Page 1: Subcontractor Name at (180, 583)');
+    console.log('[v2.60] Page 1: Subcontractor Name at (180, 583)');
     
     // Entity Type: x=130, y=547
     page1.drawText(entityType, {
@@ -443,7 +443,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
       font: font,
       color: rgb(0, 0, 0),
     });
-    console.log('[v2.59] Page 1: Entity Type at (130, 547)');
+    console.log('[v2.60] Page 1: Entity Type at (130, 547)');
     
     // ==== PAGE 15: SIGNATURE PAGE (SUBCONTRACTOR section) ====
     // VERIFIED COORDINATES - tested visually and confirmed working
@@ -462,7 +462,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
             width: 150,
             height: 35,
           });
-          console.log('[v2.59] Page 15: Signature at (100, 390)');
+          console.log('[v2.60] Page 15: Signature at (100, 390)');
           
           // Signature verification timestamp: x=100, y=383
           if (signatureInfo.timestamp || signatureInfo.ip) {
@@ -477,7 +477,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
           }
         }
       } catch (sigErr) {
-        console.error('[v2.59] MSA signature embed error:', sigErr);
+        console.error('[v2.60] MSA signature embed error:', sigErr);
       }
     }
     
@@ -490,7 +490,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
         font: font,
         color: rgb(0, 0, 0),
       });
-      console.log('[v2.59] Page 15: Printed Name at (150, 358)');
+      console.log('[v2.60] Page 15: Printed Name at (150, 358)');
     }
     
     // Title: x=100, y=331
@@ -502,7 +502,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
         font: font,
         color: rgb(0, 0, 0),
       });
-      console.log('[v2.59] Page 15: Title at (100, 331)');
+      console.log('[v2.60] Page 15: Title at (100, 331)');
     }
     
     // Date: x=100, y=305
@@ -513,15 +513,15 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
       font: font,
       color: rgb(0, 0, 0),
     });
-    console.log('[v2.59] Page 15: Date at (100, 305)');
+    console.log('[v2.60] Page 15: Date at (100, 305)');
     
     const pdfBytes = await pdfDoc.save();
     const base64 = btoa(String.fromCharCode(...pdfBytes));
-    console.log('[v2.59] MSA PDF generated successfully');
+    console.log('[v2.60] MSA PDF generated successfully');
     return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
-    console.error('[v2.59] Error filling MSA:', error);
+    console.error('[v2.60] Error filling MSA:', error);
     throw error;
   }
 }
