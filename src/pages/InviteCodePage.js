@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Users, Building2, Lock, CheckCircle, Shield } from 'lucide-react';
+import { ArrowLeft, Users, Building2, Lock, CheckCircle, Shield, Sun, Moon } from 'lucide-react';
 import { colors, INVITE_CODE, NDA_INVITE_CODE, LYT_INFO } from '../config/constants';
 
-function InviteCodePage({ setCurrentPage, darkMode }) {
+function InviteCodePage({ setCurrentPage, darkMode, setDarkMode }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [codeVerified, setCodeVerified] = useState(false);
   const [codeType, setCodeType] = useState(null); // 'onboarding' or 'nda'
 
   // Dynamic colors based on theme
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
-  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
+  const accentPrimary = darkMode ? '#ff6b35' : '#28a745';       // Orange vs Green (Onboarding)
+  const accentSecondary = darkMode ? '#c850c0' : '#00b4d8';     // Pink vs Teal
   const accentNDA = darkMode ? '#c850c0' : '#0077B6';         // Pink vs Blue for NDA
   const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
 
-  const bgColor = darkMode ? colors.dark : '#f8fafc';
-  const cardBg = darkMode ? colors.darkLight : '#ffffff';
-  const textColor = darkMode ? '#ffffff' : colors.dark;
+  const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
+  const cardBg = darkMode ? '#1e293b' : '#ffffff';
+  const textColor = darkMode ? '#ffffff' : '#1e293b';
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
+  
+  // Logo text colors
+  const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';
+  const logoT = darkMode ? '#e6c4d9' : '#2ec7c0';
+  const logoComm = darkMode ? '#ffffff' : '#1e293b';
 
   const handleCodeSubmit = (e) => {
     e.preventDefault();
@@ -48,20 +53,32 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex', flexDirection: 'column' }}>
+      {/* Top Bar with Sun/Moon Toggle */}
+      <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        {setDarkMode && (
+          <button onClick={() => setDarkMode(!darkMode)} style={{ backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 8px', borderRadius: '6px' }}>
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            <span className="hide-mobile">{darkMode ? 'Light' : 'Dark'} Mode</span>
+          </button>
+        )}
+      </div>
+      
       {/* Header */}
-      <header style={{ backgroundColor: colors.dark, padding: '16px 20px' }}>
+      <header style={{ backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', padding: '16px 20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
             onClick={() => setCurrentPage('home')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#fff' }}>
-              <span style={{ color: accentPrimary }}>LYT</span>
+            <div style={{ fontSize: '1.75rem', fontWeight: '700' }}>
+              <span style={{ color: logoLY }}>ly</span>
+              <span style={{ color: logoT }}>t</span>
+              <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px', color: logoComm }}>Communications</span>
             </div>
           </button>
           <button
             onClick={() => setCurrentPage('home')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.8)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '8px 12px', borderRadius: '8px' }}
           >
             <ArrowLeft size={18} /> Back to Website
           </button>
@@ -326,9 +343,27 @@ function InviteCodePage({ setCurrentPage, darkMode }) {
       </main>
 
       {/* Footer */}
-      <footer style={{ padding: '20px', textAlign: 'center', color: mutedColor, fontSize: '0.85rem' }}>
-        © {new Date().getFullYear()} {LYT_INFO.name}. All rights reserved.
+      <footer style={{ backgroundColor: darkMode ? '#112240' : '#f8fafc', padding: '40px 20px 24px', marginTop: 'auto' }}>
+        <div style={{ height: '3px', background: `linear-gradient(135deg, ${accentPrimary} 0%, ${accentSecondary} 100%)`, marginBottom: '32px', borderRadius: '2px', maxWidth: '1200px', margin: '0 auto 32px' }} />
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px', marginBottom: '24px' }}>
+            <div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '12px' }}>
+                <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
+                <span style={{ fontWeight: '400', fontSize: '1.1rem', marginLeft: '4px', color: logoComm }}>Communications</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px', color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Professional fiber optic construction across the Gulf Coast.</p>
+            </div>
+          </div>
+          <div style={{ borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <p style={{ fontSize: '0.8rem', color: darkMode ? 'rgba(255,255,255,0.5)' : '#94a3b8' }}>© {new Date().getFullYear()} {LYT_INFO.name}</p>
+            <button onClick={() => setCurrentPage('contact')} style={{ padding: '8px 20px', background: `linear-gradient(135deg, ${accentPrimary} 0%, ${accentSecondary} 100%)`, border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' }}>Get in Touch</button>
+          </div>
+        </div>
       </footer>
+      
+      {/* Responsive Styles */}
+      <style>{`@media (max-width: 768px) { .hide-mobile { display: none !important; } }`}</style>
     </div>
   );
 }
