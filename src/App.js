@@ -38,10 +38,14 @@ function App() {
   // Dynamic accent colors matching the gradient extremes
   // Dark mode gradient: purple (#667eea) -> pink (#c850c0) -> orange (#ff6b35)
   // Light mode gradient: blue (#0077B6) -> teal (#00b4d8) -> green (#28a745)
-  const accentLYT = darkMode ? '#ff6b35' : '#00b4d8';           // Orange vs Teal (for LYT text)
   const accentPortal = darkMode ? '#667eea' : '#00b4d8';        // Purple vs Teal (Portal button)
   const accentOnboarding = darkMode ? '#ff6b35' : '#28a745';    // Orange vs Green (Onboarding button)
   const accentHighlight = darkMode ? '#ff6b35' : '#00b4d8';     // For nav highlights
+  
+  // Logo text colors matching actual logo images
+  const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';              // Pink (dark) vs Deep blue (light)
+  const logoT = darkMode ? '#e6c4d9' : '#2ec7c0';               // Pink (dark) vs Teal (light)
+  const logoComm = darkMode ? '#ffffff' : '#1e293b';            // White (dark) vs Dark gray (light)
 
   const navLinks = [
     { id: 'home', label: 'Home' },
@@ -135,33 +139,33 @@ function App() {
       case 'portal':
         return <PortalSelect setCurrentPage={handleNavClick} darkMode={darkMode} />;
       case 'employee-onboarding':
-        return <EmployeeOnboarding setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <EmployeeOnboarding setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'contractor-onboarding':
-        return <ContractorOnboarding setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <ContractorOnboarding setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'employee-login':
-        return <EmployeeLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <EmployeeLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'contractor-login':
-        return <ContractorLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <ContractorLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'employee-dashboard':
-        return <EmployeeDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <EmployeeDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'contractor-dashboard':
-        return <ContractorDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <ContractorDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'admin-login':
-        return <AdminLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <AdminLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'admin-dashboard':
-        return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'portal-login':
-        return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} />;
+        return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'onboarding':
-        return <InviteCodePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <InviteCodePage setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'set-password':
-        return <SetPassword setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <SetPassword setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'forgot-password':
-        return <ForgotPassword setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <ForgotPassword setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'api-test':
         return <ApiTestPage darkMode={darkMode} />;
       case 'nda-sign':
-        return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} />;
+        return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
@@ -221,9 +225,10 @@ function App() {
             onClick={() => handleNavClick('home')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>
-              <span style={{ color: accentLYT }}>LYT</span>
-              <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px' }}>Communications</span>
+            <div style={{ fontSize: '1.75rem', fontWeight: '700' }}>
+              <span style={{ color: logoLY }}>ly</span>
+              <span style={{ color: logoT }}>t</span>
+              <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px', color: logoComm }}>Communications</span>
             </div>
           </button>
 
@@ -396,10 +401,12 @@ function App() {
           }}>
             {/* Logo & Tagline */}
             <div style={{ flex: '1 1 280px' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '700', color: darkMode ? '#fff' : '#1e293b', marginBottom: '12px' }}>
-                <span style={{ color: accentLYT }}>LYT</span> Communications
+              <div style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '12px' }}>
+                <span style={{ color: logoLY }}>ly</span>
+                <span style={{ color: logoT }}>t</span>
+                <span style={{ fontWeight: '400', fontSize: '1.1rem', marginLeft: '4px', color: logoComm }}>Communications</span>
               </div>
-              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px' }}>
+              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px', color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b' }}>
                 Professional fiber optic construction across the Gulf Coast.
               </p>
               <p style={{ fontSize: '0.75rem', marginTop: '12px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#94a3b8', lineHeight: '1.5' }}>
