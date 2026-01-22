@@ -1,11 +1,11 @@
 /**
- * pdfService.js - PDF Form Filling Service v2.56
+ * pdfService.js - PDF Form Filling Service v2.59
  * Fills actual IRS W-4, W-9 forms and LYT MSA with user data and signatures.
  * Uses pdf-lib to manipulate PDF form fields.
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
- * v2.56 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
+ * v2.59 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -385,7 +385,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
  */
 export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
-    console.log('[v2.56] Loading MSA v4.0 PDF...');
+    console.log('[v2.59] Loading MSA v4.0 PDF...');
     const pdfDoc = await loadPdf(PDF_URLS.MSA);
     const pages = pdfDoc.getPages();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -412,41 +412,44 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
     const entityType = entityTypeMap[data.entityType] || data.entityType || '';
     
     // ==== PAGE 1: HEADER INFO ====
+    // VERIFIED COORDINATES - tested visually and confirmed working
     const page1 = pages[0];
-    const { height: h1 } = page1.getSize();
     
-    // Effective Date - after "Effective Date:" label
+    // Effective Date: x=150, y=649
     page1.drawText(effectiveDate, {
-      x: 115,
-      y: h1 - 133,
+      x: 150,
+      y: 649,
       size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
+    console.log('[v2.59] Page 1: Effective Date at (150, 649)');
     
-    // Subcontractor Name - after "Subcontractor Name:" label
+    // Subcontractor Name: x=180, y=583
     page1.drawText(contractorName, {
-      x: 155,
-      y: h1 - 170,
+      x: 180,
+      y: 583,
       size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
+    console.log('[v2.59] Page 1: Subcontractor Name at (180, 583)');
     
-    // Entity Type - after "Entity Type:" label
+    // Entity Type: x=130, y=547
     page1.drawText(entityType, {
-      x: 105,
-      y: h1 - 198,
+      x: 130,
+      y: 547,
       size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
+    console.log('[v2.59] Page 1: Entity Type at (130, 547)');
     
-    // ==== PAGE 15: SIGNATURE PAGE ====
+    // ==== PAGE 15: SIGNATURE PAGE (SUBCONTRACTOR section) ====
+    // VERIFIED COORDINATES - tested visually and confirmed working
     const lastPage = pages[pages.length - 1];
-    const { height: h15 } = lastPage.getSize();
     
-    // Signature image
+    // Signature image: x=100, y=398
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -455,17 +458,18 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
           
           lastPage.drawImage(sigImage, {
             x: 100,
-            y: h15 - 448,
+            y: 390,
             width: 150,
             height: 35,
           });
+          console.log('[v2.59] Page 15: Signature at (100, 390)');
           
-          // Signature verification (timestamp + IP) - small gray text right of signature
+          // Signature verification timestamp: x=100, y=383
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             lastPage.drawText(verifyText, {
-              x: 260,
-              y: h15 - 438,
+              x: 100,
+              y: 375,
               size: 6,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
@@ -473,47 +477,51 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
           }
         }
       } catch (sigErr) {
-        console.error('[v2.56] MSA signature embed error:', sigErr);
+        console.error('[v2.59] MSA signature embed error:', sigErr);
       }
     }
     
-    // Printed Name
+    // Printed Name: x=150, y=358
     if (printedName) {
       lastPage.drawText(printedName, {
-        x: 100,
-        y: h15 - 483,
+        x: 150,
+        y: 358,
         size: 11,
         font: font,
         color: rgb(0, 0, 0),
       });
+      console.log('[v2.59] Page 15: Printed Name at (150, 358)');
     }
     
-    // Title
+    // Title: x=100, y=331
     if (title) {
       lastPage.drawText(title, {
         x: 100,
-        y: h15 - 518,
+        y: 331,
         size: 11,
         font: font,
         color: rgb(0, 0, 0),
       });
+      console.log('[v2.59] Page 15: Title at (100, 331)');
     }
     
-    // Date
+    // Date: x=100, y=305
     lastPage.drawText(signatureDate, {
       x: 100,
-      y: h15 - 553,
+      y: 305,
       size: 11,
       font: font,
       color: rgb(0, 0, 0),
     });
+    console.log('[v2.59] Page 15: Date at (100, 305)');
     
     const pdfBytes = await pdfDoc.save();
     const base64 = btoa(String.fromCharCode(...pdfBytes));
+    console.log('[v2.59] MSA PDF generated successfully');
     return `data:application/pdf;base64,${base64}`;
     
   } catch (error) {
-    console.error('[v2.56] Error filling MSA:', error);
+    console.error('[v2.59] Error filling MSA:', error);
     throw error;
   }
 }
