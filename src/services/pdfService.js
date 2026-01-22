@@ -5,6 +5,7 @@
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
+ * v2.65 - Fix W-9 field names to match actual form fields
  * v2.64 - Add checkbox support to createFormPdf
  * v2.63 - Fix verification text positions - move to right of signature on all forms
  * v2.62 - REMOVED white rectangles - transparent PNG signatures draw directly on form
@@ -231,6 +232,7 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
 /**
  * Fill IRS Form W-9 with contractor data - ALL FIELDS
  */
+
 export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('Loading W-9 PDF...');
@@ -262,31 +264,32 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     };
     
-    // Line 1 - Name
-    const name = data.companyName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
-    setText('Name', name);
+    // Line 1 - Name (CORRECT field name)
+    const name = data.companyName || data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim();
+    setText('1 Name of entityindividual An entry is required For a sole proprietor or disregarded entity enter the owners name on line 1 and enter the businessdisregarded entitys name on line 2', name);
     
-    // Line 2 - Business name/DBA
+    // Line 2 - Business name/DBA (CORRECT field name)
     if (data.dba) {
-      setText('Business namedisregarded entity name if different from above', data.dba);
+      setText('2 Business namedisregarded entity name if different from above', data.dba);
     }
     
-    // Line 3 - Federal tax classification
+    // Line 3 - Federal tax classification (CORRECT checkbox names)
     const entityType = (data.entityType || '').toLowerCase();
-    if (entityType === 'individual' || entityType === 'sole_proprietor') {
-      setCheck('IndividualSole proprietor or', true);
-    } else if (entityType === 'c_corp' || entityType === 'c corporation') {
-      setCheck('C Corporation', true);
-    } else if (entityType === 's_corp' || entityType === 's corporation') {
-      setCheck('S Corporation', true);
+    if (entityType === 'individual' || entityType === 'sole_proprietor' || entityType === 'sole') {
+      setCheck('Individualsole proprietor', true);
+    } else if (entityType === 'c_corp' || entityType === 'c_corporation' || entityType === 'c corporation') {
+      setCheck('C corporation', true);
+    } else if (entityType === 's_corp' || entityType === 's_corporation' || entityType === 's corporation') {
+      setCheck('S corporation', true);
     } else if (entityType === 'partnership') {
       setCheck('Partnership', true);
     } else if (entityType === 'trust' || entityType === 'estate') {
       setCheck('Trustestate', true);
-    } else if (entityType === 'llc') {
-      setCheck('Limited liability company Enter the tax classification C C corporation S S corporation P Partnership', true);
-      if (data.llcClassification) {
-        setText('undefined', data.llcClassification);
+    } else if (entityType === 'llc' || entityType.includes('llc')) {
+      setCheck('LLC Enter the tax classification C  C corporation S  S corporation P  Partnership', true);
+      // Tax classification letter
+      if (data.taxClassification || data.llcClassification) {
+        setText('undefined', data.taxClassification || data.llcClassification);
       }
     } else if (entityType === 'other') {
       setCheck('Other see instructions', true);
@@ -294,23 +297,23 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
     
     // Line 4 - Exemptions
     if (data.exemptPayeeCode) setText('Exempt payee code if any', data.exemptPayeeCode);
-    if (data.fatcaCode) setText('Exemption from FATCA reporting', data.fatcaCode);
+    if (data.fatcaCode) setText('Compliance Act FATCA reporting', data.fatcaCode);
     
-    // Line 5 - Address
-    setText('Address number street and apt or suite no See instructions', data.address || '');
+    // Line 5 - Address (CORRECT field name)
+    setText('5 Address number street and apt or suite no See instructions', data.address || '');
     
-    // Line 6 - City, State, ZIP
+    // Line 6 - City, State, ZIP (CORRECT field name)
     const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
-    setText('City state and ZIP code', cityStateZip);
+    setText('6 City state and ZIP code', cityStateZip);
     
     // Line 7 - Account numbers
-    if (data.accountNumbers) setText('List account numbers here optional', data.accountNumbers);
+    if (data.accountNumbers) setText('7 List account numbers here optional', data.accountNumbers);
     
     // SSN - Draw each digit in its own box
     const ssnBoxX = [417.8, 431.9, 446.6, 475.2, 489.9, 518.4, 532.7, 547.3, 561.8];
     const ssnY = 372;
     
-    if (data.ssn && (entityType === 'individual' || entityType === 'sole_proprietor' || !data.ein)) {
+    if (data.ssn && (entityType === 'individual' || entityType === 'sole_proprietor' || entityType === 'sole' || !data.ein)) {
       const ssnClean = data.ssn.replace(/\D/g, '');
       for (let i = 0; i < Math.min(ssnClean.length, 9); i++) {
         firstPage.drawText(ssnClean[i], {
@@ -340,10 +343,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
       }
     }
     
-    // Date
-    setText('Date', data.w9Date || new Date().toLocaleDateString());
-    
-    // Signature - v2.62: Draw transparent PNG directly (NO white background)
+    // SIGNATURE - v2.65: Draw transparent PNG directly
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -358,6 +358,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
             height: 30,
           });
           
+          // Verification text to the right
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
@@ -385,10 +386,6 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
   }
 }
 
-
-/**
- * Fill MSA PDF with contractor data
- */
 export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   try {
     console.log('[v2.60] Loading MSA v4.0 PDF...');
