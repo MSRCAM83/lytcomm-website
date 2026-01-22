@@ -1,21 +1,29 @@
-// ContractorOnboarding.js v2.56 - MSA fields pass effectiveDate, printedName, msaDate
+// ContractorOnboarding.js v2.57 - Updated styling with Sun/Moon toggle, matching header/footer
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO, URLS, skillOptions } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import EINInput from '../components/EINInput';
 import SSNInput from '../components/SSNInput';
 import { fillW9, fillMSA, createFormPdf } from '../services/pdfService';
 
-const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
-  // Dynamic colors based on theme
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
-  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
-  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
+  // Onboarding section accent colors (orange/green)
+  const accentPrimary = darkMode ? '#ff6b35' : '#28a745';       // Orange vs Green
+  const accentSecondary = darkMode ? '#c850c0' : '#00b4d8';     // Pink vs Teal
+  const accentGradient = darkMode 
+    ? 'linear-gradient(135deg, #ff6b35 0%, #c850c0 100%)'
+    : 'linear-gradient(135deg, #28a745 0%, #00b4d8 100%)';
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';
+  
+  // Logo text colors
+  const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';
+  const logoT = darkMode ? '#e6c4d9' : '#2ec7c0';
+  const logoComm = darkMode ? '#ffffff' : '#1e293b';
 
-  const bgColor = darkMode ? colors.dark : '#f8fafc';
-  const cardBg = darkMode ? colors.darkLight : '#ffffff';
-  const textColor = darkMode ? '#ffffff' : colors.dark;
+  const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
+  const cardBg = darkMode ? '#1e293b' : '#ffffff';
+  const textColor = darkMode ? '#ffffff' : '#1e293b';
 
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -1602,21 +1610,38 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor }}>
+      {/* Top Bar with Sun/Moon Toggle */}
+      <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        {setDarkMode && (
+          <button onClick={() => setDarkMode(!darkMode)} style={{ backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 8px', borderRadius: '6px', transition: 'all 0.2s ease' }}>
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            <span className="hide-mobile-toggle">{darkMode ? 'Light' : 'Dark'} Mode</span>
+          </button>
+        )}
+      </div>
+      
       {/* Header - Triple tap title to skip steps (hidden feature) */}
-      <header style={{ padding: isMobile ? '12px 16px' : '20px', backgroundColor: colors.dark, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ padding: isMobile ? '12px 16px' : '16px 20px', backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
         <button
-          onClick={() => setCurrentPage('portal-login')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', fontSize: isMobile ? '0.9rem' : '1rem', cursor: 'pointer' }}
+          onClick={() => setCurrentPage('onboarding')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: isMobile ? '0.9rem' : '1rem', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.2s ease' }}
         >
-          <ArrowLeft size={isMobile ? 18 : 20} /> {!isMobile && 'Back to Portal'}
+          <ArrowLeft size={isMobile ? 18 : 20} /> {!isMobile && 'Back'}
         </button>
         <div 
           onClick={handleHeaderTap}
-          style={{ fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '700', color: '#fff', cursor: 'default', userSelect: 'none' }}
+          style={{ fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '700', color: textColor, cursor: 'default', userSelect: 'none' }}
         >
           <span style={{ color: accentPrimary }}>Contractor</span> Registration
         </div>
-        <div style={{ width: isMobile ? '40px' : '120px' }} />
+        <button
+          onClick={() => setCurrentPage('home')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+        >
+          <div style={{ fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '700' }}>
+            <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
+          </div>
+        </button>
       </header>
 
       {/* Progress Steps - Mobile: Dropdown, Desktop: Full bar */}
@@ -1627,7 +1652,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
             style={{
               width: '100%',
               padding: '12px 16px',
-              backgroundColor: darkMode ? colors.dark : '#f1f5f9',
+              backgroundColor: darkMode ? '#0d1b2a' : '#f1f5f9',
               border: `1px solid ${darkMode ? '#374151' : '#e2e8f0'}`,
               borderRadius: '8px',
               display: 'flex',
@@ -1815,6 +1840,13 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode }) => {
           </div>
         </div>
       </main>
+      
+      {/* Responsive Styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          .hide-mobile-toggle { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 };
