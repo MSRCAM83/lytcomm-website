@@ -5,6 +5,7 @@
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
+ * v2.64 - Add checkbox support to createFormPdf
  * v2.63 - Fix verification text positions - move to right of signature on all forms
  * v2.62 - REMOVED white rectangles - transparent PNG signatures draw directly on form
  * v2.61 - Signature white background fix: Draw white rectangle before transparent PNG signature
@@ -605,6 +606,23 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             if (y < 120) break;
             const text = `${field.label}: ${field.value || 'N/A'}`;
             page.drawText(text, {
+              x: 60,
+              y: y,
+              size: 10,
+              font: font,
+              color: rgb(0, 0, 0),
+              maxWidth: width - 120,
+            });
+            y -= 14;
+          }
+        }
+        
+        // Checkboxes - v2.64
+        if (section.checkboxes && Array.isArray(section.checkboxes)) {
+          for (const cb of section.checkboxes) {
+            if (y < 120) break;
+            const checkmark = cb.checked ? '☑' : '☐';
+            page.drawText(`${checkmark} ${cb.label}`, {
               x: 60,
               y: y,
               size: 10,
