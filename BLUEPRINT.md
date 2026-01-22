@@ -1,113 +1,118 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 19, 2026
+### Last Updated: January 22, 2026
 
 ---
 
 ## 🎯 PROJECT OVERVIEW
 
-**What is this?** A React website + employee/contractor portal system for LYT Communications, a fiber optic construction company in Houston, TX.
+**What is this?** A React website + employee/contractor portal system for LYT Communications, a fiber optic construction company operating in Texas and Louisiana.
 
-**Live URL:** https://lytcomm-website.vercel.app (auto-deploys from main branch)
+**Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
 **Core Functions:**
 1. Public marketing website (Home, About, Services, Contact)
 2. Employee portal (onboarding, dashboard, field operations)
 3. Contractor portal (onboarding, dashboard, compliance)
 4. Admin dashboard (manage employees/contractors)
+5. NDA signing system (standalone invite code flow)
+
+---
+
+## 🚨 CURRENT STATUS (Jan 22, 2026)
+
+### 🔴 CRITICAL - Files Corrupted
+- `pdfService.js` - Empty/corrupted, needs restore from previous commit
+- `ContractorOnboarding.js` - Empty/corrupted, needs restore from previous commit
+
+### 🟡 PENDING STYLING (Never Completed)
+Portal/onboarding pages need full theme update:
+- Header/footer must match main site
+- Add Sun/Moon dark/light toggle to all pages
+- "lyt" always lowercase, matching logo font/color
+- Pass `setDarkMode` from App.js to components
+
+**Files to style:**
+1. App.js (pass setDarkMode prop)
+2. PortalLogin.js
+3. SetPassword.js
+4. ForgotPassword.js
+5. InviteCodePage.js
+6. EmployeeOnboarding.js
+7. ContractorOnboarding.js
+
+**Color Scheme by Section:**
+| Mode | Portal Pages | Onboarding Pages |
+|------|--------------|------------------|
+| Dark | #667eea (Purple) | #ff6b35 (Orange) |
+| Light | #00b4d8 (Teal) | #28a745 (Green) |
+
+### 🟡 PENDING PDF FIXES
+- MSA v4.0 coordinate-based text filling (pages 1 & 15)
+- SSN/EIN individual digit boxes (one number per box)
+- W-4 worksheet fields (pages 3-4)
+
+### 🟡 PENDING BACKEND
+- Apps Script `submitNDA` handler
+- Emergency Contact PDF generation
+- Drug Test PDF generation
+- (Requires Apps Script v4.1 deployment)
 
 ---
 
 ## 🎨 DESIGN SYSTEM
 
-### Colors (MUST USE THESE EXACTLY)
+### Brand Colors
 ```javascript
+// Primary Palette
 const colors = {
-  blue: '#0077B6',      // Primary - headers, links, primary buttons
-  teal: '#00B4D8',      // Accent - highlights, hover states, icons
-  green: '#28a745',     // Success - confirmations, completed states
-  coral: '#e85a4f',     // CTA - call-to-action buttons, alerts
-  orange: '#ff6b35',    // Secondary accent (use sparingly)
+  oceanBlue: '#0077B6',   // Primary
+  teal: '#00B4D8',        // Secondary
+  green: '#28a745',       // Success/Tertiary
+  coral: '#e85a4f',       // CTA
+  orange: '#ff6b35',      // Accent (dark mode)
+  purple: '#667eea',      // Portal accent (dark mode)
 };
 
-// Dark Mode
+// Dark Mode (matches pink/purple/orange logo)
 const darkMode = {
   background: '#0d1b2a',
+  topBar: '#112240',
   cardBg: 'rgba(255,255,255,0.03)',
-  cardBgAlt: 'rgba(255,255,255,0.05)',
   text: '#ffffff',
   textMuted: '#94a3b8',
   border: 'rgba(255,255,255,0.1)',
+  accentPortal: '#667eea',    // Purple
+  accentOnboarding: '#ff6b35', // Orange
 };
 
-// Light Mode
+// Light Mode (matches blue/teal/green logo)
 const lightMode = {
   background: '#ffffff',
+  topBar: '#f1f5f9',
   cardBg: '#f8fafc',
-  cardBgAlt: '#f1f5f9',
   text: '#1e293b',
   textMuted: '#64748b',
   border: 'rgba(0,0,0,0.1)',
+  accentPortal: '#00b4d8',    // Teal
+  accentOnboarding: '#28a745', // Green
 };
 ```
+
+### Logo Text Colors
+The "lyt Communications" text in the logo:
+- **Dark mode "ly":** #e6c4d9 (pink)
+- **Dark mode "t":** #e6c4d9 (pink)
+- **Light mode "ly":** #0a3a7d (deep blue)
+- **Light mode "t":** #2ec7c0 (teal)
 
 ### Typography
-- Font: System default (-apple-system, BlinkMacSystemFont, 'Segoe UI', etc.)
-- Headings: Bold, use `textColor` variable
-- Body: Regular weight, 1.6-1.7 line height
-- Small text: `textMuted` color
-
-### Component Styling Patterns
-```javascript
-// Card pattern
-const cardStyle = {
-  backgroundColor: cardBg,
-  borderRadius: '12px',
-  padding: '24px',
-  border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
-};
-
-// Button pattern - Primary
-const primaryButton = {
-  backgroundColor: colors.coral,
-  color: '#ffffff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '12px 24px',
-  fontWeight: '600',
-  cursor: 'pointer',
-};
-
-// Button pattern - Secondary
-const secondaryButton = {
-  backgroundColor: 'transparent',
-  color: colors.blue,
-  border: `2px solid ${colors.blue}`,
-  borderRadius: '8px',
-  padding: '10px 22px',
-};
-
-// Input pattern
-const inputStyle = {
-  width: '100%',
-  padding: '12px 16px',
-  borderRadius: '8px',
-  border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : '#e2e8f0'}`,
-  backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#ffffff',
-  color: textColor,
-  fontSize: '1rem',
-};
-```
+- Font: System default (-apple-system, BlinkMacSystemFont, 'Segoe UI')
+- Company name: **Always "lyt" lowercase** (matches logo)
 
 ### Icons
 - Library: `lucide-react`
-- Size: 20px for inline, 24px for standalone, 40-48px for features
-- Color: Use `colors.blue`, `colors.teal`, or `textColor`
-
-### NO STOCK PHOTOS
-- Use icons, CSS gradients, and the custom logos instead
-- Hero sections: Logo-centered with subtle glow effects
-- Feature sections: Icon-based cards
+- NO STOCK PHOTOS - Use icons, CSS gradients, logo as focal point
 
 ---
 
@@ -117,44 +122,42 @@ const inputStyle = {
 lytcomm-website/
 ├── public/
 │   ├── index.html
-│   ├── lyt_logo_dark.jpg       # Dark mode logo (pink/magenta fiber optic)
-│   ├── lyt_logo_light.jpg      # Light mode logo (blue/teal fiber optic)
+│   ├── lyt_logo_dark.png        # Dark mode logo (pink/purple/orange)
+│   ├── lyt_logo_light.png       # Light mode logo (blue/teal/green)
 │   ├── Form W-4 sign.pdf
 │   ├── Form W-9 sign.pdf
-│   └── LYT MSA 2006 - v3.4.pdf
+│   └── LYT_MSA_2026_v4.0.pdf    # Latest MSA (no fillable fields)
 ├── src/
-│   ├── App.js                  # Main router, dark mode state, view switching
-│   ├── index.js                # React entry point
-│   ├── index.css               # Global styles (minimal)
+│   ├── App.js                   # Main router, dark mode state
+│   ├── index.js
+│   ├── index.css
 │   ├── config/
-│   │   └── constants.js        # Colors, company info, mock data
+│   │   └── constants.js         # INVITE_CODE, NDA_INVITE_CODE, URLS
 │   ├── components/
-│   │   ├── SignaturePad.js     # Signature capture component
-│   │   ├── SSNInput.js         # SSN input with formatting
-│   │   └── EINInput.js         # EIN input with formatting
+│   │   ├── SignaturePad.js
+│   │   ├── SSNInput.js
+│   │   └── EINInput.js
+│   ├── services/
+│   │   └── pdfService.js        # 🔴 CORRUPTED - needs restore
 │   ├── pages/
-│   │   ├── HomePage.js         # Landing page with hero, services, CTA
-│   │   ├── AboutPage.js        # Company info, team, mission
-│   │   ├── ServicesPage.js     # Service offerings grid
-│   │   ├── ContactPage.js      # Contact form + info
-│   │   ├── PortalSelect.js     # Portal type selection cards
-│   │   └── InviteCodePage.js   # Invite code entry for onboarding
+│   │   ├── HomePage.js
+│   │   ├── AboutPage.js
+│   │   ├── ServicesPage.js
+│   │   ├── ContactPage.js
+│   │   ├── PortalSelect.js
+│   │   ├── InviteCodePage.js    # Handles welcome2lyt AND lytnda2026
+│   │   └── NDASignPage.js       # NDA signing wizard (3 steps)
 │   └── portals/
-│       ├── PortalLogin.js      # Unified login (employee/contractor)
-│       ├── EmployeeLogin.js    # Employee-specific login
-│       ├── ContractorLogin.js  # Contractor-specific login
-│       ├── AdminLogin.js       # Admin login
-│       ├── SetPassword.js      # New user password setup
-│       ├── ForgotPassword.js   # Password recovery
-│       ├── EmployeeOnboarding.js    # 5-step employee onboarding
-│       ├── ContractorOnboarding.js  # 8-step contractor onboarding
-│       ├── EmployeeDashboard.js     # Employee field operations
-│       ├── ContractorDashboard.js   # Contractor job management
-│       └── AdminDashboard.js        # Admin management panel
-├── BLUEPRINT.md                # THIS FILE
-├── CLAUDE_CRASH_RECOVERY_PROTOCOL.md
-├── package.json
-└── README.md
+│       ├── PortalLogin.js
+│       ├── SetPassword.js
+│       ├── ForgotPassword.js
+│       ├── EmployeeOnboarding.js
+│       ├── ContractorOnboarding.js  # 🔴 CORRUPTED - needs restore
+│       ├── EmployeeDashboard.js
+│       ├── ContractorDashboard.js
+│       └── AdminDashboard.js
+├── BLUEPRINT.md                 # THIS FILE
+└── package.json
 ```
 
 ---
@@ -162,113 +165,44 @@ lytcomm-website/
 ## 🔀 APPLICATION FLOW
 
 ```
-                         ┌─────────────────┐
-                         │   PUBLIC SITE   │
-                         │ Home/About/etc  │
-                         └────────┬────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              │                   │                   │
-              ▼                   ▼                   ▼
-       ┌──────────┐       ┌──────────────┐    ┌─────────────┐
-       │  Portal  │       │ Invite Code  │    │   Admin     │
-       │  Login   │       │    Entry     │    │   Login     │
-       └────┬─────┘       └──────┬───────┘    └──────┬──────┘
-            │                    │                   │
-            │           ┌───────┴───────┐           │
-            │           ▼               ▼           │
-            │    ┌──────────┐    ┌────────────┐     │
-            │    │ Employee │    │ Contractor │     │
-            │    │Onboarding│    │ Onboarding │     │
-            │    └────┬─────┘    └─────┬──────┘     │
-            │         │                │           │
-            ▼         ▼                ▼           ▼
-     ┌────────────────────────────────────────────────┐
-     │              AUTHENTICATED USERS               │
-     ├──────────────┬─────────────────┬──────────────┤
-     │   Employee   │   Contractor    │    Admin     │
-     │  Dashboard   │   Dashboard     │  Dashboard   │
-     └──────────────┴─────────────────┴──────────────┘
+PUBLIC WEBSITE
+    ↓
+[Home] [About] [Services] [Contact] [Portal] [Onboarding]
+    ↓                                    ↓
+PORTAL LOGIN                    INVITE CODE PAGE
+(Existing users)                      ↓
+    ↓                    ┌────────────┴────────────┐
+    ↓                    ↓                         ↓
+    ↓              welcome2lyt               lytnda2026
+    ↓                    ↓                         ↓
+    ↓          [Employee] [Contractor]         [NDA Only]
+    ↓                ↓           ↓                 ↓
+DASHBOARDS    EMPLOYEE      CONTRACTOR        NDA SIGN
+              ONBOARDING    ONBOARDING        (3 steps)
+              (5 steps)     (8 steps)
 ```
 
 ---
 
-## 📋 COMPONENT SPECIFICATIONS
+## 🔐 ACCESS CODES & ACCOUNTS
 
-### App.js (Main Router)
-- Manages: `view` state, `darkMode` state, `user` state
-- Views: 'home', 'about', 'services', 'contact', 'portal-select', 'invite-code', 'employee-onboarding', 'contractor-onboarding', 'employee-dashboard', 'contractor-dashboard', 'admin-dashboard', 'admin-login', 'portal-login', 'set-password', 'forgot-password'
-- Passes to all pages: `darkMode`, `setDarkMode`, `colors`, `setView`, `user`, `setUser`
-
-### HomePage.js
-- Hero: Logo-centered (switches dark/light), animated glow, tagline
-- Services preview: 4 icon cards (HDD, Splicing, Aerial, Underground)
-- CTA section: "Join Our Team" and "Partner With Us"
-- Service area: Houston metro cities listed
-
-### EmployeeDashboard.js (~1,600 lines)
-Features:
-- Dashboard tab: Stats cards, announcements
-- Production Logs: Fiber footage, splices, poles, HDD drilling entry
-- Equipment Checks: Pre-use inspection forms
-- Toolbox Talks: Safety meeting sign-ins
-- OTDR Uploads: Fiber test result uploads
-- 811 Tickets: Utility locate tracking with expiry alerts
-- Certifications: License/cert tracking with 30-day warnings
-- Incident Reports: Safety incident documentation
-
-### ContractorDashboard.js (~1,400 lines)
-Features:
-- Dashboard tab: Active jobs, compliance status
-- Jobs: Job listings and details
-- Work Logs: Daily work documentation
-- Invoices: Invoice submission and tracking
-- Documents: COI, W-9, MSA management
-- Compliance: Insurance expiry tracking
-
----
-
-## 🔐 AUTHENTICATION
-
-### Invite Code
-- Code: `welcome2lyt`
-- Used for: New employee/contractor onboarding access
+### Invite Codes
+| Code | Purpose | Route |
+|------|---------|-------|
+| `welcome2lyt` | Employee/Contractor onboarding | #onboarding |
+| `lytnda2026` | NDA signing only | #onboarding → #nda-sign |
 
 ### Demo Accounts
-```javascript
-const mockUsers = [
-  { email: 'matt@lytcomm.com', password: 'demo123', role: 'admin', name: 'Matt Campbell' },
-  { email: 'john@lytcomm.com', password: 'demo123', role: 'employee', name: 'John Smith' },
-  { email: 'sarah@lytcomm.com', password: 'demo123', role: 'contractor', name: 'Sarah Johnson' },
-];
-```
+| Email | Password | Role |
+|-------|----------|------|
+| matt@lytcomm.com | demo123 | Admin |
+| john@lytcomm.com | demo123 | Employee |
+| sarah@lytcomm.com | demo123 | Contractor |
 
 ### Admin Contacts
-- Matt Campbell: matt@lytcomm.com (Primary)
+- Matt Roy: matt@lytcomm.com (Primary)
 - Mason Roy: mason@lytcomm.com
-- Donnie Smith: donnie@lytcomm.com
-
----
-
-## 🏢 COMPANY INFO
-
-```javascript
-const LYT_INFO = {
-  name: 'LYT Communications, LLC',
-  address: '12130 State Highway 3',
-  city: 'Webster',
-  state: 'TX',
-  zip: '77598',
-  phone: '(832) 850-3887',
-  email: 'info@lytcomm.com',
-};
-
-const SERVICE_AREAS = [
-  'Houston', 'Webster', 'League City', 'Pearland', 
-  'Sugar Land', 'Katy', 'The Woodlands', 'Galveston', 
-  'Pasadena', 'Baytown'
-];
-```
+- Donnie Wells: donnie@lytcomm.com
 
 ---
 
@@ -276,38 +210,51 @@ const SERVICE_AREAS = [
 
 | Service | Purpose | ID/Details |
 |---------|---------|------------|
-| Vercel | Hosting/Deploy | Team: matt-roys-projects |
-| GitHub | Source control | MSRCAM83/lytcomm-website |
-| Google Drive | Document storage | Folder: 11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC |
-| Google Sheets | Rate card data | Sheet: 10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4 |
-| Adobe Sign | Document signatures | W-4, W-9, MSA workflows |
+| Vercel | Hosting | Team: team_KdY24IuzstUJ0GmIFbiMTPFn, Project: prj_WaoGvADsQWGd0kxC14n5qlNJ2T4q |
+| GitHub | Source | MSRCAM83/lytcomm-website |
+| Google Apps Script | Backend | v4.0 deployed from matt@lytcomm.com |
+| Google Drive | Storage | Folder: 11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC |
+| Google Sheets | Rate Card | Sheet: 10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4 |
+| Work Log | Tracking | Doc: 110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo |
 
 ---
 
-## ⚠️ IMPORTANT RULES FOR CLAUDE
+## ⚠️ HARD RULES FOR CLAUDE
 
-1. **Colors**: Always use the exact hex codes from the Design System
-2. **Dark/Light Mode**: Every component must support both modes
-3. **No Stock Photos**: Use icons (lucide-react) and CSS effects only
-4. **Mobile First**: All layouts must work on iPhone/Android
-5. **Inline Styles**: Project uses inline CSS, not Tailwind or external CSS
-6. **ESLint**: Remove unused imports, test with `CI=true npm run build`
-7. **Versioning**: Increment version numbers on all deliverables
-8. **Don't Delete**: Fix broken code, never delete functionality
+1. **NEVER DELETE** - Fix broken code, don't remove functionality
+2. **NEVER GIT CLONE** - Use GitHub API via curl (it stalls otherwise)
+3. **VERSION EVERYTHING** - Increment version numbers on all deliverables
+4. **MODIFY, DON'T RECREATE** - Use str_replace and mv, not full rewrites
+5. **TEST BEFORE PUSH** - Run `CI=true npm run build` locally
+6. **ASK BEFORE PUSHING** - Unless extended permission granted
+7. **"lyt" LOWERCASE** - Company name always lowercase like the logo
+8. **NO ADDRESS/PHONE ON PDFs** - User explicitly removed this
+
+### GitHub API Pattern
+```bash
+# READ file
+curl -s -H "Authorization: token [GITHUB_TOKEN]" \
+  -H "Accept: application/vnd.github.v3.raw" \
+  "https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/[path]"
+
+# WRITE file (requires SHA)
+# 1. Get current SHA
+# 2. Base64 encode content
+# 3. PUT to contents endpoint
+# Token stored in Claude's memory - never commit to repo
+```
 
 ---
 
-## 🔄 RECOVERY CHECKLIST
+## 🔄 CRASH RECOVERY PROTOCOL
 
-If you're a new Claude session:
-
-1. ☐ Read this BLUEPRINT.md
-2. ☐ Check CLAUDE_WORK_LOG in Google Drive for current task status
-3. ☐ Compare `main` vs `claude-wip` branches for any WIP code
-4. ☐ Ask user what they want to work on
-5. ☐ Update work log BEFORE starting any task
-6. ☐ Commit to `claude-wip` every ~100 lines
-7. ☐ Merge to `main` only when complete and tested
+When starting a new session:
+1. ☐ Check current time via bash
+2. ☐ Read this BLUEPRINT.md
+3. ☐ Check work log (Doc ID: 110MX9xNtuVz4pZguJ58X34aqAsVgrRUmj2QjrooZcCo)
+4. ☐ Check recent_chats for context
+5. ☐ Compare main vs claude-wip branches if needed
+6. ☐ Ask user what to work on
 
 ---
 
@@ -315,11 +262,34 @@ If you're a new Claude session:
 
 | Date | Version | Changes |
 |------|---------|---------|
-| Jan 17, 2026 | 1.0 | Initial site + portals deployed |
-| Jan 18, 2026 | 2.0 | New logo-centered homepage, ESLint fixes |
-| Jan 18, 2026 | 2.0.1 | Full ESLint audit, all errors fixed |
-| Jan 19, 2026 | 2.1 | Crash recovery system added |
+| Jan 17 | 1.0-2.0 | Initial site + portals |
+| Jan 18 | 2.1-2.25 | Logo fixes, ESLint audit, mobile responsive |
+| Jan 19 | 2.26-2.38 | Theme consistency, Google Drive integration |
+| Jan 20 | 2.39-2.43 | PDF generation fixes (W-4, W-9), Apps Script v4.0 |
+| Jan 21 | 2.44-2.46 | SSN/EIN digit boxes, mobile optimization, data unmasking |
+| Jan 22 | 2.47+ | NDA signing feature, MSA v4.0 work (files corrupted) |
 
 ---
 
-*This blueprint should be updated whenever significant changes are made to the project structure, design system, or component specifications.*
+## ✅ COMPLETED FEATURES
+
+- [x] Public website (Home, About, Services, Contact)
+- [x] Logo-centered homepage (no stock photos)
+- [x] Dark/Light mode with dynamic logos
+- [x] Employee onboarding (5 steps)
+- [x] Contractor onboarding (8 steps)
+- [x] Employee Dashboard with field operations
+- [x] Contractor Dashboard
+- [x] Admin Dashboard
+- [x] Unified portal login
+- [x] W-4 PDF filling with all fields
+- [x] W-9 PDF filling with SSN/EIN digit boxes
+- [x] Direct deposit forms
+- [x] Google Drive integration (matt@lytcomm.com)
+- [x] NDA signing feature (lytnda2026)
+- [x] Mobile responsive design
+- [x] Rate card PDF generation
+
+---
+
+*Update this blueprint whenever significant changes are made.*
