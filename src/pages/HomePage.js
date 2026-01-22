@@ -31,16 +31,16 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
     }
   };
 
-  // Generate fake signature as base64 PNG
+  // Generate fake signature as base64 PNG with TRANSPARENT background
   const generateSignature = (name) => {
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 80;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 300, 80);
+    // TRANSPARENT background - no fillRect, just clear
+    ctx.clearRect(0, 0, 300, 80);
     ctx.font = 'italic 28px "Brush Script MT", cursive, Georgia';
-    ctx.fillStyle = '#000066';
+    ctx.fillStyle = '#000000';  // Black signature ink
     ctx.fillText(name, 20, 50);
     return canvas.toDataURL('image/png');
   };
@@ -767,7 +767,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.62</span></h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.63</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
