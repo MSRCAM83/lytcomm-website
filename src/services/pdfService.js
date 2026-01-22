@@ -5,6 +5,7 @@
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
+ * v2.62 - REMOVED white rectangles - transparent PNG signatures draw directly on form
  * v2.61 - Signature white background fix: Draw white rectangle before transparent PNG signature
  * v2.60 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
  */
@@ -179,7 +180,7 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
       if (dw.line15) setText('15', dw.line15);
     }
     
-    // SIGNATURE - v2.61: White background rectangle to cover signature line, then transparent PNG
+    // SIGNATURE - v2.62: Draw transparent PNG signature directly (NO white background)
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
@@ -189,18 +190,7 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
           const firstPage = pages[0];
           const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
           
-          // Draw white rectangle FIRST to cover the signature line on the form
-          // This ensures a clean background for the signature
-          firstPage.drawRectangle({
-            x: 103,
-            y: 90,
-            width: 155,
-            height: 40,
-            color: rgb(1, 1, 1), // White
-            borderWidth: 0,
-          });
-          
-          // Now draw the transparent PNG signature on top of the white background
+          // Draw transparent PNG signature directly on the form
           firstPage.drawImage(sigImage, {
             x: 105,
             y: 92,
@@ -351,24 +341,14 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
     // Date
     setText('Date', data.w9Date || new Date().toLocaleDateString());
     
-    // Signature - v2.61: White background rectangle for clean signature
+    // Signature - v2.62: Draw transparent PNG directly (NO white background)
     if (signatureDataUrl) {
       try {
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
-          // Draw white rectangle FIRST to cover signature line
-          firstPage.drawRectangle({
-            x: 73,
-            y: 203,
-            width: 155,
-            height: 35,
-            color: rgb(1, 1, 1), // White
-            borderWidth: 0,
-          });
-          
-          // Draw transparent PNG signature on top
+          // Draw transparent PNG signature directly on form
           firstPage.drawImage(sigImage, {
             x: 75,
             y: 205,
@@ -480,24 +460,14 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
-          // Draw white rectangle FIRST to cover signature line
-          lastPage.drawRectangle({
-            x: 98,
-            y: 388,
-            width: 155,
-            height: 40,
-            color: rgb(1, 1, 1), // White
-            borderWidth: 0,
-          });
-          
-          // Draw transparent PNG signature on top
+          // Draw transparent PNG signature directly on form (NO white background)
           lastPage.drawImage(sigImage, {
             x: 100,
             y: 390,
             width: 150,
             height: 35,
           });
-          console.log('[v2.61] Page 15: Signature with white bg at (100, 390)');
+          console.log('[v2.62] Page 15: Signature at (100, 390)');
           
           // Signature verification timestamp: x=100, y=383
           if (signatureInfo.timestamp || signatureInfo.ip) {
@@ -701,17 +671,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             color: rgb(0, 0, 0),
           });
           
-          // v2.61: Draw white rectangle for clean signature background
-          page.drawRectangle({
-            x: 48,
-            y: y - 2,
-            width: 155,
-            height: 40,
-            color: rgb(1, 1, 1), // White
-            borderWidth: 0,
-          });
-          
-          // Draw transparent PNG signature on top
+          // v2.62: Draw transparent PNG signature directly (NO white background)
           page.drawImage(sigImage, {
             x: 50,
             y: y,
