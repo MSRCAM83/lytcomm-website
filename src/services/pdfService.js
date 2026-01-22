@@ -621,7 +621,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
         if (section.checkboxes && Array.isArray(section.checkboxes)) {
           for (const cb of section.checkboxes) {
             if (y < 120) break;
-            const checkmark = cb.checked ? '☑' : '☐';
+            const checkmark = cb.checked ? '[X]' : '[ ]';
             page.drawText(`${checkmark} ${cb.label}`, {
               x: 60,
               y: y,
