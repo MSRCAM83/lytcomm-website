@@ -5,6 +5,7 @@
  * 
  * v2.49 - FIXED createFormPdf to handle array of sections (for test panel)
  * v2.47 - FIXED W-4 page 3-4 field mappings
+ * v2.63 - Fix verification text positions - move to right of signature on all forms
  * v2.62 - REMOVED white rectangles - transparent PNG signatures draw directly on form
  * v2.61 - Signature white background fix: Draw white rectangle before transparent PNG signature
  * v2.60 - MSA v4.0: Fill page 1 header + page 15 signature with timestamp/IP
@@ -201,9 +202,9 @@ export async function fillW4(data, signatureDataUrl, signatureInfo = {}) {
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
-              x: 105,
-              y: 78,
-              size: 6,
+              x: 260,
+              y: 95,
+              size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
@@ -359,9 +360,9 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
-              x: 75,
-              y: 190,
-              size: 6,
+              x: 230,
+              y: 210,
+              size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
@@ -473,9 +474,9 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             lastPage.drawText(verifyText, {
-              x: 100,
-              y: 375,
-              size: 6,
+              x: 255,
+              y: 395,
+              size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
@@ -683,9 +684,9 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             page.drawText(verifyText, {
-              x: 50,
-              y: y - 15,
-              size: 6,
+              x: 205,
+              y: y + 5,
+              size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
             });
