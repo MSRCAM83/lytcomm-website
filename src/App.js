@@ -36,6 +36,10 @@ import PotholeVerification from './portals/PotholeVerification';
 import DailyWorkSheet from './portals/DailyWorkSheet';
 import InvoiceGenerator from './portals/InvoiceGenerator';
 
+// Phase 7 - Advanced Admin
+import MetricsDashboard from './portals/MetricsDashboard';
+import ActivityLog from './portals/ActivityLog';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -134,6 +138,8 @@ function App() {
     'potholes',
     'daily-worksheet',
     'invoices',
+    'metrics',
+    'activity-log',
     'set-password',
     'forgot-password',
     'api-test',
@@ -182,6 +188,10 @@ function App() {
         return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} />;
       case 'invoices':
         return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} />;
+      case 'metrics':
+        return <MetricsDashboard darkMode={darkMode} user={loggedInUser} />;
+      case 'activity-log':
+        return <ActivityLog darkMode={darkMode} user={loggedInUser} />;
       case 'portal-login':
         return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'onboarding':
