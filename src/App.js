@@ -26,6 +26,12 @@ import PortalLogin from './portals/PortalLogin';
 import SetPassword from './portals/SetPassword';
 import ForgotPassword from './portals/ForgotPassword';
 
+// New Admin & Supervisor Components
+import AdminUserManagement from './portals/AdminUserManagement';
+import RecruitingTracker from './portals/RecruitingTracker';
+import WorkMap from './portals/WorkMap';
+import PotholeVerification from './portals/PotholeVerification';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -118,6 +124,10 @@ function App() {
     'contractor-dashboard',
     'admin-login',
     'admin-dashboard',
+    'admin-users',
+    'recruiting',
+    'work-map',
+    'potholes',
     'set-password',
     'forgot-password',
     'api-test',
@@ -154,6 +164,14 @@ function App() {
         return <AdminLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'admin-dashboard':
         return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
+      case 'admin-users':
+        return <AdminUserManagement darkMode={darkMode} currentUser={loggedInUser} />;
+      case 'recruiting':
+        return <RecruitingTracker darkMode={darkMode} user={loggedInUser} />;
+      case 'work-map':
+        return <WorkMap darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
+      case 'potholes':
+        return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
       case 'portal-login':
         return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'onboarding':
