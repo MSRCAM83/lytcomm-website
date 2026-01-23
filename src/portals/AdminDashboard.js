@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User } from 'lucide-react';
 import { colors, mockUsers, mockContractors, mockProjects, mockTimeEntries, mockInvoices } from '../config/constants';
 
 // Mock pending onboarding data
@@ -33,6 +33,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'profile', label: 'My Profile', icon: User, external: 'profile' },
     { id: 'metrics', label: 'Metrics Dashboard', icon: BarChart3, external: 'metrics' },
     { id: 'activity-log', label: 'Activity Log', icon: History, external: 'activity-log' },
     { id: 'onboarding', label: 'Pending Onboarding', icon: UserPlus, badge: mockPendingOnboarding.length },
