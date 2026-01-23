@@ -544,7 +544,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
 
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
 
