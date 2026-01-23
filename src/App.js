@@ -32,6 +32,10 @@ import RecruitingTracker from './portals/RecruitingTracker';
 import WorkMap from './portals/WorkMap';
 import PotholeVerification from './portals/PotholeVerification';
 
+// Phase 6 - Document Generation
+import DailyWorkSheet from './portals/DailyWorkSheet';
+import InvoiceGenerator from './portals/InvoiceGenerator';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -128,6 +132,8 @@ function App() {
     'recruiting',
     'work-map',
     'potholes',
+    'daily-worksheet',
+    'invoices',
     'set-password',
     'forgot-password',
     'api-test',
@@ -172,6 +178,10 @@ function App() {
         return <WorkMap darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
       case 'potholes':
         return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
+      case 'daily-worksheet':
+        return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} />;
+      case 'invoices':
+        return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} />;
       case 'portal-login':
         return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'onboarding':
