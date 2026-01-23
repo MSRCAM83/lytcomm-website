@@ -366,36 +366,23 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         log(`❌ Safety ERROR: ${e.message}`);
       }
       
-      // Build payload
+      // Build payload - FLAT structure matching Apps Script v4.2 expectations
       const payload = {
         action: 'submitEmployeeOnboarding',
-        type: 'employee_onboarding',
-        formData: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          ssn: formData.ssn,
-          dateOfBirth: formData.dateOfBirth,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          bankName: formData.bankName,
-          routingNumber: formData.routingNumber,
-          accountNumber: formData.accountNumber,
-          accountType: formData.accountType,
-          emergencyName: formData.emergencyName,
-          emergencyPhone: formData.emergencyPhone,
-          emergencyRelation: formData.emergencyRelation,
-          emergencyEmail: formData.emergencyEmail,
-        },
-        signatureVerification: {
-          ipAddress,
-          timestamp: signatureTimestamp,
-          userAgent: navigator.userAgent,
-        },
-        filledPdfs: {
+        // Flat params for Apps Script
+        name: fullName,
+        email: formData.email,
+        phone: formData.phone,
+        ssn: formData.ssn,
+        dob: formData.dateOfBirth,
+        address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`,
+        emergencyContact: `${formData.emergencyName} (${formData.emergencyRelation}): ${formData.emergencyPhone}`,
+        directDeposit: true,
+        safetyAcknowledged: true,
+        w4Status: 'completed',
+        ipAddress: ipAddress,
+        // PDFs as base64 - Apps Script expects 'pdfs' not 'filledPdfs'
+        pdfs: {
           w4: w4Pdf,
           directDeposit: directDepositPdf,
           emergencyContact: emergencyContactPdf,
@@ -654,33 +641,18 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       // Build payload
       const payload = {
         action: 'submitContractorOnboarding',
-        type: 'contractor_onboarding',
-        formData: {
-          companyName: formData.companyName,
-          dba: formData.dba,
-          contactName: formData.contactName,
-          contactTitle: formData.contactTitle,
-          contactEmail: formData.email,
-          contactPhone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          entityType: formData.entityType,
-          taxIdType: formData.taxIdType,
-          ein: formData.ein,
-          ssn: formData.ssn,
-          bankName: formData.bankName,
-          routingNumber: formData.routingNumber,
-          accountNumber: formData.accountNumber,
-          accountType: formData.accountType,
-        },
-        signatureVerification: {
-          ipAddress,
-          timestamp: signatureTimestamp,
-          userAgent: navigator.userAgent,
-        },
-        filledPdfs: {
+        // Flat params for Apps Script v4.2
+        companyName: formData.companyName,
+        contactName: formData.contactName,
+        email: formData.email,
+        phone: formData.phone,
+        ein: formData.ein || '',
+        address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`,
+        msaSigned: true,
+        w9Completed: true,
+        ipAddress: ipAddress,
+        // PDFs as base64 - Apps Script expects 'pdfs' not 'filledPdfs'
+        pdfs: {
           w9: w9Pdf,
           msa: msaPdf,
           rateCard: rateCardPdf,
@@ -769,7 +741,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.73</span></h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.76</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
@@ -1350,6 +1322,19 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* Version Footer */}
+      <div style={{
+        position: 'fixed',
+        bottom: '10px',
+        right: '10px',
+        fontSize: '11px',
+        color: darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+        fontFamily: 'monospace',
+        zIndex: 50,
+      }}>
+        v2.76
+      </div>
     </div>
   );
 };
