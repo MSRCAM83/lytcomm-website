@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel } from 'lucide-react';
 import { colors, mockUsers, mockContractors, mockProjects, mockTimeEntries, mockInvoices } from '../config/constants';
 
 // Mock pending onboarding data
@@ -34,8 +34,12 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'onboarding', label: 'Pending Onboarding', icon: UserPlus, badge: mockPendingOnboarding.length },
+    { id: 'recruiting', label: 'Recruiting Pipeline', icon: Target, external: 'recruiting' },
+    { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
+    { id: 'potholes', label: 'Pothole Approvals', icon: Shovel, external: 'potholes' },
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'contractors', label: 'Contractors', icon: Briefcase },
+    { id: 'user-management', label: 'User Management', icon: UserCog, external: 'admin-users' },
     { id: 'admins', label: 'Admin Users', icon: Shield },
     { id: 'time', label: 'Time Records', icon: Clock },
     { id: 'invoices', label: 'Invoices', icon: DollarSign },
@@ -759,7 +763,13 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.external) {
+                  setCurrentPage(item.external);
+                } else {
+                  setActiveTab(item.id);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '14px 24px',
@@ -790,6 +800,9 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 }}>
                   {item.badge}
                 </span>
+              )}
+              {item.external && (
+                <ChevronRight size={16} style={{ marginLeft: 'auto', opacity: 0.5 }} />
               )}
             </button>
           ))}
