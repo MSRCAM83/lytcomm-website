@@ -40,6 +40,9 @@ import InvoiceGenerator from './portals/InvoiceGenerator';
 import MetricsDashboard from './portals/MetricsDashboard';
 import ActivityLog from './portals/ActivityLog';
 
+// Phase 8 - User Self-Service
+import UserProfile from './portals/UserProfile';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -140,6 +143,7 @@ function App() {
     'invoices',
     'metrics',
     'activity-log',
+    'profile',
     'set-password',
     'forgot-password',
     'api-test',
@@ -192,6 +196,8 @@ function App() {
         return <MetricsDashboard darkMode={darkMode} user={loggedInUser} />;
       case 'activity-log':
         return <ActivityLog darkMode={darkMode} user={loggedInUser} />;
+      case 'profile':
+        return <UserProfile darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       case 'portal-login':
         return <PortalLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'onboarding':
