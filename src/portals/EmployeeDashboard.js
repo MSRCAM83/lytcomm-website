@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel } from 'lucide-react';
+import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User } from 'lucide-react';
 import { colors, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
 
 const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -75,6 +75,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Clock },
+    { id: 'profile', label: 'My Profile', icon: User, external: 'profile' },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
     { id: 'potholes', label: 'Pothole Docs', icon: Shovel, external: 'potholes' },
     { id: 'production', label: 'Daily Production', icon: Activity },
