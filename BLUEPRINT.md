@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 23, 2026 - 3:45 PM CST
+### Last Updated: January 23, 2026 - 4:00 PM CST
 
 ---
 
@@ -28,15 +28,21 @@
 
 ---
 
-## 🚀 CURRENT STATUS (Jan 23, 2026 - 3:45 PM CST)
+## 🚀 CURRENT STATUS (Jan 23, 2026 - 4:00 PM CST)
 
 ### ✅ Live Version: v2.70
 All Phases 1-7 deployed and working.
 
 ### ✅ BACKEND CONNECTED
-- Apps Script v4.2 deployed
+- Apps Script v4.2 deployed (NEW URL)
 - Login authentication: WORKING
 - Google Sheets integrated
+
+### ✅ CLAUDE GATEWAY OPERATIONAL
+- Gateway URL: https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec
+- Secret: LYTcomm2026ClaudeGatewaySecretKey99
+- GCP Project: 344674689562 (LYT-Claude-Gateway)
+- Full access: Drive, Gmail, Calendar, Sheets, Docs, Apps Script creation
 
 ### 🟡 NEEDS TESTING
 - Employee onboarding form → saves to Google Sheet?
@@ -55,9 +61,10 @@ All Phases 1-7 deployed and working.
 - **Onboarding:** https://lytcomm.com/#onboarding (code: welcome2lyt)
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
 
-### Apps Script Backend
-- **Web App URL:** https://script.google.com/macros/s/AKfycbznRYF1MvKJ6dqspLhe74jjRC-iOeb76IQT7nqSHV18_8xucn3zuCZhNUZAIwOKy7mr/exec
+### Apps Script Backend (UPDATED JAN 23 2026)
+- **Web App URL:** https://script.google.com/macros/s/AKfycbx_CdTOkbzr9pmjaOmAgOP-rxKJaiUQTFgZyMS8Ub7ak5vjwQ8bRGAZYjO4mP_Qc1B3/exec
 - **Version:** v4.2
+- **Script ID:** 1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG
 
 ### Google Sheets
 | Sheet Name | Sheet ID | Purpose |
@@ -249,13 +256,15 @@ If session crashes, paste this:
 LYT project - run crash recovery
 
 Backend is connected. Apps Script v4.2 deployed.
+Apps Script URL: https://script.google.com/macros/s/AKfycbx_CdTOkbzr9pmjaOmAgOP-rxKJaiUQTFgZyMS8Ub7ak5vjwQ8bRGAZYjO4mP_Qc1B3/exec
+
 Google Sheets configured:
 - Users: 1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw
 - Onboarding: 1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc
 
 Login works with: matt@lytcomm.com / demo123
 
-NEEDS TESTING: Employee/Contractor onboarding form submission to Google Sheets
+Claude Gateway operational for autonomous fixes.
 ```
 
 ---
