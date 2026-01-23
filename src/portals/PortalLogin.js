@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNfM2kARMK2goiRyKLyxJnfOKnOYHZWpMsuqyOBDmXnZgmMHZeL1VkJb7R_gHqMXyA/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPbdQSBGvIIQKc3L646nbhnnkn68Y97ee44Nr9q791IQYgxt5-qo1oZltlpP5Y2xz9/exec';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode }) {
   const [email, setEmail] = useState('');
