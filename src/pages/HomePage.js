@@ -368,6 +368,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       // Build payload
       const payload = {
+        action: 'submitEmployeeOnboarding',
         type: 'employee_onboarding',
         formData: {
           firstName: formData.firstName,
@@ -652,6 +653,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       // Build payload
       const payload = {
+        action: 'submitContractorOnboarding',
         type: 'contractor_onboarding',
         formData: {
           companyName: formData.companyName,
