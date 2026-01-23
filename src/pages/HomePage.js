@@ -411,7 +411,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
       
@@ -695,7 +695,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
       
