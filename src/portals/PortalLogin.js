@@ -1,7 +1,9 @@
-// PortalLogin.js v2.0 - Updated with shared styling, Sun/Moon toggle, matching header/footer
+// PortalLogin.js v3.0 - Production ready, no demo accounts, unified theme
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNfM2kARMK2goiRyKLyxJnfOKnOYHZWpMsuqyOBDmXnZgmMHZeL1VkJb7R_gHqMXyA/exec';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode }) {
   const [email, setEmail] = useState('');
@@ -11,12 +13,12 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(null);
 
-  // Portal section accent colors
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
-  const accentSecondary = darkMode ? '#c850c0' : '#0077B6';   // Pink vs Blue
+  // Theme colors matching main website
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
+  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';
   const accentGradient = darkMode 
-    ? 'linear-gradient(135deg, #667eea 0%, #c850c0 100%)'
-    : 'linear-gradient(135deg, #00b4d8 0%, #0077B6 100%)';
+    ? 'linear-gradient(135deg, #c850c0 0%, #ff6b35 100%)'
+    : 'linear-gradient(135deg, #0077B6 0%, #00b4d8 100%)';
   
   // Logo text colors matching actual logo
   const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';
@@ -28,35 +30,39 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
   const textColor = darkMode ? '#ffffff' : '#1e293b';
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
 
-  // Demo accounts for testing
-  const demoAccounts = [
-    { email: 'matt@lytcomm.com', password: 'Empire083#', role: 'admin', name: 'Matt Campbell' },
-    { email: 'demo.employee@lytcomm.com', password: 'demo123', role: 'employee', name: 'Demo Employee' },
-    { email: 'demo.contractor@lytcomm.com', password: 'demo123', role: 'contractor', name: 'Demo Contractor', company: 'Demo Contracting LLC' },
-  ];
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          action: 'login',
+          email: email.toLowerCase().trim(),
+          password: password
+        })
+      });
 
-    const user = demoAccounts.find(
-      acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
-    );
+      const result = await response.json();
 
-    if (user) {
-      setLoggedInUser(user);
-      if (user.role === 'admin') {
-        setCurrentPage('admin-dashboard');
-      } else if (user.role === 'employee') {
-        setCurrentPage('employee-dashboard');
-      } else if (user.role === 'contractor') {
-        setCurrentPage('contractor-dashboard');
+      if (result.success && result.user) {
+        setLoggedInUser(result.user);
+        if (result.user.role === 'admin') {
+          setCurrentPage('admin-dashboard');
+        } else if (result.user.role === 'employee') {
+          setCurrentPage('employee-dashboard');
+        } else if (result.user.role === 'contractor') {
+          setCurrentPage('contractor-dashboard');
+        }
+      } else {
+        setError(result.message || 'Invalid email or password. Please try again.');
       }
-    } else {
-      setError('Invalid email or password. Please try again.');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect. Please try again.');
     }
 
     setLoading(false);
@@ -183,7 +189,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
                   <LogIn size={32} color={accentPrimary} />
                 </div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>
-                  <span style={{ color: accentPrimary }}>Portal</span> Login
+                  Team <span style={{ color: accentPrimary }}>Portal</span>
                 </h1>
                 <p style={{ color: mutedColor }}>
                   Sign in to access your dashboard
@@ -315,24 +321,6 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
                   Start Onboarding
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Demo Accounts Notice */}
-          <div style={{ 
-            marginTop: '24px', 
-            padding: '16px', 
-            backgroundColor: `${accentPrimary}10`, 
-            borderRadius: '8px', 
-            border: `1px solid ${accentPrimary}30` 
-          }}>
-            <p style={{ color: textColor, fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>
-              Demo Accounts:
-            </p>
-            <div style={{ fontSize: '0.8rem', color: mutedColor }}>
-              <p>• Admin: matt@lytcomm.com</p>
-              <p>• Employee: demo.employee@lytcomm.com (demo123)</p>
-              <p>• Contractor: demo.contractor@lytcomm.com (demo123)</p>
             </div>
           </div>
         </div>
