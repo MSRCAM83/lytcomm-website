@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert } from 'lucide-react';
+import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel } from 'lucide-react';
 import { colors, mockProjects, mockTimeEntries, mockFiles, mockAnnouncements, mockUsers } from '../config/constants';
 
 const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -75,6 +75,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Clock },
+    { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
+    { id: 'potholes', label: 'Pothole Docs', icon: Shovel, external: 'potholes' },
     { id: 'production', label: 'Daily Production', icon: Activity },
     { id: 'otdr', label: 'OTDR Results', icon: Zap },
     { id: 'tickets', label: '811 Tickets', icon: Phone },
@@ -1554,7 +1556,13 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.external) {
+                  setCurrentPage(item.external);
+                } else {
+                  setActiveTab(item.id);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '14px 24px',
@@ -1571,6 +1579,9 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
               }}
             >
               <item.icon size={20} /> {item.label}
+              {item.external && (
+                <ChevronRight size={16} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+              )}
             </button>
           ))}
         </nav>
