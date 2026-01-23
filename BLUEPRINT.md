@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 22, 2026
+### Last Updated: January 23, 2026
 
 ---
 
@@ -16,30 +16,246 @@
 3. Contractor portal (onboarding, dashboard, compliance)
 4. Admin dashboard (manage employees/contractors)
 5. NDA signing system (standalone invite code flow)
+6. Recruiting tracker (Donnie's pipeline management)
+7. Work map system (GPS-validated section tracking)
+8. Pothole verification (photo documentation + approval workflow)
 
 ---
 
-## 🚨 CURRENT STATUS (Jan 22, 2026)
+## 🚀 CURRENT STATUS (Jan 23, 2026)
 
-### 🔴 CRITICAL - Files Corrupted
-- `pdfService.js` - Empty/corrupted, needs restore from previous commit
-- `ContractorOnboarding.js` - Empty/corrupted, needs restore from previous commit
+### ✅ Live Version: v2.66
+All core features deployed and working.
 
-### 🟡 PENDING STYLING (Never Completed)
+### 🟡 READY TO INTEGRATE (Built, Not Deployed)
+Four new components in `lyt-phase1-components-v1_0.zip`:
+1. **RecruitingTracker.js** (1,206 lines) - Donnie's pipeline management
+2. **WorkMap.js** (650 lines) - GPS work validation, section tracking
+3. **PotholeVerification.js** (873 lines) - Photo documentation + approval
+4. **PortalLogin.js v3.0** (475 lines) - Production ready, unified theme
+
+### 🟡 PENDING STYLING
+Portal/onboarding pages need full theme update to match main site.
+
+---
+
+## 📋 COMPLETE PHASE BREAKDOWN
+
+### ✅ PHASE 1 - CORE PORTAL (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| Unified login with invite code | ✅ |
+| InviteCodePage (welcome2lyt) | ✅ |
+| PortalLogin | ✅ |
+| SetPassword | ✅ |
+| ForgotPassword | ✅ |
+| Admin: matt@lytcomm.com | ✅ |
+
+### ✅ PHASE 2 - ADMIN & PDFS (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| Admin dashboard | ✅ |
+| Pending onboarding approvals | ✅ |
+| User management | ✅ |
+| Secondary admin assignment | ✅ |
+| Embedded PDFs inline (W-4, W-9, MSA) | ✅ |
+
+### ✅ PHASE 3 - FIELD OPERATIONS (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| Daily production logs (footage, splices, poles, HDD, conduit) | ✅ |
+| Equipment pre-use inspections (8-item checklist) | ✅ |
+| Toolbox talk sign-in (13 preset topics) | ✅ |
+| Photo documentation | ✅ |
+| OTDR test result uploads (.sor/.trc files) | ✅ |
+| 811 ticket tracking with expiry alerts (≤3 days) | ✅ |
+
+### ✅ PHASE 4 - COMPLIANCE & TRACKING (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| Employee certifications (OSHA, CPR, FOI, Confined Space, Flagger) | ✅ |
+| 30-day expiry alerts for certifications | ✅ |
+| COI/compliance tracking (carrier, policy#, liability amounts) | ✅ |
+| Vehicle insurance tracking | ✅ |
+| Business license tracking | ✅ |
+| Incident reports (injuries, actions, photos) | ✅ |
+
+### ✅ PDF GENERATION (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| W-4 with all fields filled | ✅ |
+| W-9 with SSN/EIN digit boxes (y=355 for EIN) | ✅ |
+| Rate Card PDF with signature | ✅ |
+| Direct Deposit authorization PDF | ✅ |
+| Safety acknowledgment PDF | ✅ |
+| ESIGN compliance (timestamp, IP, intent) | ✅ |
+
+### ✅ NDA SIGNING (COMPLETED)
+| Feature | Status |
+|---------|--------|
+| Invite code: lytnda2026 | ✅ |
+| Route: #nda-sign | ✅ |
+| 3-step wizard | ✅ |
+
+---
+
+## 🟡 PHASE 5 - SUPERVISOR/ADMIN TOOLS (BUILT - NEEDS INTEGRATION)
+
+### RecruitingTracker.js (Donnie's Tool)
+| Feature | Description |
+|---------|-------------|
+| Dashboard | Drill capacity bar (X/25 approved), follow-ups due, quick stats |
+| Contractor Pipeline | New Lead → Contacted → Meeting → Docs Sent → Under Review → Approved → Blacklisted |
+| Employee Pipeline | New Lead → Phone Screen → Interview → Offer → Accepted → Hired |
+| Lead Management | Contact info, drill count, crew size, skills, service area |
+| Commitment Tracking | Committed date, assigned project, showed up (yes/no) |
+| No-Show Tracking | One no-show = blacklisted (zero tolerance for new recruits) |
+| Reliability Scores | 0-100% based on show-up history |
+| Follow-up System | Follow-up dates with alerts when due |
+| Search & Filter | By name, company, phone, email, notes, status, type |
+
+### WorkMap.js (GPS Work Validation)
+| Feature | Description |
+|---------|-------------|
+| Project Overview | List projects with sections, assignments, footage |
+| Section Tracking | ID, status (not_started/in_progress/completed), contractor, footage |
+| GPS Validation | Gets current location, validates crew is on-site |
+| Pre-Work Validation | Checks: GPS available, 811 ticket not expired, permit not expired, all potholes approved |
+| Work Timer | Start/stop with elapsed time (HH:MM:SS) |
+| Active Crews View | Which crews working, which drill, section, start time, footage today |
+| Locate/Permit Expiry | Tracks expiration per section |
+| Pothole Blocking | Blocks drilling if potholes pending approval |
+
+### PotholeVerification.js (Photo Documentation)
+| Feature | Description |
+|---------|-------------|
+| Contractor View | "My Potholes" tab - submit new, view history |
+| Supervisor View | "Pending" tab - review queue |
+| Photo Upload | Multiple angles (Overview, Utilities Close-up, Depth Measurement) |
+| Pothole Details | Section, GPS, address, depth, width, locate ticket#, utilities exposed |
+| Approval Flow | Pending → Approved OR Rejected (with reason) |
+| Drilling Blocker | Crews cannot drill on sections with pending potholes |
+| History | Who submitted, when, who reviewed, when, rejection reasons |
+
+### PortalLogin.js v3.0 (Production Ready)
+| Feature | Description |
+|---------|-------------|
+| No Demo Accounts | Removed mock users, uses real Apps Script auth |
+| Apps Script URL | https://script.google.com/macros/s/AKfycbwNfM2kARMK2goiRyKLyxJnfOKnOYHZWpMsuqyOBDmXnZgmMHZeL1VkJb7R_gHqMXyA/exec |
+| Unified Theme | Matches main site header/footer |
+| Sun/Moon Toggle | Dark/light mode in top bar |
+| Logo Styling | Correct colors per mode (dark: #e6c4d9, light: #0a3a7d/#2ec7c0) |
+
+---
+
+## 🔴 PHASE 6 - AUTO-GENERATED DOCUMENTS (NOT BUILT)
+
+### Auto Daily Work Sheet (Metronet Excel Format)
+| Source | Auto-Fills |
+|--------|------------|
+| Project assignment | PROJECT, LCP codes |
+| GPS/address | Location, Cross Streets |
+| System date | DATE |
+| Contractor profile | Company + Contact + Phone |
+| Section type | AE/UG |
+| GPS work start time | Time |
+| Traffic control checkbox | YES/NO |
+| Production log notes | Purpose/Reason |
+
+**Output:** Excel file matching exact Metronet template, one per day per project, multiple rows for multiple drills.
+
+### Invoice Generator
+| Feature | Description |
+|---------|-------------|
+| LYT Template | Custom design (not Metronet format) |
+| Auto-populate | Completed sections, rate card pricing, quantities |
+| Approved work only | Only bills what's been inspected |
+| Separate per map | Each map/project gets own invoice |
+
+### Reconciliation Report
+| Feature | Description |
+|---------|-------------|
+| Compare | Your logs vs. Metronet payments |
+| Discrepancy alerts | Flag mismatches |
+
+---
+
+## 🔴 PHASE 7 - ADVANCED ADMIN FEATURES (NOT BUILT)
+
+| Feature | Description |
+|---------|-------------|
+| Production Metrics Dashboard | Daily/weekly/monthly footage, splices, poles, HDD |
+| Safety Metrics | Days without incident, open issues |
+| Compliance Overview | Expiring certs, COIs, permits at a glance |
+| Project Profitability | Cost vs. billed by project |
+| Activity Log | Full audit trail - who did what, when |
+| Bulk Import (CSV) | Add multiple users at once |
+| Export Data | Download reports, user lists |
+
+---
+
+## 🔴 PHASE 8 - USER SELF-SERVICE & NOTIFICATIONS (NOT BUILT)
+
+| Feature | Description |
+|---------|-------------|
+| Edit Profile | Update phone, address, emergency contact |
+| Upload New COI | Contractors renew insurance annually |
+| View Documents | Access their signed forms |
+| In-App Notification Center | See approvals, messages, alerts |
+| Email Digests | Daily summary of pending items for admin |
+| Session Timeout | Auto-logout after inactivity |
+
+---
+
+## 🔴 PHASE 9 - ADVANCED WORK TRACKING (NOT BUILT)
+
+| Feature | Description |
+|---------|-------------|
+| Multi-Drill GPS Tracking | Real-time location per drill on management view |
+| Breadcrumb Trail Playback | Review where crews were throughout the day |
+| One-Call Locate Photo Confirmation | Photo proof of marks before drilling |
+| Open Hole Status | End-of-day tracking |
+| Client Inspection Workflow | Sign-off from Metronet supervisors |
+| Restoration Tracking | Concrete, asphalt, landscape restoration status |
+| Material Tracking | What was used per section |
+
+---
+
+## 🔴 PHASE 10 - CONTRACTOR PORTAL ENHANCEMENTS (NOT BUILT)
+
+| Feature | Description |
+|---------|-------------|
+| Bore Log | Depth, soil type, utilities encountered |
+| Damage Reports | Document any damages for liability protection |
+| Permit Tracker | Avoid work stoppages |
+| Invoices Submission | Submit invoices, track payment status |
+| Client Portal View | Limited view for Metronet to see progress |
+
+---
+
+## 🔴 PHASE 11 - MOBILE/NATIVE CONSIDERATIONS (NOT BUILT)
+
+| Feature | Description |
+|---------|-------------|
+| iPhone Contact Sync | Auto-save recruiting leads to Donnie's phone (needs native app) |
+| Push Notifications | Real-time alerts for approvals, follow-ups |
+| Offline Mode | Work tracking when no signal, syncs when back online |
+
+---
+
+## 🟡 PENDING STYLING OVERHAUL
+
 Portal/onboarding pages need full theme update:
-- Header/footer must match main site
-- Add Sun/Moon dark/light toggle to all pages
-- "lyt" always lowercase, matching logo font/color
-- Pass `setDarkMode` from App.js to components
 
-**Files to style:**
-1. App.js (pass setDarkMode prop)
-2. PortalLogin.js
-3. SetPassword.js
-4. ForgotPassword.js
-5. InviteCodePage.js
-6. EmployeeOnboarding.js
-7. ContractorOnboarding.js
+| File | Needed Changes |
+|------|----------------|
+| App.js | Pass setDarkMode to all pages |
+| PortalLogin.js | ✅ Done in v3.0 |
+| SetPassword.js | Match main site header/footer, Sun/Moon toggle |
+| ForgotPassword.js | Match main site header/footer, Sun/Moon toggle |
+| InviteCodePage.js | Match main site header/footer, Sun/Moon toggle |
+| EmployeeOnboarding.js | Match main site header/footer, Sun/Moon toggle |
+| ContractorOnboarding.js | Match main site header/footer, Sun/Moon toggle |
 
 **Color Scheme by Section:**
 | Mode | Portal Pages | Onboarding Pages |
@@ -47,12 +263,18 @@ Portal/onboarding pages need full theme update:
 | Dark | #667eea (Purple) | #ff6b35 (Orange) |
 | Light | #00b4d8 (Teal) | #28a745 (Green) |
 
-### 🟡 PENDING PDF FIXES
+---
+
+## 🟡 PENDING PDF FIXES
+
 - MSA v4.0 coordinate-based text filling (pages 1 & 15)
 - SSN/EIN individual digit boxes (one number per box)
 - W-4 worksheet fields (pages 3-4)
 
-### 🟡 PENDING BACKEND
+---
+
+## 🟡 PENDING BACKEND
+
 - Apps Script `submitNDA` handler
 - Emergency Contact PDF generation
 - Drug Test PDF generation
@@ -138,7 +360,7 @@ lytcomm-website/
 │   │   ├── SSNInput.js
 │   │   └── EINInput.js
 │   ├── services/
-│   │   └── pdfService.js        # 🔴 CORRUPTED - needs restore
+│   │   └── pdfService.js        # PDF generation (W-4, W-9, etc.)
 │   ├── pages/
 │   │   ├── HomePage.js
 │   │   ├── AboutPage.js
@@ -152,10 +374,13 @@ lytcomm-website/
 │       ├── SetPassword.js
 │       ├── ForgotPassword.js
 │       ├── EmployeeOnboarding.js
-│       ├── ContractorOnboarding.js  # 🔴 CORRUPTED - needs restore
+│       ├── ContractorOnboarding.js
 │       ├── EmployeeDashboard.js
 │       ├── ContractorDashboard.js
-│       └── AdminDashboard.js
+│       ├── AdminDashboard.js
+│       ├── RecruitingTracker.js   # 🟡 READY TO INTEGRATE
+│       ├── WorkMap.js             # 🟡 READY TO INTEGRATE
+│       └── PotholeVerification.js # 🟡 READY TO INTEGRATE
 ├── BLUEPRINT.md                 # THIS FILE
 └── package.json
 ```
@@ -168,36 +393,59 @@ lytcomm-website/
 PUBLIC WEBSITE
     ↓
 [Home] [About] [Services] [Contact] [Portal] [Onboarding]
-    ↓                                    ↓
-PORTAL LOGIN                    INVITE CODE PAGE
-(Existing users)                      ↓
-    ↓                    ┌────────────┴────────────┐
-    ↓                    ↓                         ↓
-    ↓              welcome2lyt               lytnda2026
-    ↓                    ↓                         ↓
-    ↓          [Employee] [Contractor]         [NDA Only]
-    ↓                ↓           ↓                 ↓
-DASHBOARDS    EMPLOYEE      CONTRACTOR        NDA SIGN
-              ONBOARDING    ONBOARDING        (3 steps)
-              (5 steps)     (8 steps)
+    ↓                                       ↓
+PORTAL LOGIN                        INVITE CODE PAGE
+(Existing users)                            ↓
+    ↓                         ┌─────────────┴─────────────┐
+    ↓                         ↓                           ↓
+    ↓                   welcome2lyt                 lytnda2026
+    ↓                         ↓                           ↓
+    ↓             [Employee] [Contractor]           [NDA Only]
+    ↓                   ↓           ↓                     ↓
+DASHBOARDS       EMPLOYEE      CONTRACTOR           NDA SIGN
+                ONBOARDING    ONBOARDING            (3 steps)
+                 (5 steps)     (8 steps)
 ```
+
+### Dashboard Navigation
+
+**Employee Dashboard Tabs:**
+- Dashboard (stats, announcements)
+- Production Logs
+- Equipment Checks
+- Toolbox Talks
+- OTDR Results
+- 811 Tickets
+- Certifications
+- Incident Reports
+
+**Contractor Dashboard Tabs:**
+- Dashboard (job assignments, stats)
+- Daily Production
+- Equipment Check
+- COI / Compliance
+- Incident Reports
+- Invoices
+- Rate Card
+
+**Admin Dashboard Tabs:**
+- Dashboard (metrics)
+- Pending Approvals
+- User Management
+- Reports
+- Recruiting Tracker (🟡 to integrate)
+- Work Map (🟡 to integrate)
+- Pothole Verification (🟡 to integrate)
 
 ---
 
-## 🔐 ACCESS CODES & ACCOUNTS
+## 🔑 ACCESS CODES & ACCOUNTS
 
 ### Invite Codes
 | Code | Purpose | Route |
 |------|---------|-------|
 | `welcome2lyt` | Employee/Contractor onboarding | #onboarding |
 | `lytnda2026` | NDA signing only | #onboarding → #nda-sign |
-
-### Demo Accounts
-| Email | Password | Role |
-|-------|----------|------|
-| matt@lytcomm.com | demo123 | Admin |
-| john@lytcomm.com | demo123 | Employee |
-| sarah@lytcomm.com | demo123 | Contractor |
 
 ### Admin Contacts
 - Matt Roy: matt@lytcomm.com (Primary)
@@ -258,6 +506,17 @@ When starting a new session:
 
 ---
 
+## 📊 PHASE SUMMARY
+
+| Status | Count | Description |
+|--------|-------|-------------|
+| ✅ Completed & Live | 25+ | Core portal, onboarding, field ops, compliance, PDF generation |
+| 🟡 Built, Need Integration | 4 | RecruitingTracker, WorkMap, PotholeVerification, PortalLogin v3.0 |
+| 🟡 Pending Styling | 6 | SetPassword, ForgotPassword, InviteCodePage, EmployeeOnboarding, ContractorOnboarding |
+| 🔴 Not Built | 30+ | Auto docs, advanced admin, user self-service, GPS tracking, native features |
+
+---
+
 ## 📝 CHANGELOG
 
 | Date | Version | Changes |
@@ -266,29 +525,10 @@ When starting a new session:
 | Jan 18 | 2.1-2.25 | Logo fixes, ESLint audit, mobile responsive |
 | Jan 19 | 2.26-2.38 | Theme consistency, Google Drive integration |
 | Jan 20 | 2.39-2.43 | PDF generation fixes (W-4, W-9), Apps Script v4.0 |
-| Jan 21 | 2.44-2.46 | SSN/EIN digit boxes, mobile optimization, data unmasking |
-| Jan 22 | 2.47+ | NDA signing feature, MSA v4.0 work (files corrupted) |
-
----
-
-## ✅ COMPLETED FEATURES
-
-- [x] Public website (Home, About, Services, Contact)
-- [x] Logo-centered homepage (no stock photos)
-- [x] Dark/Light mode with dynamic logos
-- [x] Employee onboarding (5 steps)
-- [x] Contractor onboarding (8 steps)
-- [x] Employee Dashboard with field operations
-- [x] Contractor Dashboard
-- [x] Admin Dashboard
-- [x] Unified portal login
-- [x] W-4 PDF filling with all fields
-- [x] W-9 PDF filling with SSN/EIN digit boxes
-- [x] Direct deposit forms
-- [x] Google Drive integration (matt@lytcomm.com)
-- [x] NDA signing feature (lytnda2026)
-- [x] Mobile responsive design
-- [x] Rate card PDF generation
+| Jan 21 | 2.44-2.46 | SSN/EIN digit boxes, mobile optimization |
+| Jan 22 | 2.47-2.50 | NDA signing feature, MSA v4.0 work |
+| Jan 23 | 2.51-2.66 | W-9 EIN fix (y=355), signature overlap fix, PDF audit |
+| Jan 23 | - | Built RecruitingTracker, WorkMap, PotholeVerification, PortalLogin v3.0 |
 
 ---
 
