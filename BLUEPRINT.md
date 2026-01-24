@@ -37,7 +37,7 @@ All Phases 1-7 deployed and working.
 - Apps Script v5.0 deployed
 - Login authentication: WORKING
 - Google Sheets integrated
-- PDF generation: WORKING
+- PDF uploads to correct Drive folders: WORKING
 - Accepts both `pdfs` and `filledPdfs` keys (v5.2 fix)
 - Folder names no longer include dates (v5.3 fix)
 
@@ -47,12 +47,11 @@ All Phases 1-7 deployed and working.
 - GCP Project: 344674689562 (LYT-Claude-Gateway)
 - Full access: Drive, Gmail, Calendar, Sheets, Docs, Apps Script creation
 
-### 🟡 NEEDS TESTING
-- Employee onboarding form → saves to Google Sheet?
-- Contractor onboarding form → saves to Google Sheet?
-- User creation from Admin User Management
-- Forgot password email flow
-- NDA signing flow
+### 🟡 PENDING STYLING
+- Portal/onboarding pages need header/footer to match main site
+- Sun/Moon dark mode toggle on all portal pages
+- Accent colors: Portal (#667eea dark / #00b4d8 light), Onboarding (#ff6b35 dark / #28a745 light)
+- "lyt" lowercase to match logo throughout
 
 ---
 
@@ -65,14 +64,14 @@ All Phases 1-7 deployed and working.
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
 
 ### Apps Script Backend (UPDATED JAN 24 2026)
-- **Web App URL:** https://script.google.com/macros/s/AKfycbw12ixoNLzmrorAxCcppWsOk4JgqbHkfcwpK3UxrcXKRsPj7Oc7bEsv0gUwG99Hk_WdSg/exec
+- **Web App URL:** https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
 - **Version:** v5.0
 - **Script ID:** 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
 
 ### Google Drive Folders
-- **Documents Root:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
-- **Employee Onboarding:** `1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62`
-- **Contractor Onboarding:** `1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk`
+- **Main Documents Folder:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
+- **Employee Onboarding Folder:** `1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62`
+- **Contractor Onboarding Folder:** `1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk`
 
 ### Google Sheets
 | Sheet Name | Sheet ID | Purpose |
@@ -82,24 +81,25 @@ All Phases 1-7 deployed and working.
 
 ### Google Drive
 - **Documents Folder:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
+- **Employee Folder:** `1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62`
+- **Contractor Folder:** `1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk`
 - **Rate Card Sheet:** `10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4`
 
-### Reserved Pre-Authorized Scripts (10 Available)
-These scripts are pre-authorized for immediate deployment without OAuth prompts:
-| # | Script ID (short) | Full Script ID |
-|---|-------------------|----------------|
-| 1 | 1eJPgH6 | 1eJPgH6... (see work log for full IDs) |
-| 2 | 1M6ChVJ | 1M6ChVJ... |
-| 3 | 1yOMZE7 | 1yOMZE7... |
-| 4 | 13mUhCF | 13mUhCF... |
-| 5 | 17kc_Zj | 17kc_Zj... |
-| 6 | 1pmjBFv | 1pmjBFv... |
-| 7 | 1rnjvEo | 1rnjvEo... |
-| 8 | 1Az2rJN | 1Az2rJN... |
-| 9 | 1BXJNtl | 1BXJNtl... |
-| 10 | 1nvnyca | 1nvnyca... |
+### Reserved Pre-Auth Scripts (10 available)
+| # | Script ID |
+|---|-----------|
+| 1 | `1eJPgH6...` |
+| 2 | `1M6ChVJ...` |
+| 3 | `1yOMZE7...` |
+| 4 | `13mUhCF...` |
+| 5 | `17kc_Zj...` |
+| 6 | `1pmjBFv...` |
+| 7 | `1rnjvEo...` |
+| 8 | `1Az2rJN...` |
+| 9 | `1BXJNtl...` |
+| 10 | `1nvnyca...` |
 
-*Full IDs stored in work log document to avoid clutter*
+*(Full IDs stored in work log document)*
 
 ### GitHub
 - **Repo:** MSRCAM83/lytcomm-website
@@ -194,7 +194,7 @@ These scripts are pre-authorized for immediate deployment without OAuth prompts:
 
 ```
 src/
-├── App.js (v2.70 - main router)
+├── App.js (v5.3 - main router)
 ├── config/
 │   └── constants.js
 ├── components/
@@ -238,12 +238,20 @@ const CONFIG = {
   USERS_SHEET_ID: '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
   ONBOARDING_SHEET_ID: '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc',
   DRIVE_FOLDER_ID: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
+  EMPLOYEE_FOLDER_ID: '1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62',
+  CONTRACTOR_FOLDER_ID: '1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk',
   COMPANY_NAME: 'LYT Communications',
   COMPANY_EMAIL: 'info@lytcomm.com',
   PORTAL_URL: 'https://lytcomm.com',
   ADMIN_EMAILS: ['matt@lytcomm.com', 'mason@lytcomm.com', 'donnie@lytcomm.com']
 };
 ```
+
+### v5.x Key Fixes:
+- Accepts both `pdfs` and `filledPdfs` keys for PDF data
+- Name extraction: `d.name || ((f.firstName||'') + ' ' + (f.lastName||'')).trim()`
+- Folder names no longer include dates
+- PDFs saved to correct employee/contractor folders
 
 ### Apps Script Handlers Available:
 | Action | Handler | Purpose |
@@ -270,6 +278,14 @@ const CONFIG = {
 | v2.68 | Jan 23 | Dashboard nav integration |
 | v2.69 | Jan 23 | Phase 6 document generation |
 | v2.70 | Jan 23 | Phase 7 analytics & audit log |
+| v2.80 | Jan 23 | W-9 sig fix, MSA v4.1, test panel mock docs |
+| v2.81 | Jan 23 | New transparent dark/light logos |
+| v2.82 | Jan 23 | Realistic onboarding test suite |
+| v2.83 | Jan 24 | Fixed action field names for Apps Script API |
+| v5.0 | Jan 24 | New Apps Script with correct folder locations |
+| v5.1 | Jan 24 | Apps Script URL update |
+| v5.2 | Jan 24 | Accepts both pdfs and filledPdfs keys |
+| v5.3 | Jan 24 | No date in folder names |
 
 ---
 
@@ -281,14 +297,15 @@ If session crashes, paste this:
 LYT project - run crash recovery
 
 Backend is connected. Apps Script v5.0 deployed.
-Apps Script URL: https://script.google.com/macros/s/AKfycbw12ixoNLzmrorAxCcppWsOk4JgqbHkfcwpK3UxrcXKRsPj7Oc7bEsv0gUwG99Hk_WdSg/exec
+Apps Script URL: https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
 Script ID: 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
 
 Google Sheets configured:
 - Users: 1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw
 - Onboarding: 1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc
 
-Drive Folders:
+Google Drive folders:
+- Main: 11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC
 - Employees: 1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62
 - Contractors: 1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk
 
@@ -302,10 +319,11 @@ Claude Gateway operational for autonomous fixes.
 ## 📝 IMPORTANT NOTES
 
 1. **Never use git clone** - always use GitHub API via curl
-2. **Always version files** - lyt-site-v2.70.zip not lyt-site-FINAL.zip
+2. **Always version files** - lyt-site-v5.3.zip not lyt-site-FINAL.zip
 3. **Save files immediately** - don't wait until end of session
 4. **Test with CI=true npm run build** before pushing
 5. **No company address/phone on PDFs** - user explicitly requested removal
+6. **Apps Script deployments are versioned snapshots** - must create new deployment after code changes
 
 ---
 
@@ -447,7 +465,7 @@ def call_gateway(action, params=None, use_post=False):
 ```python
 # First, get the current code
 result = call_gateway("getScript", {
-    "scriptId": "1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG"
+    "scriptId": "1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub"
 })
 
 # Extract current files
@@ -464,7 +482,7 @@ modified_code = code.replace("old_text", "new_text")
 
 # Push the complete updated code - USE POST!
 result = call_gateway("updateScript", {
-    "scriptId": "1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG",
+    "scriptId": "1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub",
     "files": [
         {"name": "Code", "type": "SERVER_JS", "source": modified_code},
         {"name": "appsscript", "type": "JSON", "source": manifest}
