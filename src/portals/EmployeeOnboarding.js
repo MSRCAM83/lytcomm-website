@@ -219,6 +219,39 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
       // ========== GENERATE FILLED PDFs ==========
       console.log('Generating filled PDFs...');
       
+      // 0. Personal Information PDF (captures all Step 1 data)
+      let personalInfoPdf = null;
+      try {
+        personalInfoPdf = await createFormPdf(
+          'Employee Personal Information',
+          [
+            { title: 'PERSONAL DETAILS', fields: [
+              { label: 'Full Name', value: fullName },
+              { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
+              { label: 'Date of Birth', value: formData.dateOfBirth },
+              { label: 'SSN', value: formData.ssn ? `***-**-${formData.ssn.slice(-4)}` : '' },
+            ]},
+            { title: 'ADDRESS', fields: [
+              { label: 'Street', value: formData.address },
+              { label: 'City', value: formData.city },
+              { label: 'State', value: formData.state },
+              { label: 'ZIP', value: formData.zip },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+              { label: 'Submitted', value: new Date().toLocaleString() },
+            ]}
+          ],
+          null,
+          { timestamp: new Date().toLocaleString(), ip: ipAddress }
+        );
+        console.log('Personal Info PDF created');
+      } catch (e) {
+        console.error('Personal Info error:', e);
+      }
+      
       // 1. Fill actual IRS W-4 form
       let w4Pdf = null;
       const signatureInfo = {
@@ -474,6 +507,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         },
         // PRE-FILLED PDFs (base64)
         filledPdfs: {
+          personalInfo: personalInfoPdf,
           w4: w4Pdf,
           directDeposit: directDepositPdf,
           emergencyContact: emergencyContactPdf,
