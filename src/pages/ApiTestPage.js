@@ -412,7 +412,7 @@ const ApiTestPage = ({ darkMode }) => {
       // Step 9: Submit to Apps Script
       updateProgress(++step, totalSteps, 'Submitting to Google Apps Script...');
       const submissionData = {
-        type: 'employee',
+        action: 'submitEmployeeOnboarding',
         personalInfo: {
           firstName: REALISTIC_EMPLOYEE.firstName,
           middleName: REALISTIC_EMPLOYEE.middleName,
@@ -714,7 +714,7 @@ const ApiTestPage = ({ darkMode }) => {
       // Step 9: Submit to Apps Script
       updateProgress(++step, totalSteps, 'Submitting to Google Apps Script...');
       const submissionData = {
-        type: 'contractor',
+        action: 'submitContractorOnboarding',
         companyInfo: {
           companyName: REALISTIC_CONTRACTOR.companyName,
           dba: REALISTIC_CONTRACTOR.dba,
