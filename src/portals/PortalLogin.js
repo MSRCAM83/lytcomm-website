@@ -1,9 +1,7 @@
-// PortalLogin.js v3.0 - Production ready, no demo accounts, unified theme
+// PortalLogin.js v3.1 - Uses URLS.portalScript from constants
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
-
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznRYF1MvKJ6dqspLhe74jjRC-iOeb76IQT7nqSHV18_8xucn3zuCZhNUZAIwOKy7mr/exec';
+import { colors, LYT_INFO, URLS } from '../config/constants';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode }) {
   const [email, setEmail] = useState('');
@@ -36,7 +34,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
     setLoading(true);
 
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(URLS.portalScript, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
