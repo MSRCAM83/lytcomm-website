@@ -420,31 +420,46 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('MSA error:', e);
       }
       
-      // 3. Insurance Certificate Info
+      // 3. Insurance Certificate Info (per MSA Article 9)
       let insurancePdf = null;
       try {
         insurancePdf = await createFormPdf(
-          'Insurance Certificate Information',
+          'Insurance Certificate Requirements',
           [
             { title: 'CONTRACTOR', fields: [
               { label: 'Company', value: formData.companyName },
               { label: 'Contact', value: formData.contactName },
             ]},
-            { title: 'INSURANCE REQUIREMENTS', checkboxes: [
-              { label: 'General Liability: $1,000,000 per occurrence', checked: true },
-              { label: 'Auto Liability: $1,000,000 combined single limit', checked: true },
-              { label: 'Workers Compensation: Statutory limits', checked: true },
-              { label: 'Umbrella/Excess: $2,000,000', checked: true },
+            { title: 'WORKERS COMPENSATION (MSA 9.1a)', fields: [
+              { label: 'Each Accident', value: '$1,000,000' },
+              { label: 'Disease - Each Employee', value: '$1,000,000' },
+              { label: 'Disease - Policy Limit', value: '$1,000,000' },
+            ]},
+            { title: 'COMMERCIAL GENERAL LIABILITY (MSA 9.1b)', fields: [
+              { label: 'Aggregate', value: '$2,000,000' },
+              { label: 'Products/Completed Ops', value: '$2,000,000' },
+              { label: 'Personal Injury', value: '$1,000,000' },
+              { label: 'Each Occurrence', value: '$1,000,000' },
+              { label: 'Fire Damage', value: '$50,000' },
+              { label: 'Medical Expense', value: '$5,000' },
+            ]},
+            { title: 'AUTO LIABILITY (MSA 9.1c)', fields: [
+              { label: 'Combined Single Limit', value: '$1,000,000' },
+            ]},
+            { title: 'UMBRELLA/EXCESS (MSA 9.1d)', fields: [
+              { label: 'Jobs up to $250K', value: '$1,000,000' },
+              { label: 'Jobs $250K - $1M', value: '$3,000,000' },
+              { label: 'Jobs $1M+', value: '$5,000,000' },
             ]},
             { title: 'CERTIFICATE DETAILS', fields: [
               { label: 'COI Uploaded', value: formData.coiFileName || 'Pending' },
               { label: 'Expiration Date', value: formData.coiExpiration || 'TBD' },
             ]},
-            { paragraphs: ['LYT Communications, LLC must be listed as Additional Insured on all policies.'] },
-            { title: 'ELECTRONIC RECORD', fields: [
-              { label: 'IP Address', value: ipAddress },
-              { label: 'Timestamp', value: signatureTimestamp },
-            ]}
+            { paragraphs: [
+              'LYT Communications, LLC must be listed as Additional Insured on all policies.',
+              'Policies must cover underground damage, 811 failures, residential projects, and XCU hazards.',
+              'Maintain completed ops coverage for 6 years or statute of repose.',
+            ]},
           ],
           null,
           signatureInfo
@@ -454,30 +469,52 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('Insurance error:', e);
       }
       
-      // 4. Rate Card Acceptance
+      // 4. Rate Card Acceptance with actual rates
       let rateCardPdf = null;
       try {
         rateCardPdf = await createFormPdf(
-          'Rate Card Acceptance',
+          'Rate Card Acceptance Agreement',
           [
             { title: 'CONTRACTOR', fields: [
               { label: 'Company', value: formData.companyName },
               { label: 'Contact', value: formData.contactName },
             ]},
+            { title: 'AERIAL CONSTRUCTION RATES', fields: [
+              { label: 'Place 6M strand', value: '$0.50/LF' },
+              { label: 'Lash Cable up to 144F', value: '$0.60/LF' },
+              { label: 'Overlash to Existing', value: '$0.60/LF' },
+              { label: 'Cable >144F', value: '$0.90/LF' },
+              { label: 'Down Guy (w/ Guard)', value: '$14.00/EA' },
+              { label: 'Screw Anchor 6000lbs', value: '$30.00/EA' },
+              { label: 'Pole Transfer (Dead)', value: '$50.00/EA' },
+              { label: 'Pole Transfer (Thru)', value: '$35.00/EA' },
+            ]},
+            { title: 'FIBER SPLICING RATES', fields: [
+              { label: 'Fusion Splice (1 fiber)', value: '$13.00/EA' },
+              { label: 'Ring Cut', value: '$180.00/EA' },
+              { label: 'Test Fiber', value: '$2.50/EA' },
+              { label: 'ReEnter Enclosure', value: '$100.00/EA' },
+            ]},
+            { title: 'UNDERGROUND RATES', fields: [
+              { label: 'Directional Bore 1-4 duct', value: '$6.00/LF' },
+              { label: 'Pull Cable in duct', value: '$0.30/LF' },
+              { label: 'Direct Bury - Plow', value: '$1.50/LF' },
+              { label: 'Hardscape Pothole', value: '$150.00/EA' },
+            ]},
+            { title: 'RESTORATION RATES', fields: [
+              { label: 'Asphalt up to 4"', value: '$15.00/SF' },
+              { label: 'Concrete up to 4"', value: '$20.00/SF' },
+              { label: 'Traffic Control', value: '$30.00/HR' },
+            ]},
             { title: 'PAYMENT TERMS', checkboxes: [
               { label: 'Net 30 from invoice approval', checked: true },
               { label: '10% retainage until project completion', checked: true },
               { label: 'Lien waivers required with payment applications', checked: true },
-              { label: 'Rates per LYT Communications Rate Card', checked: true },
+              { label: 'Subject to change with 30-day written notice', checked: true },
             ]},
-            { paragraphs: ['By signing, I accept the rates and payment terms above.'] },
-            { title: 'ELECTRONIC SIGNATURE VERIFICATION', fields: [
-              { label: 'IP Address', value: ipAddress },
-              { label: 'Timestamp', value: signatureTimestamp },
-            ]}
+            { paragraphs: ['By signing, I acknowledge receipt of and agree to the LYT Communications Rate Card above.'] },
           ],
           formData.rateCardSignature,
-          formData.contactName,
           signatureInfo
         );
         console.log('Rate Card PDF created');
