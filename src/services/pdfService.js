@@ -530,7 +530,7 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   }
 }
 
-export async function createFormPdf(title, content, signatureDataUrl, signatureInfo = {}) {
+export async function createFormPdf(title, content, signatureDataUrl, signatureInfo = {}, attachmentImage = null) {
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([612, 792]); // Letter size
@@ -667,6 +667,116 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             y -= 6; // Extra space after paragraph
           }
         }
+      }
+    }
+    
+    // Embedded attachment image (e.g., voided check)
+    if (attachmentImage) {
+      try {
+        let imgBytes;
+        let imgEmbed;
+        
+        // Handle both data URL and raw base64
+        const imgData = attachmentImage.data || attachmentImage;
+        const imgBase64 = imgData.includes('base64,') ? imgData.split('base64,')[1] : imgData;
+        imgBytes = Uint8Array.from(atob(imgBase64), c => c.charCodeAt(0));
+        
+        // Detect image type and embed accordingly
+        const mimeType = attachmentImage.mimeType || (attachmentImage.data && attachmentImage.data.includes('image/png') ? 'image/png' : 'image/jpeg');
+        
+        if (mimeType.includes('png')) {
+          imgEmbed = await pdfDoc.embedPng(imgBytes);
+        } else if (mimeType.includes('pdf')) {
+          // For PDF, we'd need to merge pages - skip for now, just note it
+          page.drawText('[Voided Check PDF attached - see separate file]', {
+            x: 50,
+            y: y,
+            size: 9,
+            font: font,
+            color: rgb(0.3, 0.3, 0.3),
+          });
+          y -= 20;
+        } else {
+          // Assume JPEG
+          imgEmbed = await pdfDoc.embedJpg(imgBytes);
+        }
+        
+        if (imgEmbed) {
+          // Add section header
+          y -= 10;
+          page.drawText('VOIDED CHECK / BANK VERIFICATION:', {
+            x: 50,
+            y: y,
+            size: 11,
+            font: fontBold,
+            color: rgb(0, 0.3, 0.5),
+          });
+          y -= 15;
+          
+          // Calculate scaled dimensions to fit width while maintaining aspect ratio
+          const maxWidth = width - 100;
+          const maxHeight = 200;
+          const imgDims = imgEmbed.scale(1);
+          let imgWidth = imgDims.width;
+          let imgHeight = imgDims.height;
+          
+          if (imgWidth > maxWidth) {
+            const scale = maxWidth / imgWidth;
+            imgWidth = maxWidth;
+            imgHeight = imgHeight * scale;
+          }
+          if (imgHeight > maxHeight) {
+            const scale = maxHeight / imgHeight;
+            imgHeight = maxHeight;
+            imgWidth = imgWidth * scale;
+          }
+          
+          // Check if we need a new page for the image
+          if (y - imgHeight < 100) {
+            // Add new page for the image
+            const page2 = pdfDoc.addPage([612, 792]);
+            page2.drawText('VOIDED CHECK / BANK VERIFICATION (continued):', {
+              x: 50,
+              y: height - 50,
+              size: 11,
+              font: fontBold,
+              color: rgb(0, 0.3, 0.5),
+            });
+            page2.drawImage(imgEmbed, {
+              x: 50,
+              y: height - 70 - imgHeight,
+              width: imgWidth,
+              height: imgHeight,
+            });
+            // Footer on page 2
+            page2.drawText('LYT Communications, LLC - Confidential', {
+              x: 50,
+              y: 30,
+              size: 8,
+              font: font,
+              color: rgb(0.5, 0.5, 0.5),
+            });
+          } else {
+            // Draw on current page
+            page.drawImage(imgEmbed, {
+              x: 50,
+              y: y - imgHeight,
+              width: imgWidth,
+              height: imgHeight,
+            });
+            y -= (imgHeight + 20);
+          }
+        }
+      } catch (imgErr) {
+        console.error('Error embedding attachment image:', imgErr);
+        page.drawText('[Attachment could not be embedded]', {
+          x: 50,
+          y: y,
+          size: 9,
+          font: font,
+          color: rgb(0.5, 0.3, 0.3),
+        });
+        y -= 15;
       }
     }
     
