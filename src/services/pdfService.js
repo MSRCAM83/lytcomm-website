@@ -594,8 +594,11 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
     // ===== CONTENT SECTIONS =====
     if (Array.isArray(content)) {
       for (const section of content) {
-        // Skip "ELECTRONIC SIGNATURE VERIFICATION" - we'll put this under signature only
-        if (section.title && section.title.toUpperCase().includes('ELECTRONIC SIGNATURE')) {
+        // Skip "ELECTRONIC SIGNATURE" and "ELECTRONIC RECORD" sections - IP/timestamp only under signature
+        if (section.title && (
+          section.title.toUpperCase().includes('ELECTRONIC SIGNATURE') ||
+          section.title.toUpperCase().includes('ELECTRONIC RECORD')
+        )) {
           continue;
         }
         
