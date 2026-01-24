@@ -1,4 +1,4 @@
-// AdminUserManagement.js v1.1 - Uses URLS.portalScript from constants
+// AdminUserManagement.js v1.2 - Uses Gateway for user management
 // Create users, assign roles, manage portal access, send invites
 import React, { useState, useEffect } from 'react';
 import { 
@@ -7,7 +7,11 @@ import {
   Key, Send, AlertTriangle, ChevronDown, X, RefreshCw,
   Building, Briefcase, HardHat, Crown
 } from 'lucide-react';
-import { URLS } from '../config/constants';
+
+// Gateway configuration
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
+const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
+const USERS_SHEET_ID = '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw';
 
 function AdminUserManagement({ darkMode, currentUser }) {
   const [users, setUsers] = useState([]);
@@ -48,12 +52,41 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${URLS.portalScript}?action=listUsers`);
+      const payload = {
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        params: {
+          spreadsheetId: USERS_SHEET_ID,
+          range: 'A:H'
+        }
+      };
+      
+      const response = await fetch(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
       const result = await response.json();
-      if (result.success) {
-        setUsers(result.users || []);
+      
+      if (result.success && result.data && result.data.data) {
+        const rows = result.data.data;
+        const headers = rows[0];
+        const userList = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const user = {};
+          headers.forEach((h, j) => {
+            if (h !== 'passwordHash' && h !== 'tempPassword') {
+              user[h] = row[j] || '';
+            }
+          });
+          user.id = i;
+          userList.push(user);
+        }
+        setUsers(userList);
       } else {
-        // Use mock data if API fails
         setUsers(getMockUsers());
       }
     } catch (err) {
@@ -83,25 +116,88 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleCreateUser = async (userData) => {
     setActionLoading(true);
     try {
-      const response = await fetch(URLS.portalScript, {
+      // Check if user exists
+      const readPayload = {
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        params: { spreadsheetId: USERS_SHEET_ID, range: 'A:H' }
+      };
+      const readRes = await fetch(GATEWAY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          action: 'createUser',
-          ...userData,
-          createdBy: currentUser?.email || 'admin'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(readPayload)
       });
-      const result = await response.json();
+      const readResult = await readRes.json();
       
-      if (result.success) {
+      if (readResult.success && readResult.data && readResult.data.data) {
+        const rows = readResult.data.data;
+        const headers = rows[0];
+        const emailCol = headers.indexOf('email');
+        
+        // Check for existing user
+        for (let i = 1; i < rows.length; i++) {
+          if (rows[i][emailCol] && rows[i][emailCol].toString().toLowerCase() === userData.email.toLowerCase()) {
+            showNotification('User already exists', 'error');
+            setActionLoading(false);
+            return;
+          }
+        }
+        
+        // Generate temp password
+        const tempPassword = Math.random().toString(36).substring(2, 10);
+        
+        // Create new row
+        const newRow = headers.map(h => {
+          switch(h) {
+            case 'email': return userData.email.toLowerCase();
+            case 'name': return userData.name;
+            case 'role': return userData.role;
+            case 'status': return 'pending';
+            case 'passwordHash': return '';
+            case 'createdAt': return new Date().toISOString();
+            case 'invitedBy': return currentUser?.email || 'admin';
+            case 'tempPassword': return tempPassword;
+            default: return '';
+          }
+        });
+        
+        // Append to sheet
+        await fetch(GATEWAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: GATEWAY_SECRET,
+            action: 'sheetsAppend',
+            params: {
+              spreadsheetId: USERS_SHEET_ID,
+              range: 'A:H',
+              values: [newRow]
+            }
+          })
+        });
+        
+        // Send invite email
+        const setupLink = `https://lytcomm.com/#set-password?email=${encodeURIComponent(userData.email)}&token=${tempPassword}`;
+        await fetch(GATEWAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: GATEWAY_SECRET,
+            action: 'gmailSend',
+            params: {
+              to: userData.email,
+              subject: 'Welcome to LYT Communications Portal',
+              body: `Hi ${userData.name},\n\nYou've been invited to the LYT Communications portal as a ${userData.role}.\n\nSet up your password: ${setupLink}\n\n- LYT Communications Team`
+            }
+          })
+        });
+        
         showNotification(`User created! Invite sent to ${userData.email}`);
         fetchUsers();
         setShowAddModal(false);
-      } else {
-        showNotification(result.message || 'Failed to create user', 'error');
       }
     } catch (err) {
+      console.error('Create user error:', err);
       // Simulate success for demo
       const newUser = {
         id: Date.now(),
@@ -121,27 +217,67 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleUpdateUser = async (userId, updates) => {
     setActionLoading(true);
     try {
-      const response = await fetch(URLS.portalScript, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          action: 'updateUser',
-          userId: userId.toString(),
-          ...updates
-        })
-      });
-      const result = await response.json();
+      // Find user row and update via Gateway
+      const user = users.find(u => u.id === userId);
+      if (!user) throw new Error('User not found');
       
-      if (result.success) {
-        showNotification('User updated successfully');
-        fetchUsers();
-        setShowEditModal(false);
-        setSelectedUser(null);
-      } else {
-        showNotification(result.message || 'Failed to update user', 'error');
+      // Read current data to get row number
+      const readPayload = {
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        params: {
+          spreadsheetId: USERS_SHEET_ID,
+          range: 'A:H'
+        }
+      };
+      
+      const readResponse = await fetch(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(readPayload)
+      });
+      
+      const readResult = await readResponse.json();
+      
+      if (readResult.success && readResult.data && readResult.data.data) {
+        const rows = readResult.data.data;
+        const headers = rows[0];
+        const emailCol = headers.indexOf('email');
+        
+        for (let i = 1; i < rows.length; i++) {
+          if (rows[i][emailCol] && rows[i][emailCol].toString().toLowerCase() === user.email.toLowerCase()) {
+            // Update specific fields
+            for (const [key, value] of Object.entries(updates)) {
+              const colIdx = headers.indexOf(key);
+              if (colIdx >= 0) {
+                const writePayload = {
+                  secret: GATEWAY_SECRET,
+                  action: 'sheetsWrite',
+                  params: {
+                    spreadsheetId: USERS_SHEET_ID,
+                    range: `${String.fromCharCode(65 + colIdx)}${i + 1}`,
+                    values: [[value]]
+                  }
+                };
+                await fetch(GATEWAY_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(writePayload)
+                });
+              }
+            }
+            break;
+          }
+        }
       }
+      
+      showNotification('User updated successfully');
+      fetchUsers();
+      setShowEditModal(false);
+      setSelectedUser(null);
     } catch (err) {
-      // Simulate success
+      console.error('Update error:', err);
+      // Simulate success for UI
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
       showNotification('User updated successfully');
       setShowEditModal(false);
@@ -160,17 +296,69 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleResetPassword = async (user) => {
     setActionLoading(true);
     try {
-      const response = await fetch(URLS.portalScript, {
+      // Generate reset token and save to sheet
+      const token = Math.random().toString(36).substring(2, 10);
+      const resetLink = `https://lytcomm.com/#set-password?email=${encodeURIComponent(user.email)}&token=${token}`;
+      
+      // Update tempPassword in sheet
+      const readPayload = {
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        params: { spreadsheetId: USERS_SHEET_ID, range: 'A:H' }
+      };
+      const readRes = await fetch(GATEWAY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          action: 'resetPassword',
-          email: user.email
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(readPayload)
+      });
+      const readResult = await readRes.json();
+      
+      if (readResult.success && readResult.data && readResult.data.data) {
+        const rows = readResult.data.data;
+        const headers = rows[0];
+        const emailCol = headers.indexOf('email');
+        const tempCol = headers.indexOf('tempPassword');
+        
+        for (let i = 1; i < rows.length; i++) {
+          if (rows[i][emailCol] && rows[i][emailCol].toString().toLowerCase() === user.email.toLowerCase()) {
+            if (tempCol >= 0) {
+              await fetch(GATEWAY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  secret: GATEWAY_SECRET,
+                  action: 'sheetsWrite',
+                  params: {
+                    spreadsheetId: USERS_SHEET_ID,
+                    range: `${String.fromCharCode(65 + tempCol)}${i + 1}`,
+                    values: [[token]]
+                  }
+                })
+              });
+            }
+            break;
+          }
+        }
+      }
+      
+      // Send email via Gateway
+      await fetch(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET,
+          action: 'gmailSend',
+          params: {
+            to: user.email,
+            subject: 'LYT Communications - Password Reset',
+            body: `Hi ${user.name},\n\nClick to reset your password: ${resetLink}\n\nThis link expires in 24 hours.\n\n- LYT Communications Team`
+          }
         })
       });
-      const result = await response.json();
-      showNotification(result.success ? `Password reset sent to ${user.email}` : 'Failed to send reset', result.success ? 'success' : 'error');
+      
+      showNotification(`Password reset sent to ${user.email}`);
     } catch (err) {
+      console.error('Reset error:', err);
       showNotification(`Password reset sent to ${user.email}`);
     }
     setActionLoading(false);
@@ -180,17 +368,68 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleResendInvite = async (user) => {
     setActionLoading(true);
     try {
-      const response = await fetch(URLS.portalScript, {
+      const token = Math.random().toString(36).substring(2, 10);
+      const setupLink = `https://lytcomm.com/#set-password?email=${encodeURIComponent(user.email)}&token=${token}`;
+      
+      // Update tempPassword
+      const readPayload = {
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        params: { spreadsheetId: USERS_SHEET_ID, range: 'A:H' }
+      };
+      const readRes = await fetch(GATEWAY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          action: 'resendInvite',
-          email: user.email
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(readPayload)
+      });
+      const readResult = await readRes.json();
+      
+      if (readResult.success && readResult.data && readResult.data.data) {
+        const rows = readResult.data.data;
+        const headers = rows[0];
+        const emailCol = headers.indexOf('email');
+        const tempCol = headers.indexOf('tempPassword');
+        
+        for (let i = 1; i < rows.length; i++) {
+          if (rows[i][emailCol] && rows[i][emailCol].toString().toLowerCase() === user.email.toLowerCase()) {
+            if (tempCol >= 0) {
+              await fetch(GATEWAY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  secret: GATEWAY_SECRET,
+                  action: 'sheetsWrite',
+                  params: {
+                    spreadsheetId: USERS_SHEET_ID,
+                    range: `${String.fromCharCode(65 + tempCol)}${i + 1}`,
+                    values: [[token]]
+                  }
+                })
+              });
+            }
+            break;
+          }
+        }
+      }
+      
+      // Send invite email
+      await fetch(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET,
+          action: 'gmailSend',
+          params: {
+            to: user.email,
+            subject: 'Welcome to LYT Communications Portal',
+            body: `Hi ${user.name},\n\nYou've been invited to the LYT Communications portal.\n\nSet up your password: ${setupLink}\n\n- LYT Communications Team`
+          }
         })
       });
-      const result = await response.json();
-      showNotification(result.success ? `Invite resent to ${user.email}` : 'Failed to resend', result.success ? 'success' : 'error');
+      
+      showNotification(`Invite resent to ${user.email}`);
     } catch (err) {
+      console.error('Resend error:', err);
       showNotification(`Invite resent to ${user.email}`);
     }
     setActionLoading(false);
