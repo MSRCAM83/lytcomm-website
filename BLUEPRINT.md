@@ -28,30 +28,22 @@
 
 ---
 
-## 🚀 CURRENT STATUS (Jan 24, 2026 - 12:15 AM CST)
+## 🚀 CURRENT STATUS (Jan 24, 2026 - 1:30 AM CST)
 
-### ✅ Live Version: v5.3
-All Phases 1-7 deployed and working.
+### ✅ Live Version: v2.86
+Website code updated, Vercel auto-deploying.
 
-### ✅ BACKEND CONNECTED
-- Apps Script v5.0 deployed
-- Login authentication: WORKING
-- Google Sheets integrated
+### ✅ ONBOARDING BACKEND - WORKING
+- Apps Script v5.5 deployed and tested
 - PDF uploads to correct Drive folders: WORKING
-- Accepts both `pdfs` and `filledPdfs` keys (v5.2 fix)
-- Folder names no longer include dates (v5.3 fix)
+- Accepts both `pdfs` and `filledPdfs` keys
 
-### ✅ CLAUDE GATEWAY OPERATIONAL
-- Gateway URL: https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec
-- Secret: LYTcomm2026ClaudeGatewaySecretKey99
-- GCP Project: 344674689562 (LYT-Claude-Gateway)
-- Full access: Drive, Gmail, Calendar, Sheets, Docs, Apps Script creation
+### ⚠️ PORTAL BACKEND - NEEDS DEPLOYMENT
+- Script code is ready, needs manual deployment
+- See instructions below
 
-### 🟡 PENDING STYLING
-- Portal/onboarding pages need header/footer to match main site
-- Sun/Moon dark mode toggle on all portal pages
-- Accent colors: Portal (#667eea dark / #00b4d8 light), Onboarding (#ff6b35 dark / #28a745 light)
-- "lyt" lowercase to match logo throughout
+### ✅ SEPARATION OF CONCERNS
+Onboarding and Portal now use SEPARATE Apps Scripts to prevent issues.
 
 ---
 
@@ -63,10 +55,18 @@ All Phases 1-7 deployed and working.
 - **Onboarding:** https://lytcomm.com/#onboarding (code: welcome2lyt)
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
 
-### Apps Script Backend (UPDATED JAN 24 2026)
-- **Web App URL:** https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
-- **Version:** v5.0
-- **Script ID:** 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
+### Apps Script Backend - SEPARATED (JAN 24 2026)
+
+**ONBOARDING SCRIPT (v5.5)** - Handles form submissions ✅ WORKING
+- URL: `https://script.google.com/macros/s/AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw/exec`
+- Script ID: `1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub`
+- Used by: EmployeeOnboarding.js, ContractorOnboarding.js, HomePage.js test panel
+
+**PORTAL SCRIPT (v1.0)** - Handles login/users ⚠️ NEEDS DEPLOYMENT
+- Script ID: `1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG`
+- Edit URL: https://script.google.com/d/1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG/edit
+- Used by: PortalLogin.js, AdminUserManagement.js
+- **TO DEPLOY:** Open edit URL → Deploy → New deployment → Web app → Anyone → Deploy → Copy URL → Update constants.js
 
 ### Google Drive Folders
 - **Main Documents Folder:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
