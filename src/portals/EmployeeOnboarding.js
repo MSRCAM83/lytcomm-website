@@ -250,8 +250,27 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('W-4 error:', e);
       }
       
-      // 2. Direct Deposit Authorization
+      // 2. Direct Deposit Authorization (with embedded voided check)
       let directDepositPdf = null;
+      let voidedCheckImage = null;
+      
+      // Read voided check image if available
+      if (formData.voidedCheck) {
+        try {
+          const reader = new FileReader();
+          voidedCheckImage = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve({
+              data: reader.result,
+              mimeType: formData.voidedCheck.type
+            });
+            reader.onerror = reject;
+            reader.readAsDataURL(formData.voidedCheck);
+          });
+        } catch (e) {
+          console.error('Error reading voided check:', e);
+        }
+      }
+      
       try {
         directDepositPdf = await createFormPdf(
           'Direct Deposit Authorization',
@@ -277,8 +296,8 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.directDepositSignature,
-          fullName,
-          signatureInfo
+          signatureInfo,
+          voidedCheckImage
         );
         console.log('Direct Deposit PDF created');
       } catch (e) {
@@ -303,7 +322,6 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           null,
-          fullName,
           signatureInfo
         );
         console.log('Emergency Contact PDF created');
@@ -333,7 +351,6 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.backgroundCheckSignature,
-          fullName,
           signatureInfo
         );
         console.log('Background Check PDF created');
@@ -362,7 +379,6 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.drugTestSignature,
-          fullName,
           signatureInfo
         );
         console.log('Drug Test PDF created');
@@ -392,7 +408,6 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.safetySignature,
-          fullName,
           signatureInfo
         );
         console.log('Safety PDF created');
