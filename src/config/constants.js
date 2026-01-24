@@ -27,13 +27,20 @@ export const LYT_INFO = {
 };
 
 export const URLS = {
-  // UPDATED Jan 23, 2026 - Apps Script v4.3 (JSON parsing fix)
+  // ONBOARDING Script (v5.5) - DO NOT CHANGE - Handles employee/contractor form submissions
   appsScript: 'https://script.google.com/macros/s/AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw/exec',
+  
+  // PORTAL Script (v1.0) - Handles login, user management, password reset
+  // Script ID: 1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG
+  // DEPLOY FROM: https://script.google.com/d/1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG/edit
+  // After deploying, update this URL:
+  portalScript: 'NEEDS_DEPLOYMENT',
+  
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   w4Pdf: '/Form%20W-4%20sign.pdf',
   w9Pdf: '/Form%20W-9%20sign.pdf',
-  msaPdf: '/LYT_MSA_2026_AdobeSign_Full_v4_0.pdf',
+  msaPdf: '/LYT_MSA_2026_AdobeSign_Full_v4_1.pdf',
 };
 
 // Onboarding invite code
