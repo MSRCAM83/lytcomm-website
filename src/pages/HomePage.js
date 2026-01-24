@@ -526,6 +526,40 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       log(`Bank: ${formData.bankName}, Routing: ${formData.routingNumber}, Account: ${formData.accountNumber}`);
       
       // Generate PDFs
+      log('Generating Company Info PDF...');
+      let companyInfoPdf = null;
+      try {
+        companyInfoPdf = await createFormPdf(
+          'Contractor Company Information',
+          [
+            { title: 'COMPANY DETAILS', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'DBA', value: formData.dba || 'N/A' },
+              { label: 'Entity Type', value: formData.entityType },
+              { label: 'Tax ID', value: formData.taxIdType === 'ein' ? formData.ein : `***-**-${(formData.ssn || '').slice(-4)}` },
+            ]},
+            { title: 'PRIMARY CONTACT', fields: [
+              { label: 'Contact Name', value: formData.contactName },
+              { label: 'Title', value: formData.contactTitle },
+              { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
+            ]},
+            { title: 'ADDRESS', fields: [
+              { label: 'Address', value: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}` },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        log(companyInfoPdf ? '✅ Company Info PDF created' : '❌ Company Info returned null');
+      } catch (e) {
+        log(`❌ Company Info ERROR: ${e.message}`);
+      }
+
       log('Generating W-9 PDF...');
       let w9Pdf = null;
       try {
@@ -562,6 +596,103 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         log(msaPdf ? '✅ MSA PDF signed successfully!' : '❌ MSA returned null');
       } catch (e) {
         log(`❌ MSA ERROR: ${e.message}`);
+      }
+      
+      log('Generating Insurance PDF...');
+      let insurancePdf = null;
+      try {
+        insurancePdf = await createFormPdf(
+          'Insurance Certificate Information',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'INSURANCE REQUIREMENTS', checkboxes: [
+              { label: 'General Liability: $1,000,000 per occurrence', checked: true },
+              { label: 'Auto Liability: $1,000,000 combined single limit', checked: true },
+              { label: 'Workers Compensation: Statutory limits', checked: true },
+              { label: 'Umbrella/Excess: $2,000,000', checked: true },
+            ]},
+            { paragraphs: ['LYT Communications, LLC must be listed as Additional Insured.'] },
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        log(insurancePdf ? '✅ Insurance PDF created' : '❌ Insurance returned null');
+      } catch (e) {
+        log(`❌ Insurance ERROR: ${e.message}`);
+      }
+      
+      log('Generating Fleet PDF...');
+      let fleetPdf = null;
+      try {
+        fleetPdf = await createFormPdf(
+          'Fleet & Personnel Information',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'PERSONNEL', fields: [
+              { label: 'Total Employees', value: '5' },
+              { label: 'Field Technicians', value: '4' },
+            ]},
+            { title: 'FLEET/EQUIPMENT', fields: [
+              { label: 'Item 1', value: 'Bucket Truck: 2' },
+              { label: 'Item 2', value: 'Splice Van: 1' },
+              { label: 'Item 3', value: 'Work Truck: 3' },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        log(fleetPdf ? '✅ Fleet PDF created' : '❌ Fleet returned null');
+      } catch (e) {
+        log(`❌ Fleet ERROR: ${e.message}`);
+      }
+      
+      log('Generating Skills PDF...');
+      let skillsPdf = null;
+      try {
+        skillsPdf = await createFormPdf(
+          'Skills & Capabilities Inventory',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'CERTIFIED SKILLS', checkboxes: [
+              { label: 'Fiber Splicing', checked: true },
+              { label: 'OTDR Testing', checked: true },
+              { label: 'Aerial Construction', checked: true },
+              { label: 'Underground Construction', checked: true },
+              { label: 'HDD Drilling', checked: true },
+            ]},
+            { title: 'CERTIFICATIONS', fields: [
+              { label: 'OSHA 10/30', value: 'Yes' },
+              { label: 'First Aid/CPR', value: 'Yes' },
+              { label: 'CDL', value: 'Yes' },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        log(skillsPdf ? '✅ Skills PDF created' : '❌ Skills returned null');
+      } catch (e) {
+        log(`❌ Skills ERROR: ${e.message}`);
       }
       
       log('Generating Rate Card Acceptance PDF...');
@@ -686,8 +817,12 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         ipAddress: ipAddress,
         // PDFs as base64 - using filledPdfs to match ContractorOnboarding.js
         filledPdfs: {
+          companyInfo: companyInfoPdf,
           w9: w9Pdf,
           msa: msaPdf,
+          insurance: insurancePdf,
+          fleet: fleetPdf,
+          skills: skillsPdf,
           rateCard: rateCardPdf,
           directDeposit: directDepositPdf,
           safety: safetyPdf,
@@ -696,7 +831,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       };
       
       log('Submitting to backend...');
-      log(`PDFs: W9=${!!w9Pdf}, MSA=${!!msaPdf}, RC=${!!rateCardPdf}, DD=${!!directDepositPdf}, Safety=${!!safetyPdf}`);
+      log(`PDFs: CI=${!!companyInfoPdf}, W9=${!!w9Pdf}, MSA=${!!msaPdf}, Ins=${!!insurancePdf}, Fleet=${!!fleetPdf}, Skills=${!!skillsPdf}, RC=${!!rateCardPdf}, DD=${!!directDepositPdf}, Safety=${!!safetyPdf}`);
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
@@ -774,7 +909,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.84</span></h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.85</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
