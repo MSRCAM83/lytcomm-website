@@ -28,7 +28,7 @@ export const LYT_INFO = {
 
 export const URLS = {
   // UPDATED Jan 23, 2026 - Apps Script v4.3 (JSON parsing fix)
-  appsScript: 'https://script.google.com/macros/s/AKfycbyjQrJu0BbREwo-LW2ajXKrrjQ_HrtU_IYdhz8SqDo0f4HOktHShaIHY_17pYTkN5Bm/exec',
+  appsScript: 'https://script.google.com/macros/s/AKfycbwtcs6J-fJF9abVLw-2ObLUERwjoy7-bZK73rH6fqYcTvH7_NSSZple4Tqj_qLSFO3bvA/exec',
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   w4Pdf: '/Form%20W-4%20sign.pdf',
