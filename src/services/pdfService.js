@@ -665,7 +665,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
           
           for (const cb of section.checkboxes) {
             checkNewPage(18);
-            const mark = cb.checked ? '☑' : '☐';
+            const mark = cb.checked ? '[X]' : '[ ]';
             page.drawText(mark + ' ' + cb.label, {
               x: leftMargin + 10, y: cbY, size: 9, font: font, color: darkGray, maxWidth: contentWidth - 20,
             });
