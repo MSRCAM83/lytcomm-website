@@ -46,7 +46,7 @@ export const URLS = {
 export const INVITE_CODE = 'welcome2lyt';
 
 // NDA invite code  
-export const NDA_CODE = 'lytnda2026';
+export const NDA_INVITE_CODE = 'lytnda2026';
 
 // Rate Card Data (embedded for reliability)
 export const RATE_CARD = {
