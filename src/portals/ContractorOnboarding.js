@@ -341,6 +341,44 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         ip: ipAddress
       };
       
+      // 0. Company Info PDF (captures all Step 1 data)
+      let companyInfoPdf = null;
+      try {
+        companyInfoPdf = await createFormPdf(
+          'Contractor Company Information',
+          [
+            { title: 'COMPANY DETAILS', fields: [
+              { label: 'Company Name', value: formData.companyName },
+              { label: 'DBA', value: formData.dba || 'N/A' },
+              { label: 'Entity Type', value: formData.entityType },
+              { label: 'Tax ID Type', value: formData.taxIdType === 'ein' ? 'EIN' : 'SSN' },
+              { label: 'Tax ID', value: formData.taxIdType === 'ein' ? formData.ein : `***-**-${(formData.ssn || '').slice(-4)}` },
+            ]},
+            { title: 'PRIMARY CONTACT', fields: [
+              { label: 'Contact Name', value: formData.contactName },
+              { label: 'Title', value: formData.contactTitle },
+              { label: 'Email', value: formData.contactEmail },
+              { label: 'Phone', value: formData.contactPhone },
+            ]},
+            { title: 'ADDRESS', fields: [
+              { label: 'Street', value: formData.address },
+              { label: 'City', value: formData.city },
+              { label: 'State', value: formData.state },
+              { label: 'ZIP', value: formData.zip },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        console.log('Company Info PDF created');
+      } catch (e) {
+        console.error('Company Info error:', e);
+      }
+      
       // 1. Fill actual IRS W-9 form
       let w9Pdf = null;
       try {
@@ -382,7 +420,41 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('MSA error:', e);
       }
       
-      // 3. Rate Card Acceptance
+      // 3. Insurance Certificate Info
+      let insurancePdf = null;
+      try {
+        insurancePdf = await createFormPdf(
+          'Insurance Certificate Information',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'INSURANCE REQUIREMENTS', checkboxes: [
+              { label: 'General Liability: $1,000,000 per occurrence', checked: true },
+              { label: 'Auto Liability: $1,000,000 combined single limit', checked: true },
+              { label: 'Workers Compensation: Statutory limits', checked: true },
+              { label: 'Umbrella/Excess: $2,000,000', checked: true },
+            ]},
+            { title: 'CERTIFICATE DETAILS', fields: [
+              { label: 'COI Uploaded', value: formData.coiFileName || 'Pending' },
+              { label: 'Expiration Date', value: formData.coiExpiration || 'TBD' },
+            ]},
+            { paragraphs: ['LYT Communications, LLC must be listed as Additional Insured on all policies.'] },
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        console.log('Insurance PDF created');
+      } catch (e) {
+        console.error('Insurance error:', e);
+      }
+      
+      // 4. Rate Card Acceptance
       let rateCardPdf = null;
       try {
         rateCardPdf = await createFormPdf(
@@ -413,7 +485,76 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('Rate Card error:', e);
       }
       
-      // 4. Direct Deposit Authorization
+      // 5. Fleet & Personnel PDF
+      let fleetPdf = null;
+      try {
+        // Format fleet data
+        const fleetList = (formData.fleet || [])
+          .filter(f => f.type || f.count)
+          .map(f => `${f.type}: ${f.count} ${f.description ? `(${f.description})` : ''}`);
+        
+        fleetPdf = await createFormPdf(
+          'Fleet & Personnel Information',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'PERSONNEL', fields: [
+              { label: 'Total Employees', value: formData.totalEmployees || 'Not specified' },
+              { label: 'Field Technicians', value: formData.fieldTechnicians || 'Not specified' },
+            ]},
+            { title: 'FLEET/EQUIPMENT', fields: fleetList.length > 0 
+              ? fleetList.map((item, i) => ({ label: `Item ${i+1}`, value: item }))
+              : [{ label: 'Equipment', value: 'None specified' }]
+            },
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        console.log('Fleet PDF created');
+      } catch (e) {
+        console.error('Fleet error:', e);
+      }
+      
+      // 6. Skills Inventory PDF
+      let skillsPdf = null;
+      try {
+        const skillsList = (formData.skills || []).length > 0
+          ? formData.skills.map(s => ({ label: s, checked: true }))
+          : [{ label: 'No skills selected', checked: false }];
+        
+        skillsPdf = await createFormPdf(
+          'Skills & Capabilities Inventory',
+          [
+            { title: 'CONTRACTOR', fields: [
+              { label: 'Company', value: formData.companyName },
+              { label: 'Contact', value: formData.contactName },
+            ]},
+            { title: 'CERTIFIED SKILLS', checkboxes: skillsList },
+            { title: 'CERTIFICATIONS', fields: [
+              { label: 'OSHA 10/30', value: formData.oshaCard ? 'Yes' : 'No' },
+              { label: 'First Aid/CPR', value: formData.firstAidCert ? 'Yes' : 'No' },
+              { label: 'CDL', value: formData.cdlLicense ? 'Yes' : 'No' },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        console.log('Skills PDF created');
+      } catch (e) {
+        console.error('Skills error:', e);
+      }
+      
+      // 7. Direct Deposit Authorization
       let directDepositPdf = null;
       try {
         directDepositPdf = await createFormPdf(
@@ -531,8 +672,12 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         },
         // PRE-FILLED PDFs (base64)
         filledPdfs: {
+          companyInfo: companyInfoPdf,
           w9: w9Pdf,
           msa: msaPdf,
+          insurance: insurancePdf,
+          fleet: fleetPdf,
+          skills: skillsPdf,
           rateCard: rateCardPdf,
           directDeposit: directDepositPdf,
           safety: safetyPdf,
