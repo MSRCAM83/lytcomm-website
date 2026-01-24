@@ -65,7 +65,7 @@ All Phases 1-7 deployed and working.
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
 
 ### Apps Script Backend (UPDATED JAN 24 2026)
-- **Web App URL:** https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
+- **Web App URL:** https://script.google.com/macros/s/AKfycbw12ixoNLzmrorAxCcppWsOk4JgqbHkfcwpK3UxrcXKRsPj7Oc7bEsv0gUwG99Hk_WdSg/exec
 - **Version:** v5.0
 - **Script ID:** 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
 
@@ -281,7 +281,7 @@ If session crashes, paste this:
 LYT project - run crash recovery
 
 Backend is connected. Apps Script v5.0 deployed.
-Apps Script URL: https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
+Apps Script URL: https://script.google.com/macros/s/AKfycbw12ixoNLzmrorAxCcppWsOk4JgqbHkfcwpK3UxrcXKRsPj7Oc7bEsv0gUwG99Hk_WdSg/exec
 Script ID: 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
 
 Google Sheets configured:
