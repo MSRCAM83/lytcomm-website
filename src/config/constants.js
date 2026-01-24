@@ -27,16 +27,17 @@ export const LYT_INFO = {
 };
 
 export const URLS = {
-  // ONBOARDING Script (v5.5) - Handles employee/contractor form submissions
-  // DO NOT USE FOR PORTAL - Use Gateway instead
+  // ONBOARDING Script (v5.5) - DO NOT CHANGE - Handles employee/contractor form submissions
   appsScript: 'https://script.google.com/macros/s/AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw/exec',
   
-  // Claude Gateway - Used for Portal login, user management, sheets/email operations
-  gateway: 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec',
+  // PORTAL Script (v1.0) - Handles login, user management, password reset
+  // Script ID: 1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG
+  // DEPLOY FROM: https://script.google.com/d/1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG/edit
+  // After deploying, update this URL:
+  portalScript: 'NEEDS_DEPLOYMENT',
   
   googleDriveFolder: '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC',
   rateCardSheet: '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
-  usersSheet: '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
   w4Pdf: '/Form%20W-4%20sign.pdf',
   w9Pdf: '/Form%20W-9%20sign.pdf',
   msaPdf: '/LYT_MSA_2026_AdobeSign_Full_v4_1.pdf',
@@ -45,57 +46,131 @@ export const URLS = {
 // Onboarding invite code
 export const INVITE_CODE = 'welcome2lyt';
 
-// NDA invite code  
+// NDA signing invite code
 export const NDA_INVITE_CODE = 'lytnda2026';
 
-// Rate Card Data (embedded for reliability)
-export const RATE_CARD = {
-  updated: '2026-01-01',
-  laborRates: [
-    { position: 'Project Manager', rate: '$85/hr' },
-    { position: 'Superintendent', rate: '$75/hr' },
-    { position: 'Foreman', rate: '$65/hr' },
-    { position: 'Lead Technician', rate: '$55/hr' },
-    { position: 'Fiber Splicer', rate: '$52/hr' },
-    { position: 'Lineman (Aerial)', rate: '$50/hr' },
-    { position: 'Equipment Operator', rate: '$48/hr' },
-    { position: 'Technician', rate: '$42/hr' },
-    { position: 'Laborer', rate: '$35/hr' },
-    { position: 'Flagger/Traffic Control', rate: '$32/hr' }
-  ],
-  equipmentRates: [
-    { equipment: 'Directional Drill (Small)', rate: '$1,200/day' },
-    { equipment: 'Directional Drill (Large)', rate: '$2,500/day' },
-    { equipment: 'Mini Excavator', rate: '$450/day' },
-    { equipment: 'Backhoe', rate: '$500/day' },
-    { equipment: 'Bucket Truck (40ft)', rate: '$600/day' },
-    { equipment: 'Bucket Truck (55ft+)', rate: '$800/day' },
-    { equipment: 'Trencher', rate: '$350/day' },
-    { equipment: 'Boring Machine', rate: '$400/day' },
-    { equipment: 'Fusion Splicer', rate: '$200/day' },
-    { equipment: 'OTDR Test Set', rate: '$150/day' },
-    { equipment: 'Locator Set', rate: '$75/day' },
-    { equipment: 'Generator (Portable)', rate: '$100/day' },
-    { equipment: 'Air Compressor', rate: '$125/day' },
-    { equipment: 'Light Tower', rate: '$150/day' }
-  ],
-  unitRates: [
-    { description: 'Underground Bore (per ft)', rate: '$8-15/ft' },
-    { description: 'Open Trench (per ft)', rate: '$4-8/ft' },
-    { description: 'Conduit Install 2" (per ft)', rate: '$2.50/ft' },
-    { description: 'Conduit Install 4" (per ft)', rate: '$4.00/ft' },
-    { description: 'Fiber Pull (per ft)', rate: '$0.50-1.00/ft' },
-    { description: 'Fiber Splice (per splice)', rate: '$25-35/splice' },
-    { description: 'Aerial Strand (per ft)', rate: '$1.50/ft' },
-    { description: 'Aerial Fiber (per ft)', rate: '$1.00/ft' },
-    { description: 'Pole Attachment', rate: '$150-250/pole' },
-    { description: 'Handhole Install (Small)', rate: '$350-500/ea' },
-    { description: 'Handhole Install (Large)', rate: '$600-900/ea' },
-    { description: 'Vault Install', rate: '$1,500-3,000/ea' },
-    { description: 'OTDR Testing (per strand)', rate: '$15/strand' },
-    { description: 'As-Built Documentation', rate: '$500-1,500/project' }
-  ]
+// Admin configuration
+export const ADMIN_CONFIG = {
+  primaryAdmin: 'matt@lytcomm.com',
+  notificationEmails: ['matt@lytcomm.com'],
+  allowSecondaryAdmins: true,
 };
+
+export const images = {
+  hero: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1920&q=80',
+  fiberClose: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80',
+  networkSwitch: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+  construction: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80',
+  aerial: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80',
+  underground: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&q=80',
+  testing: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80',
+  team: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80',
+  hddDrill: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80',
+  splicingTech: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=80',
+  bucketTruck: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80',
+};
+
+export const services = [
+  {
+    id: 1,
+    title: 'HDD Drilling',
+    description: 'Horizontal Directional Drilling for underground fiber installation with minimal surface disruption.',
+    image: images.underground,
+  },
+  {
+    id: 2,
+    title: 'Fiber Splicing',
+    description: 'Precision fusion splicing and OTDR testing for optimal network performance.',
+    image: images.fiberClose,
+  },
+  {
+    id: 3,
+    title: 'Aerial Construction',
+    description: 'Pole-to-pole fiber installation, strand mapping, and aerial network builds.',
+    image: images.aerial,
+  },
+  {
+    id: 4,
+    title: 'Underground Construction',
+    description: 'Trenching, boring, and conduit installation for buried fiber networks.',
+    image: images.construction,
+  },
+  {
+    id: 5,
+    title: 'Network Testing',
+    description: 'Comprehensive OTDR, power meter, and certification testing services.',
+    image: images.testing,
+  },
+  {
+    id: 6,
+    title: 'Project Management',
+    description: 'End-to-end fiber project coordination from design to completion.',
+    image: images.team,
+  },
+];
+
+export const skillOptions = [
+  'HDD Drilling',
+  'Fiber Splicing',
+  'Aerial Construction',
+  'Underground Construction',
+  'OTDR Testing',
+  'Pole Climbing',
+  'Bucket Truck Operation',
+  'Project Management',
+  'Safety Supervision',
+  'Traffic Control',
+];
+
+export const mockUsers = [
+  { id: 1, name: 'Matt Campbell', email: 'matt@lytcomm.com', role: 'admin', phone: '555-0100', avatar: 'MC' },
+  { id: 2, name: 'Mason Roy', email: 'mason@lytcomm.com', role: 'admin', phone: '555-0101', avatar: 'MR' },
+  { id: 3, name: 'Donnie Smith', email: 'donnie@lytcomm.com', role: 'supervisor', phone: '555-0102', avatar: 'DS' },
+  { id: 4, name: 'John Rivera', email: 'john@lytcomm.com', role: 'technician', phone: '555-0103', avatar: 'JR' },
+  { id: 5, name: 'Sarah Chen', email: 'sarah@lytcomm.com', role: 'technician', phone: '555-0104', avatar: 'SC' },
+];
+
+export const mockProjects = [
+  { id: 1, name: 'Downtown Fiber Expansion', client: 'City of Webster', status: 'active', progress: 65, crew: [4, 5], startDate: '2024-12-01', endDate: '2025-02-28' },
+  { id: 2, name: 'Bayshore Business Park', client: 'Bayshore Properties LLC', status: 'active', progress: 30, crew: [4], startDate: '2024-12-15', endDate: '2025-03-15' },
+  { id: 3, name: 'Harbor Medical Center', client: 'UTMB Health', status: 'pending', progress: 0, crew: [], startDate: '2025-01-10', endDate: '2025-04-30' },
+  { id: 4, name: 'Clear Lake Residential', client: 'KB Homes', status: 'completed', progress: 100, crew: [4, 5], startDate: '2024-10-01', endDate: '2024-12-20' },
+];
+
+export const mockContractors = [
+  { id: 1, company: 'ABC Drilling LLC', contact: 'Tom Wilson', email: 'tom@abcdrilling.com', phone: '555-1001', status: 'active', skills: ['HDD Drilling', 'Underground Construction'] },
+  { id: 2, company: 'Precision Splice Co', contact: 'Maria Garcia', email: 'maria@precisionsplice.com', phone: '555-1002', status: 'active', skills: ['Fiber Splicing', 'OTDR Testing'] },
+  { id: 3, company: 'SkyHigh Aerial', contact: 'James Lee', email: 'james@skyhighaerial.com', phone: '555-1003', status: 'pending', skills: ['Aerial Construction', 'Pole Climbing', 'Bucket Truck Operation'] },
+];
+
+export const mockTimeEntries = [
+  { id: 1, userId: 4, date: '2025-01-15', clockIn: '07:00', clockOut: '16:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
+  { id: 2, userId: 4, date: '2025-01-16', clockIn: '07:00', clockOut: '17:00', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
+  { id: 3, userId: 4, date: '2025-01-17', clockIn: '07:00', clockOut: null, breakTime: 0, project: 'Bayshore Business Park', status: 'active' },
+  { id: 4, userId: 5, date: '2025-01-15', clockIn: '06:30', clockOut: '15:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
+  { id: 5, userId: 5, date: '2025-01-16', clockIn: '06:30', clockOut: '16:00', breakTime: 45, project: 'Downtown Fiber Expansion', status: 'pending' },
+];
+
+export const mockInvoices = [
+  { id: 1, contractorId: 1, project: 'Downtown Fiber Expansion', amount: 15000, date: '2025-01-10', status: 'paid', dueDate: '2025-01-25' },
+  { id: 2, contractorId: 2, project: 'Downtown Fiber Expansion', amount: 8500, date: '2025-01-12', status: 'pending', dueDate: '2025-01-27' },
+  { id: 3, contractorId: 1, project: 'Bayshore Business Park', amount: 12000, date: '2025-01-15', status: 'submitted', dueDate: '2025-01-30' },
+];
+
+export const mockFiles = [
+  { id: 1, name: 'Safety Manual 2025.pdf', folder: 'Safety', size: '2.4 MB', date: '2025-01-01', type: 'pdf' },
+  { id: 2, name: 'OTDR Testing Procedures.pdf', folder: 'SOPs', size: '1.1 MB', date: '2024-12-15', type: 'pdf' },
+  { id: 3, name: 'Daily Inspection Checklist.pdf', folder: 'Forms', size: '245 KB', date: '2024-12-01', type: 'pdf' },
+  { id: 4, name: 'Project Specs - Downtown.pdf', folder: 'Projects', size: '5.2 MB', date: '2024-12-10', type: 'pdf' },
+  { id: 5, name: 'Equipment Inventory.xlsx', folder: 'Admin', size: '890 KB', date: '2025-01-05', type: 'xlsx' },
+];
+
+export const mockAnnouncements = [
+  { id: 1, title: 'Safety Meeting', content: 'Mandatory safety meeting this Friday at 7 AM.', date: '2025-01-15', priority: 'high' },
+  { id: 2, title: 'New Project Kickoff', content: 'Harbor Medical Center project starting Jan 20th.', date: '2025-01-14', priority: 'normal' },
+  { id: 3, title: 'Holiday Schedule', content: 'Office closed Monday Jan 20th for MLK Day.', date: '2025-01-10', priority: 'normal' },
+];
+
 
 // Gateway configuration (for portal components)
 export const GATEWAY_CONFIG = {
