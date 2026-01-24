@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 23, 2026 - 4:00 PM CST
+### Last Updated: January 24, 2026 - 12:15 AM CST
 
 ---
 
@@ -10,7 +10,7 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-**Current Version:** v2.70
+**Current Version:** v5.3
 
 **Core Functions:**
 1. Public marketing website (Home, About, Services, Contact)
@@ -28,15 +28,18 @@
 
 ---
 
-## 🚀 CURRENT STATUS (Jan 23, 2026 - 4:00 PM CST)
+## 🚀 CURRENT STATUS (Jan 24, 2026 - 12:15 AM CST)
 
-### ✅ Live Version: v2.70
+### ✅ Live Version: v5.3
 All Phases 1-7 deployed and working.
 
 ### ✅ BACKEND CONNECTED
-- Apps Script v4.2 deployed (NEW URL)
+- Apps Script v5.0 deployed
 - Login authentication: WORKING
 - Google Sheets integrated
+- PDF generation: WORKING
+- Accepts both `pdfs` and `filledPdfs` keys (v5.2 fix)
+- Folder names no longer include dates (v5.3 fix)
 
 ### ✅ CLAUDE GATEWAY OPERATIONAL
 - Gateway URL: https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec
@@ -61,10 +64,15 @@ All Phases 1-7 deployed and working.
 - **Onboarding:** https://lytcomm.com/#onboarding (code: welcome2lyt)
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
 
-### Apps Script Backend (UPDATED JAN 23 2026)
-- **Web App URL:** https://script.google.com/macros/s/AKfycbyjQrJu0BbREwo-LW2ajXKrrjQ_HrtU_IYdhz8SqDo0f4HOktHShaIHY_17pYTkN5Bm/exec
-- **Version:** v4.2
-- **Script ID:** 1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG
+### Apps Script Backend (UPDATED JAN 24 2026)
+- **Web App URL:** https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
+- **Version:** v5.0
+- **Script ID:** 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
+
+### Google Drive Folders
+- **Documents Root:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
+- **Employee Onboarding:** `1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62`
+- **Contractor Onboarding:** `1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk`
 
 ### Google Sheets
 | Sheet Name | Sheet ID | Purpose |
@@ -75,6 +83,23 @@ All Phases 1-7 deployed and working.
 ### Google Drive
 - **Documents Folder:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
 - **Rate Card Sheet:** `10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4`
+
+### Reserved Pre-Authorized Scripts (10 Available)
+These scripts are pre-authorized for immediate deployment without OAuth prompts:
+| # | Script ID (short) | Full Script ID |
+|---|-------------------|----------------|
+| 1 | 1eJPgH6 | 1eJPgH6... (see work log for full IDs) |
+| 2 | 1M6ChVJ | 1M6ChVJ... |
+| 3 | 1yOMZE7 | 1yOMZE7... |
+| 4 | 13mUhCF | 13mUhCF... |
+| 5 | 17kc_Zj | 17kc_Zj... |
+| 6 | 1pmjBFv | 1pmjBFv... |
+| 7 | 1rnjvEo | 1rnjvEo... |
+| 8 | 1Az2rJN | 1Az2rJN... |
+| 9 | 1BXJNtl | 1BXJNtl... |
+| 10 | 1nvnyca | 1nvnyca... |
+
+*Full IDs stored in work log document to avoid clutter*
 
 ### GitHub
 - **Repo:** MSRCAM83/lytcomm-website
@@ -206,7 +231,7 @@ src/
 
 ## 🔧 APPS SCRIPT CONFIG
 
-The Apps Script v4.2 should have this CONFIG:
+The Apps Script v5.0 should have this CONFIG:
 
 ```javascript
 const CONFIG = {
@@ -255,12 +280,17 @@ If session crashes, paste this:
 ```
 LYT project - run crash recovery
 
-Backend is connected. Apps Script v4.2 deployed.
-Apps Script URL: https://script.google.com/macros/s/AKfycbyjQrJu0BbREwo-LW2ajXKrrjQ_HrtU_IYdhz8SqDo0f4HOktHShaIHY_17pYTkN5Bm/exec
+Backend is connected. Apps Script v5.0 deployed.
+Apps Script URL: https://script.google.com/macros/s/AKfycbx6xm1vIF4YpPvdU8XhZrHm4SEX_oMzBEKZnF9MMO81U-fP9ngxI3G-7JYBXkhJF95m9Q/exec
+Script ID: 1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub
 
 Google Sheets configured:
 - Users: 1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw
 - Onboarding: 1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc
+
+Drive Folders:
+- Employees: 1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62
+- Contractors: 1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk
 
 Login works with: matt@lytcomm.com / demo123
 
@@ -488,7 +518,7 @@ for f in result["data"]["files"]:
 
 | Script | ID | Purpose |
 |--------|-----|---------|
-| LYT Portal Backend | `1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG` | Main website backend (v4.3) |
+| LYT Portal Backend | `1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub` | Main website backend (v5.0) |
 | Claude Gateway | (the Gateway itself) | This tool |
 
 ---
@@ -517,7 +547,7 @@ import ssl
 
 GATEWAY_URL = "https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec"
 GATEWAY_SECRET = "LYTcomm2026ClaudeGatewaySecretKey99"
-LYT_SCRIPT_ID = "1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG"
+LYT_SCRIPT_ID = "1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub"
 
 def call_gateway(action, params=None, use_post=False):
     payload = {"secret": GATEWAY_SECRET, "action": action}
