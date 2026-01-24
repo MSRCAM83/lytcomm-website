@@ -143,6 +143,38 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       log(`Bank: ${formData.bankName}, Routing: ${formData.routingNumber}, Account: ${formData.accountNumber}`);
       
       // Generate PDFs
+      log('Generating Personal Info PDF...');
+      let personalInfoPdf = null;
+      try {
+        personalInfoPdf = await createFormPdf(
+          'Employee Personal Information',
+          [
+            { title: 'PERSONAL DETAILS', fields: [
+              { label: 'Full Name', value: fullName },
+              { label: 'Email', value: formData.email },
+              { label: 'Phone', value: formData.phone },
+              { label: 'Date of Birth', value: formData.dateOfBirth },
+              { label: 'SSN', value: formData.ssn ? `***-**-${formData.ssn.slice(-4)}` : '' },
+            ]},
+            { title: 'ADDRESS', fields: [
+              { label: 'Street', value: formData.address },
+              { label: 'City', value: formData.city },
+              { label: 'State', value: formData.state },
+              { label: 'ZIP', value: formData.zip },
+            ]},
+            { title: 'ELECTRONIC RECORD', fields: [
+              { label: 'IP Address', value: ipAddress },
+              { label: 'Timestamp', value: signatureTimestamp },
+            ]}
+          ],
+          null,
+          signatureInfo
+        );
+        log(personalInfoPdf ? '✅ Personal Info PDF created' : '❌ Personal Info returned null');
+      } catch (e) {
+        log(`❌ Personal Info ERROR: ${e.message}`);
+      }
+
       log('Generating W-4 PDF...');
       let w4Pdf = null;
       try {
@@ -381,8 +413,9 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         safetyAcknowledged: true,
         w4Status: 'completed',
         ipAddress: ipAddress,
-        // PDFs as base64 - Apps Script expects 'pdfs' not 'filledPdfs'
-        pdfs: {
+        // PDFs as base64 - using filledPdfs to match EmployeeOnboarding.js
+        filledPdfs: {
+          personalInfo: personalInfoPdf,
           w4: w4Pdf,
           directDeposit: directDepositPdf,
           emergencyContact: emergencyContactPdf,
@@ -394,7 +427,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
       };
       
       log('Submitting to backend...');
-      log(`PDFs: W4=${!!w4Pdf}, DD=${!!directDepositPdf}, EC=${!!emergencyContactPdf}, BG=${!!backgroundCheckPdf}, DT=${!!drugTestPdf}, Safety=${!!safetyPdf}`);
+      log(`PDFs: PI=${!!personalInfoPdf}, W4=${!!w4Pdf}, DD=${!!directDepositPdf}, EC=${!!emergencyContactPdf}, BG=${!!backgroundCheckPdf}, DT=${!!drugTestPdf}, Safety=${!!safetyPdf}`);
       
       const response = await fetch(URLS.appsScript, {
         method: 'POST',
@@ -651,8 +684,8 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
         msaSigned: true,
         w9Completed: true,
         ipAddress: ipAddress,
-        // PDFs as base64 - Apps Script expects 'pdfs' not 'filledPdfs'
-        pdfs: {
+        // PDFs as base64 - using filledPdfs to match ContractorOnboarding.js
+        filledPdfs: {
           w9: w9Pdf,
           msa: msaPdf,
           rateCard: rateCardPdf,
@@ -741,7 +774,7 @@ const HomePage = ({ setCurrentPage, darkMode }) => {
             border: '2px solid #0077B6',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.83</span></h2>
+              <h2 style={{ color: '#0077B6', margin: 0 }}>🧪 LYT Test Panel <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>v2.84</span></h2>
               <button 
                 onClick={() => setShowTestPanel(false)}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '24px' }}
