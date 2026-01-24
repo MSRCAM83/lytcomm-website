@@ -616,7 +616,6 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.bankingSignature,
-          formData.contactName,
           signatureInfo
         );
         console.log('Direct Deposit PDF created');
@@ -651,7 +650,6 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
             ]}
           ],
           formData.safetySignature,
-          formData.contactName,
           signatureInfo
         );
         console.log('Safety PDF created');
