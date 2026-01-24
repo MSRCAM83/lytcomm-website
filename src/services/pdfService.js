@@ -19,7 +19,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 const PDF_URLS = {
   W4: '/Form%20W-4%20sign.pdf',
   W9: '/Form%20W-9%20sign.pdf',
-  MSA: '/LYT_MSA_2026_AdobeSign_Full_v3_5.pdf',
+  MSA: '/LYT_MSA_2026_AdobeSign_Full_v4_1.pdf',
 };
 
 /**
@@ -350,10 +350,10 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
           
-          // Draw transparent PNG signature directly on form
+          // Draw transparent PNG signature directly on form - lowered to fit signature line
           firstPage.drawImage(sigImage, {
             x: 75,
-            y: 205,
+            y: 175,
             width: 150,
             height: 30,
           });
@@ -363,7 +363,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
               x: 230,
-              y: 210,
+              y: 180,
               size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
