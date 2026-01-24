@@ -10,40 +10,31 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-**Current Version:** v5.3
+## 🚀 CURRENT STATUS (Jan 24, 2026 - 1:50 AM CST)
 
-**Core Functions:**
-1. Public marketing website (Home, About, Services, Contact)
-2. Employee portal (onboarding, dashboard, field operations)
-3. Contractor portal (onboarding, dashboard, compliance)
-4. Admin dashboard (manage employees/contractors)
-5. NDA signing system (standalone invite code flow)
-6. Recruiting tracker (Donnie's pipeline management)
-7. Work map system (GPS-validated section tracking)
-8. Pothole verification (photo documentation + approval workflow)
-9. Daily work sheet generator (Metronet Excel format)
-10. Invoice generator (LYT custom templates)
-11. Metrics dashboard (production, safety, financial analytics)
-12. Activity log (full audit trail)
+### ✅ Live Version: v2.87
+Website deployed and working.
 
----
+### ✅ ARCHITECTURE SUMMARY
 
-## 🚀 CURRENT STATUS (Jan 24, 2026 - 1:30 AM CST)
+**Onboarding (Employee/Contractor forms):**
+- Script: LYT Onboarding v5.5
+- URL: `https://script.google.com/macros/s/AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw/exec`
+- Script ID: `1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub`
+- STATUS: ✅ WORKING
 
-### ✅ Live Version: v2.86
-Website code updated, Vercel auto-deploying.
+**Portal (Login, User Management):**
+- Uses Claude Gateway for all operations
+- Gateway URL: `https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec`
+- Gateway Secret: `LYTcomm2026ClaudeGatewaySecretKey99`
+- Actions used: `sheetsRead`, `sheetsWrite`, `sheetsAppend`, `gmailSend`
+- STATUS: ✅ WORKING
 
-### ✅ ONBOARDING BACKEND - WORKING
-- Apps Script v5.5 deployed and tested
-- PDF uploads to correct Drive folders: WORKING
-- Accepts both `pdfs` and `filledPdfs` keys
-
-### ⚠️ PORTAL BACKEND - NEEDS DEPLOYMENT
-- Script code is ready, needs manual deployment
-- See instructions below
-
-### ✅ SEPARATION OF CONCERNS
-Onboarding and Portal now use SEPARATE Apps Scripts to prevent issues.
+**Why Gateway instead of separate Portal script:**
+- Google Apps Script web app deployments require OAuth consent via UI
+- API-created deployments don't work without manual authorization
+- Gateway is already deployed and has Sheets/Gmail access
+- Portal functions use Gateway's sheetsRead/Write to access Users sheet directly
 
 ---
 
@@ -54,29 +45,6 @@ Onboarding and Portal now use SEPARATE Apps Scripts to prevent issues.
 - **Portal Login:** https://lytcomm.com/#portal-login
 - **Onboarding:** https://lytcomm.com/#onboarding (code: welcome2lyt)
 - **NDA Signing:** https://lytcomm.com/#nda-sign (code: lytnda2026)
-
-### Apps Script Backend - SEPARATED (JAN 24 2026)
-
-**ONBOARDING SCRIPT (v5.5)** - Handles form submissions ✅ WORKING
-- URL: `https://script.google.com/macros/s/AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw/exec`
-- Script ID: `1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub`
-- Used by: EmployeeOnboarding.js, ContractorOnboarding.js, HomePage.js test panel
-
-**PORTAL SCRIPT (v1.0)** - Handles login/users ⚠️ NEEDS DEPLOYMENT
-- Script ID: `1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG`
-- Edit URL: https://script.google.com/d/1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG/edit
-- Used by: PortalLogin.js, AdminUserManagement.js
-- **TO DEPLOY:** Open edit URL → Deploy → New deployment → Web app → Anyone → Deploy → Copy URL → Update constants.js
-
-### Google Drive Folders
-- **Main Documents Folder:** `11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC`
-- **Employee Onboarding Folder:** `1SWvghSxKR2uQN7I2xR7rGWzlBtpIYf62`
-- **Contractor Onboarding Folder:** `1bsz8Zdue0Bw4ZojJQKIE76hyBGLpQIvk`
-
-### Google Sheets
-| Sheet Name | Sheet ID | Purpose |
-|------------|----------|---------|
-| LYT Portal Users | `1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw` | User accounts & login |
 | LYT Onboarding Data | `1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc` | Onboarding submissions |
 
 ### Google Drive
