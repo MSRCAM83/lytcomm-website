@@ -353,7 +353,7 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           // Draw transparent PNG signature directly on form - lowered to fit signature line
           firstPage.drawImage(sigImage, {
             x: 75,
-            y: 175,
+            y: 188,
             width: 150,
             height: 30,
           });
@@ -362,8 +362,8 @@ export async function fillW9(data, signatureDataUrl, signatureInfo = {}) {
           if (signatureInfo.timestamp || signatureInfo.ip) {
             const verifyText = `Signed: ${signatureInfo.timestamp || ''} | IP: ${signatureInfo.ip || ''}`;
             firstPage.drawText(verifyText, {
-              x: 230,
-              y: 180,
+              x: 75,
+              y: 168,
               size: 5,
               font: font,
               color: rgb(0.4, 0.4, 0.4),
