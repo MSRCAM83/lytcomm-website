@@ -1,4 +1,4 @@
-// AdminUserManagement.js v1.0 - Complete User & Access Management
+// AdminUserManagement.js v1.1 - Uses URLS.portalScript from constants
 // Create users, assign roles, manage portal access, send invites
 import React, { useState, useEffect } from 'react';
 import { 
@@ -7,8 +7,7 @@ import {
   Key, Send, AlertTriangle, ChevronDown, X, RefreshCw,
   Building, Briefcase, HardHat, Crown
 } from 'lucide-react';
-
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNfM2kARMK2goiRyKLyxJnfOKnOYHZWpMsuqyOBDmXnZgmMHZeL1VkJb7R_gHqMXyA/exec';
+import { URLS } from '../config/constants';
 
 function AdminUserManagement({ darkMode, currentUser }) {
   const [users, setUsers] = useState([]);
@@ -49,7 +48,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${APPS_SCRIPT_URL}?action=listUsers`);
+      const response = await fetch(`${URLS.portalScript}?action=listUsers`);
       const result = await response.json();
       if (result.success) {
         setUsers(result.users || []);
@@ -84,7 +83,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleCreateUser = async (userData) => {
     setActionLoading(true);
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(URLS.portalScript, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -122,7 +121,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleUpdateUser = async (userId, updates) => {
     setActionLoading(true);
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(URLS.portalScript, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -161,7 +160,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleResetPassword = async (user) => {
     setActionLoading(true);
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(URLS.portalScript, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -181,7 +180,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   const handleResendInvite = async (user) => {
     setActionLoading(true);
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(URLS.portalScript, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
