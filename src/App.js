@@ -181,7 +181,7 @@ function App() {
       case 'admin-dashboard':
         return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'admin-users':
-        return <AdminUserManagement darkMode={darkMode} currentUser={loggedInUser} />;
+        return <AdminUserManagement darkMode={darkMode} currentUser={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'recruiting':
         return <RecruitingTracker darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'work-map':
@@ -189,13 +189,13 @@ function App() {
       case 'potholes':
         return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
       case 'daily-worksheet':
-        return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} />;
+        return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'invoices':
-        return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} />;
+        return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'metrics':
-        return <MetricsDashboard darkMode={darkMode} user={loggedInUser} />;
+        return <MetricsDashboard darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'activity-log':
-        return <ActivityLog darkMode={darkMode} user={loggedInUser} />;
+        return <ActivityLog darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'profile':
         return <UserProfile darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       case 'portal-login':
@@ -207,7 +207,7 @@ function App() {
       case 'forgot-password':
         return <ForgotPassword setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'api-test':
-        return <ApiTestPage darkMode={darkMode} />;
+        return <ApiTestPage darkMode={darkMode} setCurrentPage={setCurrentPage} />;
       case 'nda-sign':
         return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       default:
