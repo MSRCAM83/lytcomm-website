@@ -1,479 +1,169 @@
-// InvoiceGenerator.js v1.0 - LYT Custom Invoice Generator
-// Auto-generate invoices from approved work data
+// InvoiceGenerator.js v2.0 - Connected to Real Backend
 import React, { useState, useEffect } from 'react';
-import { 
-  Receipt, Download, Calendar, DollarSign, FileText, Building,
-  Plus, Trash2, CheckCircle, AlertCircle, RefreshCw, Eye,
-  Printer, Mail, Clock, MapPin, ChevronDown, Search, Filter
-} from 'lucide-react';
+import { Receipt, Download, Calendar, DollarSign, FileText, Plus, Trash2, CheckCircle, RefreshCw, ArrowLeft, Loader, Send } from 'lucide-react';
+import { colors } from '../config/constants';
 
-const InvoiceGenerator = ({ darkMode, user }) => {
-  // Theme colors
-  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
-  const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';
-  const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
-  const cardBg = darkMode ? '#1e293b' : '#ffffff';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
+const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
+const SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
+
+const fetchWithRedirect = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, { ...options, redirect: 'follow' });
+    const text = await response.text();
+    if (text.trim().startsWith('<')) {
+      const match = text.match(/HREF="([^"]+)"/i);
+      if (match) { return (await fetch(match[1].replace(/&amp;/g, '&'))).text(); }
+    }
+    return text;
+  } catch (err) { throw err; }
+};
+
+const InvoiceGenerator = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
+  const currentUser = user || loggedInUser;
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
+  const bgColor = darkMode ? colors.dark : '#f8fafc';
+  const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
   const borderColor = darkMode ? '#374151' : '#e5e7eb';
 
-  const [selectedProject, setSelectedProject] = useState('');
-  const [dateRange, setDateRange] = useState({
-    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showVersion, setShowVersion] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [activeTab, setActiveTab] = useState('list');
+  const [newInvoice, setNewInvoice] = useState({
+    project: '', invoiceDate: new Date().toISOString().split('T')[0], dueDate: '',
+    lineItems: [{ description: '', quantity: '', rate: '', total: '0' }]
   });
-  const [workItems, setWorkItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState('');
 
-  // Mock projects
-  const mockProjects = [
-    { id: 'SLPH.01', name: 'Sulphur Area 1', lcpCode: 'LCP-2026-001', client: 'Metronet', clientAddress: '123 Corporate Dr, Evansville, IN 47708' },
-    { id: 'SLPH.02', name: 'Sulphur Area 2', lcpCode: 'LCP-2026-002', client: 'Metronet', clientAddress: '123 Corporate Dr, Evansville, IN 47708' },
-    { id: 'LAKE.01', name: 'Lake Charles Phase 1', lcpCode: 'LCP-2026-003', client: 'Metronet', clientAddress: '123 Corporate Dr, Evansville, IN 47708' },
-  ];
+  const projectOptions = ['Metronet - Webster Phase 3', 'Metronet - League City', 'Metronet - Pearland', 'Vexus - Lafayette'];
 
-  // Rate card items (from Google Sheet)
-  const rateCard = {
-    'HDD_BORE': { description: 'HDD Bore (per foot)', unit: 'ft', rate: 8.50 },
-    'CONDUIT_2IN': { description: '2" Conduit Installation', unit: 'ft', rate: 2.25 },
-    'CONDUIT_4IN': { description: '4" Conduit Installation', unit: 'ft', rate: 3.50 },
-    'FIBER_PULL': { description: 'Fiber Cable Pull', unit: 'ft', rate: 1.75 },
-    'SPLICE_CLOSURE': { description: 'Splice Closure Installation', unit: 'ea', rate: 450.00 },
-    'HANDHOLE_SMALL': { description: 'Small Handhole Installation', unit: 'ea', rate: 275.00 },
-    'HANDHOLE_LARGE': { description: 'Large Handhole Installation', unit: 'ea', rate: 450.00 },
-    'POTHOLE': { description: 'Pothole/Daylighting', unit: 'ea', rate: 150.00 },
-    'TRAFFIC_CONTROL': { description: 'Traffic Control Setup', unit: 'day', rate: 350.00 },
-    'RESTORATION': { description: 'Restoration (per LF)', unit: 'ft', rate: 3.00 },
+  useEffect(() => { fetchInvoices(); }, []);
+
+  const fetchInvoices = async () => {
+    setLoading(true);
+    try {
+      const text = await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: GATEWAY_SECRET, action: 'sheetsRead', params: { spreadsheetId: SHEET_ID, range: 'Invoices!A1:J100' } })
+      });
+      const result = JSON.parse(text);
+      if (result.success && result.data?.data) {
+        const rows = result.data.data;
+        setInvoices(rows.slice(1).filter(r => r[0]).map((row, idx) => ({
+          id: idx + 1, invoiceNum: row[0] || `INV-${1000 + idx}`, project: row[1] || '', submittedBy: row[2] || '',
+          invoiceDate: row[3] || '', dueDate: row[4] || '', amount: row[5] || '0', status: row[6] || 'draft'
+        })));
+      }
+    } catch (err) { console.error('Failed:', err); }
+    setLoading(false);
   };
 
-  // Mock completed work items
-  const getMockWorkItems = (projectId, startDate, endDate) => {
-    if (!projectId) return [];
-    return [
-      { id: 1, date: '2026-01-20', section: '006', type: 'HDD_BORE', quantity: 450, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-20' },
-      { id: 2, date: '2026-01-20', section: '006', type: 'CONDUIT_2IN', quantity: 450, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-20' },
-      { id: 3, date: '2026-01-20', section: '006', type: 'POTHOLE', quantity: 4, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-20' },
-      { id: 4, date: '2026-01-20', section: '006', type: 'TRAFFIC_CONTROL', quantity: 1, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-20' },
-      { id: 5, date: '2026-01-21', section: '007', type: 'HDD_BORE', quantity: 380, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-21' },
-      { id: 6, date: '2026-01-21', section: '007', type: 'CONDUIT_2IN', quantity: 380, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-21' },
-      { id: 7, date: '2026-01-21', section: '007', type: 'POTHOLE', quantity: 3, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-21' },
-      { id: 8, date: '2026-01-21', section: '007', type: 'TRAFFIC_CONTROL', quantity: 1, approved: true, approvedBy: 'Matt Roy', approvedAt: '2026-01-21' },
-      { id: 9, date: '2026-01-22', section: '008', type: 'HDD_BORE', quantity: 290, approved: true, approvedBy: 'Donnie Wells', approvedAt: '2026-01-22' },
-      { id: 10, date: '2026-01-22', section: '008', type: 'CONDUIT_2IN', quantity: 290, approved: true, approvedBy: 'Donnie Wells', approvedAt: '2026-01-22' },
-      { id: 11, date: '2026-01-22', section: '008', type: 'POTHOLE', quantity: 2, approved: true, approvedBy: 'Donnie Wells', approvedAt: '2026-01-22' },
-      { id: 12, date: '2026-01-23', section: '009', type: 'HDD_BORE', quantity: 520, approved: false },
-    ];
-  };
-
-  useEffect(() => {
-    if (selectedProject) {
-      setLoading(true);
-      setTimeout(() => {
-        const items = getMockWorkItems(selectedProject, dateRange.start, dateRange.end);
-        setWorkItems(items);
-        // Generate invoice number
-        const today = new Date();
-        setInvoiceNumber(`INV-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${selectedProject.replace('.', '')}`);
-        setLoading(false);
-      }, 500);
-    } else {
-      setWorkItems([]);
+  const addLineItem = () => setNewInvoice({ ...newInvoice, lineItems: [...newInvoice.lineItems, { description: '', quantity: '', rate: '', total: '0' }] });
+  
+  const updateLineItem = (idx, field, value) => {
+    const items = [...newInvoice.lineItems];
+    items[idx][field] = value;
+    if (field === 'quantity' || field === 'rate') {
+      items[idx].total = ((parseFloat(items[idx].quantity) || 0) * (parseFloat(items[idx].rate) || 0)).toFixed(2);
     }
-  }, [selectedProject, dateRange]);
-
-  // Only approved items
-  const approvedItems = workItems.filter(item => item.approved);
-
-  // Calculate totals
-  const calculateLineTotal = (item) => {
-    const rate = rateCard[item.type]?.rate || 0;
-    return item.quantity * rate;
+    setNewInvoice({ ...newInvoice, lineItems: items });
   };
 
-  const subtotal = approvedItems.reduce((sum, item) => sum + calculateLineTotal(item), 0);
-  const taxRate = 0; // No tax for B2B
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const removeLineItem = (idx) => setNewInvoice({ ...newInvoice, lineItems: newInvoice.lineItems.filter((_, i) => i !== idx) });
+  const getTotal = () => newInvoice.lineItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
 
-  // Group items by type for summary
-  const groupedItems = approvedItems.reduce((acc, item) => {
-    if (!acc[item.type]) {
-      acc[item.type] = { ...rateCard[item.type], quantity: 0, total: 0 };
-    }
-    acc[item.type].quantity += item.quantity;
-    acc[item.type].total += calculateLineTotal(item);
-    return acc;
-  }, {});
-
-  // Generate PDF Invoice
-  const generateInvoice = async () => {
-    setGenerating(true);
-    
-    const project = mockProjects.find(p => p.id === selectedProject);
-    
-    // In production, this would generate a PDF using pdf-lib or similar
-    // For now, create a downloadable text invoice
-    const invoiceText = `
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                            LYT COMMUNICATIONS, LLC                           ║
-║                         PROFESSIONAL FIBER OPTIC CONSTRUCTION                ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  Invoice #: ${invoiceNumber.padEnd(20)}  Date: ${new Date().toLocaleDateString().padEnd(15)} ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  BILL TO:                                                                    ║
-║  ${(project?.client || 'Client').padEnd(74)} ║
-║  ${(project?.clientAddress || '').padEnd(74)} ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  PROJECT: ${(project?.name || '').padEnd(64)} ║
-║  LCP CODE: ${(project?.lcpCode || '').padEnd(63)} ║
-║  PERIOD: ${dateRange.start} to ${dateRange.end}${''.padEnd(38)} ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  DESCRIPTION                              QTY      RATE        AMOUNT        ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-${Object.entries(groupedItems).map(([type, item]) => 
-`║  ${item.description.padEnd(38)} ${String(item.quantity).padStart(6)} ${('$' + item.rate.toFixed(2)).padStart(10)} ${('$' + item.total.toFixed(2)).padStart(14)} ║`
-).join('\n')}
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                                            SUBTOTAL: ${('$' + subtotal.toFixed(2)).padStart(20)} ║
-║                                                 TAX: ${('$' + tax.toFixed(2)).padStart(20)} ║
-║                                               TOTAL: ${('$' + total.toFixed(2)).padStart(20)} ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  PAYMENT TERMS: Net 30                                                       ║
-║  Please remit payment to: LYT Communications, LLC                            ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-`;
-
-    const blob = new Blob([invoiceText], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${invoiceNumber}.txt`;
-    link.click();
-
-    setGenerating(false);
+  const handleSubmit = async () => {
+    if (!newInvoice.project) { setMessage({ type: 'error', text: 'Select a project' }); return; }
+    setLoading(true);
+    const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
+    try {
+      await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET, action: 'sheetsAppend',
+          params: { spreadsheetId: SHEET_ID, range: 'Invoices!A:J',
+            values: [[invoiceNum, newInvoice.project, currentUser?.name || '', newInvoice.invoiceDate, newInvoice.dueDate, getTotal().toFixed(2), 'submitted', new Date().toISOString(), JSON.stringify(newInvoice.lineItems), '']]
+          }
+        })
+      });
+      setMessage({ type: 'success', text: `Invoice ${invoiceNum} created!` });
+      setNewInvoice({ project: '', invoiceDate: new Date().toISOString().split('T')[0], dueDate: '', lineItems: [{ description: '', quantity: '', rate: '', total: '0' }] });
+      setActiveTab('list');
+      fetchInvoices();
+    } catch (err) { setMessage({ type: 'error', text: 'Failed to create invoice' }); }
+    setLoading(false);
+    setTimeout(() => setMessage(null), 3000);
   };
 
-  const inputStyle = {
-    padding: '12px 16px',
-    borderRadius: '10px',
-    border: `1px solid ${borderColor}`,
-    backgroundColor: '#ffffff',
-    color: '#1f2937',
-    fontSize: '0.95rem',
-    outline: 'none',
-  };
+  const getStatusColor = (status) => ({ draft: mutedColor, submitted: accentPrimary, approved: accentSecondary, paid: '#10b981', rejected: '#ef4444' }[status] || mutedColor);
+  const inputStyle = { width: '100%', padding: '10px', border: `1px solid ${borderColor}`, borderRadius: '8px', backgroundColor: '#ffffff', color: '#1e293b' };
+  const goBack = () => setCurrentPage(currentUser?.role === 'admin' ? 'admin-dashboard' : 'contractor-dashboard');
 
   return (
-    <div style={{ padding: '24px', backgroundColor: bgColor, minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Receipt size={28} color={accentPrimary} />
-              Invoice Generator
-            </h1>
-            <p style={{ color: mutedColor }}>Generate invoices from approved work - LYT template format</p>
-          </div>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor, padding: '32px' }} onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
+      {message && <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '16px 24px', backgroundColor: message.type === 'success' ? accentSecondary : '#ef4444', color: '#fff', borderRadius: '8px', zIndex: 1000 }}>{message.text}</div>}
 
-      {/* Filters */}
-      <div style={{ 
-        backgroundColor: cardBg, 
-        borderRadius: '16px', 
-        padding: '24px', 
-        marginBottom: '24px',
-        border: `1px solid ${borderColor}`
-      }}>
-        <h3 style={{ color: textColor, marginBottom: '16px', fontWeight: '600' }}>Select Work Period</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', color: textColor, fontWeight: '500', fontSize: '0.9rem' }}>
-              Project
-            </label>
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}
-            >
-              <option value="">-- Select Project --</option>
-              {mockProjects.map(p => (
-                <option key={p.id} value={p.id}>{p.id} - {p.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', color: textColor, fontWeight: '500', fontSize: '0.9rem' }}>
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              style={{ ...inputStyle, width: '100%' }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', color: textColor, fontWeight: '500', fontSize: '0.9rem' }}>
-              End Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              style={{ ...inputStyle, width: '100%' }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-            <button
-              onClick={generateInvoice}
-              disabled={!selectedProject || approvedItems.length === 0 || generating}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: (!selectedProject || approvedItems.length === 0) ? '#6b7280' : accentSecondary,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: (!selectedProject || approvedItems.length === 0) ? 'not-allowed' : 'pointer',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                opacity: generating ? 0.7 : 1,
-              }}
-            >
-              {generating ? (
-                <>
-                  <RefreshCw size={18} className="spin" /> Generating...
-                </>
-              ) : (
-                <>
-                  <Download size={18} /> Generate Invoice
-                </>
-              )}
-            </button>
-          </div>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+          <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '8px', color: textColor, cursor: 'pointer' }}><ArrowLeft size={18} /> Back</button>
+          <div style={{ flex: 1 }}><h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>Invoices</h1><p style={{ color: mutedColor }}>Create and manage invoices</p></div>
+          <button onClick={fetchInvoices} style={{ padding: '10px', backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '8px', cursor: 'pointer' }}><RefreshCw size={18} color={textColor} /></button>
         </div>
-      </div>
 
-      {/* Invoice Preview */}
-      {selectedProject && (
-        <>
-          {/* Summary Cards */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
-            gap: '16px', 
-            marginBottom: '24px' 
-          }}>
-            {[
-              { label: 'Approved Items', value: approvedItems.length, icon: CheckCircle, color: '#10b981' },
-              { label: 'Pending Items', value: workItems.filter(i => !i.approved).length, icon: Clock, color: '#f59e0b' },
-              { label: 'Subtotal', value: '$' + subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 }), icon: DollarSign, color: accentPrimary },
-              { label: 'Invoice Total', value: '$' + total.toLocaleString(undefined, { minimumFractionDigits: 2 }), icon: Receipt, color: accentSecondary },
-            ].map((stat, idx) => (
-              <div
-                key={idx}
-                style={{
-                  backgroundColor: cardBg,
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: `1px solid ${borderColor}`,
-                  textAlign: 'center'
-                }}
-              >
-                <stat.icon size={24} color={stat.color} style={{ marginBottom: '8px' }} />
-                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: textColor }}>{stat.value}</div>
-                <div style={{ fontSize: '0.85rem', color: mutedColor }}>{stat.label}</div>
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: `1px solid ${borderColor}` }}>
+          {[{ id: 'list', label: 'All Invoices' }, { id: 'new', label: 'New Invoice' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ padding: '12px 24px', backgroundColor: 'transparent', border: 'none', borderBottom: activeTab === tab.id ? `3px solid ${accentPrimary}` : '3px solid transparent', color: activeTab === tab.id ? accentPrimary : mutedColor, cursor: 'pointer', fontWeight: activeTab === tab.id ? '600' : '400' }}>{tab.label}</button>
+          ))}
+        </div>
+
+        {activeTab === 'list' && (
+          <div style={{ backgroundColor: cardBg, borderRadius: '12px', overflow: 'hidden' }}>
+            {loading ? <div style={{ padding: '60px', textAlign: 'center', color: mutedColor }}><Loader size={32} /></div> : invoices.length === 0 ? <div style={{ padding: '60px', textAlign: 'center', color: mutedColor }}>No invoices yet</div> : invoices.map((inv, idx) => (
+              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: idx < invoices.length - 1 ? `1px solid ${borderColor}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: `${getStatusColor(inv.status)}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Receipt size={20} color={getStatusColor(inv.status)} /></div>
+                  <div><div style={{ fontWeight: '500', color: textColor }}>{inv.invoiceNum}</div><div style={{ fontSize: '0.85rem', color: mutedColor }}>{inv.project}</div></div>
+                </div>
+                <div style={{ textAlign: 'right' }}><div style={{ fontSize: '1.1rem', fontWeight: '600', color: accentSecondary }}>${parseFloat(inv.amount).toFixed(2)}</div><span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', backgroundColor: `${getStatusColor(inv.status)}20`, color: getStatusColor(inv.status), textTransform: 'capitalize' }}>{inv.status}</span></div>
               </div>
             ))}
           </div>
+        )}
 
-          {/* Invoice Preview Card */}
-          <div style={{ 
-            backgroundColor: cardBg, 
-            borderRadius: '16px', 
-            border: `1px solid ${borderColor}`,
-            overflow: 'hidden'
-          }}>
-            <div style={{ 
-              padding: '16px 24px', 
-              borderBottom: `1px solid ${borderColor}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: darkMode ? '#111827' : '#f8fafc'
-            }}>
-              <div>
-                <h3 style={{ color: textColor, fontWeight: '600', margin: 0 }}>
-                  Invoice Preview
-                </h3>
-                <p style={{ color: mutedColor, fontSize: '0.85rem', margin: '4px 0 0' }}>
-                  Invoice #: {invoiceNumber}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPreview(!showPreview)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: '8px',
-                  color: textColor,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.85rem'
-                }}
-              >
-                <Eye size={16} /> {showPreview ? 'Hide' : 'Show'} Details
-              </button>
+        {activeTab === 'new' && (
+          <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div><label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Project *</label><select value={newInvoice.project} onChange={(e) => setNewInvoice({ ...newInvoice, project: e.target.value })} style={inputStyle}><option value="">Select Project</option>{projectOptions.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+              <div><label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Invoice Date</label><input type="date" value={newInvoice.invoiceDate} onChange={(e) => setNewInvoice({ ...newInvoice, invoiceDate: e.target.value })} style={inputStyle} /></div>
+              <div><label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Due Date</label><input type="date" value={newInvoice.dueDate} onChange={(e) => setNewInvoice({ ...newInvoice, dueDate: e.target.value })} style={inputStyle} /></div>
             </div>
 
-            {loading ? (
-              <div style={{ padding: '60px', textAlign: 'center', color: mutedColor }}>
-                <RefreshCw size={32} className="spin" style={{ marginBottom: '12px' }} />
-                <p>Loading work data...</p>
-              </div>
-            ) : approvedItems.length === 0 ? (
-              <div style={{ padding: '60px', textAlign: 'center', color: mutedColor }}>
-                <AlertCircle size={48} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                <p style={{ fontWeight: '500' }}>No approved work items for this period</p>
-                <p style={{ fontSize: '0.9rem' }}>Only approved work can be invoiced</p>
-              </div>
-            ) : (
-              <div>
-                {/* Grouped Line Items */}
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
-                        {['Description', 'Quantity', 'Unit', 'Rate', 'Amount'].map(header => (
-                          <th key={header} style={{ 
-                            textAlign: header === 'Description' ? 'left' : 'right', 
-                            padding: '12px 16px', 
-                            fontWeight: '600', 
-                            fontSize: '0.8rem', 
-                            color: mutedColor,
-                            textTransform: 'uppercase'
-                          }}>
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(groupedItems).map(([type, item], idx) => (
-                        <tr key={type} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          <td style={{ padding: '14px 16px', color: textColor }}>{item.description}</td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', color: textColor }}>{item.quantity.toLocaleString()}</td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', color: mutedColor }}>{item.unit}</td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', color: textColor }}>${item.rate.toFixed(2)}</td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', color: textColor }}>
-                            ${item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ borderTop: `2px solid ${borderColor}` }}>
-                        <td colSpan={4} style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', color: textColor }}>
-                          Subtotal:
-                        </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', color: textColor }}>
-                          ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={4} style={{ padding: '10px 16px', textAlign: 'right', color: mutedColor }}>
-                          Tax (0%):
-                        </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'right', color: mutedColor }}>
-                          ${tax.toFixed(2)}
-                        </td>
-                      </tr>
-                      <tr style={{ backgroundColor: darkMode ? '#111827' : '#f0f9ff' }}>
-                        <td colSpan={4} style={{ padding: '16px', textAlign: 'right', fontWeight: '700', fontSize: '1.1rem', color: textColor }}>
-                          Total Due:
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'right', fontWeight: '700', fontSize: '1.25rem', color: accentSecondary }}>
-                          ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}><h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor }}>Line Items</h3><button onClick={addLineItem} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Plus size={16} /> Add</button></div>
+              {newInvoice.lineItems.map((item, idx) => (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
+                  <input type="text" value={item.description} onChange={(e) => updateLineItem(idx, 'description', e.target.value)} placeholder="Description" style={{ ...inputStyle, padding: '8px' }} />
+                  <input type="number" value={item.quantity} onChange={(e) => updateLineItem(idx, 'quantity', e.target.value)} placeholder="Qty" style={{ ...inputStyle, padding: '8px' }} />
+                  <input type="number" value={item.rate} onChange={(e) => updateLineItem(idx, 'rate', e.target.value)} placeholder="Rate" style={{ ...inputStyle, padding: '8px' }} />
+                  <div style={{ fontWeight: '500', color: textColor, textAlign: 'right' }}>${item.total}</div>
+                  <button onClick={() => removeLineItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={16} /></button>
                 </div>
+              ))}
+            </div>
 
-                {/* Detail Breakdown */}
-                {showPreview && (
-                  <div style={{ 
-                    padding: '24px', 
-                    backgroundColor: darkMode ? '#111827' : '#f8fafc',
-                    borderTop: `1px solid ${borderColor}`
-                  }}>
-                    <h4 style={{ color: textColor, marginBottom: '16px', fontWeight: '600' }}>
-                      📋 Detailed Work Items
-                    </h4>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                        <thead>
-                          <tr>
-                            {['Date', 'Section', 'Type', 'Qty', 'Amount', 'Approved By'].map(h => (
-                              <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: mutedColor, borderBottom: `1px solid ${borderColor}` }}>
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {approvedItems.map(item => (
-                            <tr key={item.id}>
-                              <td style={{ padding: '8px 12px', color: textColor }}>{item.date}</td>
-                              <td style={{ padding: '8px 12px', color: textColor, fontWeight: '500' }}>{item.section}</td>
-                              <td style={{ padding: '8px 12px', color: textColor }}>{rateCard[item.type]?.description}</td>
-                              <td style={{ padding: '8px 12px', color: textColor }}>{item.quantity}</td>
-                              <td style={{ padding: '8px 12px', color: textColor }}>${calculateLineTotal(item).toFixed(2)}</td>
-                              <td style={{ padding: '8px 12px', color: mutedColor }}>{item.approvedBy}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: `1px solid ${borderColor}` }}>
+              <div><div style={{ fontSize: '0.9rem', color: mutedColor }}>Total</div><div style={{ fontSize: '2rem', fontWeight: '700', color: accentSecondary }}>${getTotal().toFixed(2)}</div></div>
+              <button onClick={handleSubmit} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 32px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1rem', fontWeight: '500' }}>{loading ? <Loader size={18} /> : <Send size={18} />}{loading ? 'Submitting...' : 'Submit Invoice'}</button>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
 
-      {/* Info */}
-      {!selectedProject && (
-        <div style={{ 
-          backgroundColor: cardBg, 
-          borderRadius: '16px', 
-          padding: '60px 24px',
-          border: `1px solid ${borderColor}`,
-          textAlign: 'center'
-        }}>
-          <Receipt size={64} color={mutedColor} style={{ marginBottom: '16px', opacity: 0.5 }} />
-          <h3 style={{ color: textColor, marginBottom: '8px' }}>Select a Project</h3>
-          <p style={{ color: mutedColor }}>Choose a project and date range to generate invoices from approved work</p>
-        </div>
-      )}
-
-      {/* Animations */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .spin { animation: spin 1s linear infinite; }
-      `}</style>
+      {showVersion && <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>InvoiceGenerator v2.0</div>}
     </div>
   );
 };
