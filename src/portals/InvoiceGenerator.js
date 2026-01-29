@@ -1,4 +1,4 @@
-// InvoiceGenerator.js v2.0 - Connected to Real Backend
+// InvoiceGenerator.js v2.1 - Connected to Real Backend
 import React, { useState, useEffect } from 'react';
 import { Receipt, Download, Calendar, DollarSign, FileText, Plus, Trash2, CheckCircle, RefreshCw, ArrowLeft, Loader, Send } from 'lucide-react';
 import { colors } from '../config/constants';
@@ -163,7 +163,7 @@ const InvoiceGenerator = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
         )}
       </div>
 
-      {showVersion && <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>InvoiceGenerator v2.0</div>}
+      {showVersion && <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>InvoiceGenerator v2.1</div>}
     </div>
   );
 };
