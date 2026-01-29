@@ -128,14 +128,18 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
         })
       });
       const result = JSON.parse(text);
+      console.log('Add lead response:', result);
       if (result.success) {
         setMessage({ type: 'success', text: 'Lead added successfully!' });
         setShowAddModal(false);
         setNewLead({ name: '', company: '', type: 'contractor', phone: '', email: '', drills: '', location: '', status: 'new', notes: '', source: '' });
         fetchLeads();
+      } else {
+        setMessage({ type: 'error', text: result.error || result.message || 'Server returned failure' });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to add lead' });
+      console.error('Add lead error:', err);
+      setMessage({ type: 'error', text: 'Failed to add lead: ' + err.message });
     }
     setLoading(false);
     setTimeout(() => setMessage(null), 3000);
