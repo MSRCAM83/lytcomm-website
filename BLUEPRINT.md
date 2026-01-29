@@ -641,7 +641,9 @@ If a script returns "Page Not Found" after following redirect, it means the **de
 | **Claude Gateway** | Claude's API access | `AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ` |
 
 ### ALWAYS ADD VISIBLE VERSION NUMBERS
-Every page that gets updated MUST show a visible version number in the UI so the user can verify they're seeing the new version. Example:
+Every page that gets updated MUST show a visible version number in the UI so the user can verify they're seeing the new version. **MANDATORY RULE:** Every page/component MUST have a version number displayed in the **bottom-right corner**, visible after **triple-click**.
+
+Example:
 ```jsx
 <p style={{ fontSize: '0.7rem', opacity: 0.5 }}>v3.6</p>
 ```
@@ -656,3 +658,35 @@ Every page that gets updated MUST show a visible version number in the UI so the
 | `NDASignPage.js` | Onboarding v5.0 | `URLS.appsScript` from constants |
 | `constants.js` | Both | `URLS.appsScript`, `URLS.portalScript`, `GATEWAY_CONFIG.url` |
 
+
+## 🚨 MANDATORY VERSION NUMBER RULE
+
+**EVERY page or component that is created or modified MUST include a version number:**
+- **Location:** Bottom-right corner of the page
+- **Visibility:** Shown after triple-click (hidden by default to keep UI clean)
+- **Format:** Small text, semi-transparent
+- **This is NON-NEGOTIABLE for ALL code changes**
+
+Example implementation:
+```jsx
+// Add to every page component
+const [showVersion, setShowVersion] = useState(false);
+
+// In the JSX, add click handler to main container
+<div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
+  {/* page content */}
+  
+  {showVersion && (
+    <div style={{ 
+      position: 'fixed', 
+      bottom: '10px', 
+      right: '10px', 
+      fontSize: '0.7rem', 
+      opacity: 0.5,
+      color: darkMode ? '#fff' : '#333'
+    }}>
+      v1.0.0
+    </div>
+  )}
+</div>
+```
