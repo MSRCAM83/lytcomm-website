@@ -185,9 +185,9 @@ function App() {
       case 'recruiting':
         return <RecruitingTracker darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'work-map':
-        return <WorkMap darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
+        return <WorkMap darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} setCurrentPage={setCurrentPage} />;
       case 'potholes':
-        return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
+        return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} setCurrentPage={setCurrentPage} />;
       case 'daily-worksheet':
         return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'invoices':
