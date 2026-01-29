@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Receipt, Download, Calendar, DollarSign, FileText, Plus, Trash2, CheckCircle, RefreshCw, ArrowLeft, Loader, Send } from 'lucide-react';
 import { colors } from '../config/constants';
 
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbxKqHqIRbYHyjN5sCz7iBJs6WCg1Xt5BdTsMQ3YLspe15UWJ_Qsf_IOa9qapcln_JDS/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 const SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 
