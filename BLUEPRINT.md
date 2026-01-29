@@ -690,3 +690,84 @@ const [showVersion, setShowVersion] = useState(false);
   )}
 </div>
 ```
+
+---
+
+## Session Update - January 29, 2026 (Early Morning)
+
+### 🚀 DASHBOARDS CONNECTED TO REAL BACKEND
+
+**PROBLEM:** All dashboards were using mock/placeholder data from `constants.js`. None of the form submissions actually saved anywhere.
+
+**SOLUTION:** Connected all dashboards to Google Sheets via Gateway API.
+
+#### AdminDashboard v3.0
+- **Location:** `src/portals/AdminDashboard.js`
+- **Changes:**
+  - Removed all mock data imports
+  - Fetches REAL users from Portal Backend (listUsers API)
+  - Fetches REAL onboarding submissions from Onboarding Sheet
+  - Shows actual counts for employees/contractors/admins
+  - Pending Onboarding tab with Approve/Reject buttons
+  - View Documents links to Google Drive folders
+  - Refresh button to reload data
+  - Version: v3.0 (triple-click to show)
+
+#### EmployeeDashboard v2.0
+- **Location:** `src/portals/EmployeeDashboard.js`
+- **Changes:**
+  - Removed all mock data imports
+  - Clock In/Out logs to "Time Entries" sheet
+  - Production logs save to "Production Logs" sheet
+  - Equipment checks save to "Equipment Checks" sheet
+  - Toolbox talks save to "Safety Talks" sheet
+  - Incident reports save to "Incidents" sheet
+  - Toast notifications for success/error
+  - Version: v2.0 (triple-click to show)
+
+#### ContractorDashboard v2.0
+- **Location:** `src/portals/ContractorDashboard.js`
+- **Changes:**
+  - Removed all mock data imports
+  - Production logs save to "Contractor Production" sheet
+  - Equipment checks save to "Contractor Equipment" sheet
+  - Incident reports save to "Contractor Incidents" sheet
+  - Compliance status view (static for now)
+  - Version: v2.0 (triple-click to show)
+
+### 📊 Data Storage Locations
+
+All form submissions go to Onboarding Sheet (1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc) in separate tabs:
+- Time Entries
+- Production Logs
+- Equipment Checks
+- Safety Talks
+- Incidents
+- Contractor Production
+- Contractor Equipment
+- Contractor Incidents
+
+### 🔌 API Endpoints Used
+
+| Endpoint | Purpose |
+|----------|---------|
+| Portal Backend (listUsers) | Fetch users for Admin Dashboard |
+| Gateway (sheetsRead) | Fetch onboarding submissions |
+| Gateway (sheetsAppend) | Save form submissions |
+
+### ✅ What's Working Now
+
+1. **Login Flow** - Portal Backend handles authentication
+2. **User Management** - Full CRUD via AdminUserManagement
+3. **Password Reset** - Sends real emails via MailApp
+4. **Admin Dashboard** - Shows real user/onboarding data
+5. **Employee Dashboard** - All forms submit to backend
+6. **Contractor Dashboard** - All forms submit to backend
+7. **Onboarding** - Already worked, submits to backend
+
+### ⚠️ Still Using Static Data
+
+- Project dropdown lists (hardcoded for now)
+- Compliance status in Contractor Dashboard
+- Invoice/billing features
+
