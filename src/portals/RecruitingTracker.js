@@ -11,7 +11,7 @@ import {
 import { colors } from '../config/constants';
 
 // API URLs
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK/exec';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 const RECRUITING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 
@@ -55,6 +55,7 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -146,6 +147,44 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
     } catch (err) {
       console.error('Add lead error:', err);
       setMessage({ type: 'error', text: 'Failed to add lead: ' + err.message });
+    }
+    setLoading(false);
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleDeleteLead = async (lead) => {
+    if (!deleteConfirm || deleteConfirm.id !== lead.id) {
+      setDeleteConfirm(lead);
+      return;
+    }
+    setLoading(true);
+    try {
+      // Row index is lead.id + 1 (for header) + 1 (1-indexed)
+      const rowIndex = lead.id + 1;
+      const text = await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET,
+          action: 'sheetsDeleteRow',
+          params: {
+            spreadsheetId: RECRUITING_SHEET_ID,
+            sheetName: 'Recruiting',
+            rowIndex: rowIndex
+          }
+        })
+      });
+      const result = JSON.parse(text);
+      console.log('Delete response:', result);
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Lead deleted' });
+        setDeleteConfirm(null);
+        fetchLeads();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Failed to delete' });
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      setMessage({ type: 'error', text: 'Failed to delete: ' + err.message });
     }
     setLoading(false);
     setTimeout(() => setMessage(null), 3000);
@@ -280,11 +319,30 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
                   </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', backgroundColor: `${getStatusColor(lead.status)}20`, color: getStatusColor(lead.status), textTransform: 'capitalize' }}>
-                  {lead.status}
-                </span>
-                <div style={{ fontSize: '0.75rem', color: mutedColor, marginTop: '4px' }}>{lead.source}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', backgroundColor: `${getStatusColor(lead.status)}20`, color: getStatusColor(lead.status), textTransform: 'capitalize' }}>
+                    {lead.status}
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: mutedColor, marginTop: '4px' }}>{lead.source}</div>
+                </div>
+                <button 
+                  onClick={() => handleDeleteLead(lead)} 
+                  style={{ 
+                    padding: '8px', 
+                    backgroundColor: deleteConfirm?.id === lead.id ? accentError : 'transparent', 
+                    border: `1px solid ${deleteConfirm?.id === lead.id ? accentError : borderColor}`, 
+                    borderRadius: '6px', 
+                    cursor: 'pointer',
+                    color: deleteConfirm?.id === lead.id ? '#fff' : mutedColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title={deleteConfirm?.id === lead.id ? 'Click again to confirm delete' : 'Delete lead'}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           ))
@@ -391,7 +449,7 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          RecruitingTracker v2.3
+          RecruitingTracker v2.4
         </div>
       )}
     </div>
