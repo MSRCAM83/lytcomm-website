@@ -1,4 +1,4 @@
-// DailyWorkSheet.js v2.0 - Connected to Real Backend
+// DailyWorkSheet.js v2.1 - Connected to Real Backend
 // Auto Daily Work Sheet Generator (Metronet Format)
 import React, { useState, useEffect } from 'react';
 import { 
@@ -53,12 +53,30 @@ const DailyWorkSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
     { id: 1, name: '', hours: '', rate: '' }
   ]);
 
-  const projectOptions = [
-    'Metronet - Webster Phase 3',
-    'Metronet - League City',
-    'Metronet - Pearland',
-    'Vexus - Lafayette'
-  ];
+  const [projectOptions, setProjectOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const text = await fetchWithRedirect(GATEWAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: GATEWAY_SECRET,
+            action: 'sheetsRead',
+            params: { spreadsheetId: SHEET_ID, range: 'Projects!A2:A50' }
+          })
+        });
+        const result = JSON.parse(text);
+        if (result.success && result.data?.data) {
+          setProjectOptions(result.data.data.flat().filter(p => p));
+        }
+      } catch (err) {
+        setProjectOptions(['Metronet - Webster Phase 3', 'Metronet - League City', 'Vexus - Lafayette']);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   useEffect(() => {
     fetchSavedSheets();
@@ -315,7 +333,7 @@ const DailyWorkSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          DailyWorkSheet v2.0
+          DailyWorkSheet v2.1
         </div>
       )}
     </div>
