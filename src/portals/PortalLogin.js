@@ -1,9 +1,9 @@
-// PortalLogin.js v3.5 - Uses LYT Portal Backend for authentication
+// PortalLogin.js v3.6 - Fixed JSON payload for Portal Backend
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
 
-// Portal Backend URL - handles login directly
+// Portal Backend URL
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode }) {
@@ -32,79 +32,79 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
     setLoading(true);
 
     try {
-      // Call Portal Backend login action
       const payload = {
         action: 'login',
         email: email.trim().toLowerCase(),
         password: password
       };
 
-      // Use form submission approach to handle GAS redirects
-      const formData = new URLSearchParams();
-      formData.append('payload', JSON.stringify(payload));
-      
-      const response = await fetch(PORTAL_URL, {
+      // First, get the redirect URL from GAS
+      const initialResponse = await fetch(PORTAL_URL, {
         method: 'POST',
-        redirect: 'follow',
-        body: formData
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
       });
 
-      const text = await response.text();
+      const initialText = await initialResponse.text();
       
-      // Check if we got HTML (redirect issue) or JSON
-      if (text.trim().startsWith('<') || text.trim().startsWith('<!')) {
-        // Try to extract redirect URL and fetch it
-        const match = text.match(/HREF="([^"]+)"/i);
+      // GAS returns HTML with redirect - extract and follow it
+      if (initialText.includes('HREF="')) {
+        const match = initialText.match(/HREF="([^"]+)"/i);
         if (match) {
           const redirectUrl = match[1].replace(/&amp;/g, '&');
-          const redirectResponse = await fetch(redirectUrl);
-          const redirectText = await redirectResponse.text();
+          
+          // Fetch the actual response from redirect URL
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
           
           try {
-            const result = JSON.parse(redirectText);
+            const result = JSON.parse(finalText);
             handleLoginResult(result);
             return;
-          } catch (e) {
-            console.error('Redirect parse error:', redirectText.substring(0, 200));
+          } catch (parseErr) {
+            console.error('Parse error after redirect:', finalText.substring(0, 300));
+            setError('Server error. Please try again.');
           }
+        } else {
+          setError('Server configuration error.');
         }
-        setError('Server configuration issue. Please try again.');
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const result = JSON.parse(text);
-        handleLoginResult(result);
-      } catch (parseErr) {
-        console.error('Parse error:', text.substring(0, 200));
-        setError('Invalid server response');
-        setLoading(false);
+      } else {
+        // Direct JSON response (no redirect)
+        try {
+          const result = JSON.parse(initialText);
+          handleLoginResult(result);
+          return;
+        } catch (parseErr) {
+          console.error('Parse error:', initialText.substring(0, 300));
+          setError('Invalid server response.');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
       setError('Unable to connect. Please try again.');
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
   const handleLoginResult = (result) => {
     setLoading(false);
     
     if (result.success) {
-      const user = result.user || result.data;
+      const user = result.user || result.data || result;
       setLoggedInUser({
-        email: user.email,
-        name: user.name,
-        role: user.role,
+        email: user.email || email,
+        name: user.name || 'User',
+        role: user.role || 'employee',
         status: user.status || 'active'
       });
       
-      if (user.role === 'admin') {
+      const role = user.role || 'employee';
+      if (role === 'admin') {
         setCurrentPage('admin-dashboard');
-      } else if (user.role === 'employee') {
+      } else if (role === 'employee') {
         setCurrentPage('employee-dashboard');
-      } else if (user.role === 'contractor') {
+      } else if (role === 'contractor') {
         setCurrentPage('contractor-dashboard');
       } else {
         setCurrentPage('home');
@@ -130,53 +130,29 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor }}>
-      {/* Top Bar with Sun/Moon Toggle */}
       <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
         {setDarkMode && (
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            style={{
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.85rem',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease'
-            }}
-          >
+          <button onClick={() => setDarkMode(!darkMode)} style={{ backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 8px', borderRadius: '6px' }}>
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
           </button>
         )}
       </div>
 
-      {/* Header */}
       <header style={{ padding: '16px 20px', backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
-        <button
-          onClick={() => setCurrentPage('home')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: '1rem', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.2s ease' }}
-        >
+        <button onClick={() => setCurrentPage('home')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: '1rem', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px' }}>
           <ArrowLeft size={20} /> Back
         </button>
         <div style={{ fontSize: '1.25rem', fontWeight: '700', color: textColor }}>
           <span style={{ color: accentPrimary }}>Team</span> Portal
         </div>
-        <button
-          onClick={() => setCurrentPage('home')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-        >
+        <button onClick={() => setCurrentPage('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
           <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
             <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
           </div>
         </button>
       </header>
 
-      {/* Login Form */}
       <div style={{ maxWidth: '400px', margin: '60px auto', padding: '0 20px' }}>
         <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
@@ -190,36 +166,14 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', color: textColor, fontWeight: '500', fontSize: '0.9rem' }}>Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-                style={getInputStyle('email')}
-                placeholder="you@company.com"
-                required
-              />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} style={getInputStyle('email')} placeholder="you@company.com" required />
             </div>
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', marginBottom: '6px', color: textColor, fontWeight: '500', fontSize: '0.9rem' }}>Password</label>
               <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setFocused('password')}
-                  onBlur={() => setFocused(null)}
-                  style={{ ...getInputStyle('password'), paddingRight: '48px' }}
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
-                >
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} style={{ ...getInputStyle('password'), paddingRight: '48px' }} placeholder="••••••••" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
@@ -231,35 +185,13 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: loading ? '#9ca3af' : accentGradient,
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
+            <button type="submit" disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? '#9ca3af' : accentGradient, color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <div style={{ marginTop: '24px', textAlign: 'center' }}>
-            <button
-              onClick={() => setCurrentPage('forgot-password')}
-              style={{ background: 'none', border: 'none', color: accentPrimary, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
-            >
+            <button onClick={() => setCurrentPage('forgot-password')} style={{ background: 'none', border: 'none', color: accentPrimary, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}>
               Forgot your password?
             </button>
           </div>
