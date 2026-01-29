@@ -25,7 +25,7 @@ Website deployed and working.
 
 **Portal (Login, User Management):**
 - Uses Claude Gateway for all operations
-- Gateway URL: `https://script.google.com/macros/s/AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK/exec`
+- Gateway URL: `https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec`
 - Gateway Secret: `LYTcomm2026ClaudeGatewaySecretKey99`
 - Actions used: `sheetsRead`, `sheetsWrite`, `sheetsAppend`, `gmailSend`
 - STATUS: ✅ WORKING
@@ -342,7 +342,7 @@ import json
 import ssl
 
 # Claude Gateway Configuration
-GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK/exec"
+GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec"
 GATEWAY_SECRET = "LYTcomm2026ClaudeGatewaySecretKey99"
 
 def call_gateway(action, params=None, use_post=False):
@@ -533,7 +533,7 @@ import urllib.request
 import json
 import ssl
 
-GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK/exec"
+GATEWAY_URL = "https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec"
 GATEWAY_SECRET = "LYTcomm2026ClaudeGatewaySecretKey99"
 LYT_SCRIPT_ID = "1q0dbtkwSS9JNPeT_-eHQTzaiWRIPyKzukcEO0C6hg6h4bizOfsLN4Cub"
 
@@ -638,7 +638,7 @@ If a script returns "Page Not Found" after following redirect, it means the **de
 |--------|---------|----------------|
 | **LYT Portal Backend v1.0** | Portal login, user mgmt | `AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg` |
 | **LYT Onboarding v5.0** | Employee/Contractor forms | `AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw` |
-| **Claude Gateway** | Claude's API access | `AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK` |
+| **Claude Gateway** | Claude's API access | `AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK` |
 
 ### ALWAYS ADD VISIBLE VERSION NUMBERS
 Every page that gets updated MUST show a visible version number in the UI so the user can verify they're seeing the new version. **MANDATORY RULE:** Every page/component MUST have a version number displayed in the **bottom-right corner**, visible after **triple-click**.
