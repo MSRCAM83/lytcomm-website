@@ -161,6 +161,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
             </div>
             <h2 style={{ color: textColor, margin: '0 0 8px', fontSize: '1.5rem' }}>Welcome Back</h2>
             <p style={{ color: mutedColor, margin: 0, fontSize: '0.9rem' }}>Sign in to your account</p>
+            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v3.6</p>
           </div>
 
           <form onSubmit={handleSubmit}>
