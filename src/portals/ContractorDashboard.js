@@ -1,25 +1,190 @@
-import React, { useState } from 'react';
-import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User } from 'lucide-react';
-import { colors, LYT_INFO, URLS, mockProjects, mockInvoices, mockFiles } from '../config/constants';
+// ContractorDashboard.js v2.0 - Connected to Real Backend
+// Submits production logs, equipment checks, time entries to Google Sheets
+import React, { useState, useEffect } from 'react';
+import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User, Loader } from 'lucide-react';
+import { colors, LYT_INFO, URLS } from '../config/constants';
+
+// API URLs
+const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
+const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
+const OPERATIONS_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
+
+// Helper to handle GAS redirects
+const fetchWithRedirect = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, { ...options, redirect: 'follow' });
+    const text = await response.text();
+    if (text.trim().startsWith('<')) {
+      const match = text.match(/HREF="([^"]+)"/i);
+      if (match) {
+        const redirectUrl = match[1].replace(/&amp;/g, '&');
+        const redirectResponse = await fetch(redirectUrl);
+        return redirectResponse.text();
+      }
+    }
+    return text;
+  } catch (err) {
+    console.error('Fetch error:', err);
+    throw err;
+  }
+};
+
+// Submit data to Google Sheet
+const submitToSheet = async (sheetName, rowData) => {
+  try {
+    const text = await fetchWithRedirect(GATEWAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: GATEWAY_SECRET,
+        action: 'sheetsAppend',
+        params: {
+          spreadsheetId: OPERATIONS_SHEET_ID,
+          range: `${sheetName}!A:Z`,
+          values: [rowData]
+        }
+      })
+    });
+    const result = JSON.parse(text);
+    return result.success;
+  } catch (err) {
+    console.error('Submit error:', err);
+    return false;
+  }
+};
 
 const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
   // Dynamic colors based on theme
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
-  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
-  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
+  const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [loading, setLoading] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ show: false, success: false, message: '' });
+  const [showVersion, setShowVersion] = useState(false);
+
+  // Production log form state
+  const [productionForm, setProductionForm] = useState({
+    project: '',
+    fiberFootage: '',
+    splices: '',
+    drops: '',
+    poles: '',
+    hddFootage: '',
+    notes: ''
+  });
+
+  // Equipment check form state
+  const [equipmentForm, setEquipmentForm] = useState({
+    vehicleId: '',
+    mileage: '',
+    issues: '',
+    safetyItems: []
+  });
+
+  // Incident form state
+  const [incidentForm, setIncidentForm] = useState({
+    type: '',
+    project: '',
+    description: '',
+    injuries: false
+  });
+
+  const showNotification = (success, message) => {
+    setSubmitStatus({ show: true, success, message });
+    setTimeout(() => setSubmitStatus({ show: false, success: false, message: '' }), 3000);
+  };
+
+  const handleProductionSubmit = async () => {
+    if (!productionForm.project) {
+      showNotification(false, 'Please select a project');
+      return;
+    }
+    setLoading(true);
+    const success = await submitToSheet('Contractor Production', [
+      new Date().toISOString(),
+      loggedInUser?.email || '',
+      loggedInUser?.name || '',
+      productionForm.project,
+      productionForm.fiberFootage || '0',
+      productionForm.splices || '0',
+      productionForm.drops || '0',
+      productionForm.poles || '0',
+      productionForm.hddFootage || '0',
+      productionForm.notes,
+      'Submitted'
+    ]);
+    setLoading(false);
+    if (success) {
+      showNotification(true, 'Production log submitted successfully!');
+      setProductionForm({ project: '', fiberFootage: '', splices: '', drops: '', poles: '', hddFootage: '', notes: '' });
+    } else {
+      showNotification(false, 'Failed to submit. Please try again.');
+    }
+  };
+
+  const handleEquipmentSubmit = async () => {
+    if (!equipmentForm.vehicleId) {
+      showNotification(false, 'Please enter vehicle ID');
+      return;
+    }
+    setLoading(true);
+    const success = await submitToSheet('Contractor Equipment', [
+      new Date().toISOString(),
+      loggedInUser?.email || '',
+      loggedInUser?.name || '',
+      equipmentForm.vehicleId,
+      equipmentForm.mileage || '',
+      equipmentForm.safetyItems.join(', '),
+      equipmentForm.issues || 'None',
+      'Submitted'
+    ]);
+    setLoading(false);
+    if (success) {
+      showNotification(true, 'Equipment check submitted!');
+      setEquipmentForm({ vehicleId: '', mileage: '', issues: '', safetyItems: [] });
+    } else {
+      showNotification(false, 'Failed to submit. Please try again.');
+    }
+  };
+
+  const handleIncidentSubmit = async () => {
+    if (!incidentForm.type || !incidentForm.description) {
+      showNotification(false, 'Please fill in type and description');
+      return;
+    }
+    setLoading(true);
+    const success = await submitToSheet('Contractor Incidents', [
+      new Date().toISOString(),
+      loggedInUser?.email || '',
+      loggedInUser?.name || '',
+      incidentForm.type,
+      incidentForm.project,
+      incidentForm.description,
+      incidentForm.injuries ? 'Yes' : 'No',
+      'Pending Review'
+    ]);
+    setLoading(false);
+    if (success) {
+      showNotification(true, 'Incident report submitted! Supervisor notified.');
+      setIncidentForm({ type: '', project: '', description: '', injuries: false });
+    } else {
+      showNotification(false, 'Failed to submit. Please try again.');
+    }
+  };
 
   const handleLogout = () => {
     setLoggedInUser(null);
     setCurrentPage('portal-login');
   };
 
-  // Shared form styles - white background for visibility in all modes
   const formInputStyle = {
     width: '100%',
     padding: '10px',
@@ -29,18 +194,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     color: '#1f2937',
   };
 
-  const formSelectStyle = {
-    ...formInputStyle,
-    cursor: 'pointer',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 12px center',
-    paddingRight: '36px',
-  };
-
-  const contractorInvoices = mockInvoices.filter((i) => i.contractorId === loggedInUser?.id);
-  const assignedJobs = mockProjects.filter((p) => p.status === 'active');
+  const formSelectStyle = { ...formInputStyle, cursor: 'pointer' };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Briefcase },
@@ -48,1298 +202,281 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
     { id: 'potholes', label: 'Pothole Docs', icon: Shovel, external: 'potholes' },
     { id: 'production', label: 'Daily Production', icon: Activity },
-    { id: 'otdr', label: 'OTDR Results', icon: Zap },
-    { id: 'tickets', label: '811 Tickets', icon: Phone },
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
-    { id: 'compliance', label: 'COI / Compliance', icon: Shield },
+    { id: 'compliance', label: 'Compliance', icon: Shield },
     { id: 'incidents', label: 'Incident Reports', icon: ShieldAlert },
-    { id: 'jobs', label: 'Jobs/SOWs', icon: FileText },
     { id: 'invoices', label: 'Invoices', icon: DollarSign },
-    { id: 'documents', label: 'Documents', icon: Upload },
-    { id: 'personnel', label: 'Personnel', icon: Users },
-    { id: 'rates', label: 'Rate Card', icon: Wrench },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'paid': return accentSecondary;
-      case 'pending': return accentError;
-      case 'submitted': return accentPrimary;
-      default: return colors.gray;
-    }
-  };
+  const projectOptions = [
+    'Metronet - Webster Phase 3',
+    'Metronet - League City',
+    'Metronet - Pearland',
+    'Vexus - Lafayette',
+    'Lyte Fiber - Houston'
+  ];
 
   const renderDashboard = () => (
     <div>
       <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px' }}>
-          Welcome, {loggedInUser?.company || loggedInUser?.contact}!
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>
+          Welcome, {loggedInUser?.name?.split(' ')[0] || 'Contractor'}!
         </h2>
-        <p style={{ color: colors.gray }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p style={{ color: mutedColor }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'Active Jobs', value: assignedJobs.length, icon: Briefcase, color: accentPrimary },
-          { label: 'Pending Invoices', value: contractorInvoices.filter((i) => i.status === 'pending').length, icon: Clock, color: accentError },
-          { label: 'Total Outstanding', value: `$${contractorInvoices.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: DollarSign, color: accentPrimary },
-          { label: 'Paid This Month', value: `$${contractorInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0).toLocaleString()}`, icon: CheckCircle, color: accentSecondary },
+          { label: 'This Month', value: '$0', subtext: 'Pending invoices', icon: DollarSign, color: accentPrimary },
+          { label: 'Active Jobs', value: '0', subtext: 'Assigned to you', icon: Briefcase, color: accentSecondary },
+          { label: 'Compliance', value: '100%', subtext: 'Documents current', icon: Shield, color: accentSecondary },
         ].map((stat, idx) => (
           <div key={idx} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <stat.icon size={20} color={stat.color} />
-              <span style={{ color: colors.gray, fontSize: '0.9rem' }}>{stat.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: `${stat.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <stat.icon size={20} color={stat.color} />
+              </div>
             </div>
-            <p style={{ fontSize: '2rem', fontWeight: '700' }}>{stat.value}</p>
+            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>{stat.value}</div>
+            <div style={{ fontSize: '0.85rem', color: mutedColor }}>{stat.label}</div>
+            <div style={{ fontSize: '0.75rem', color: mutedColor }}>{stat.subtext}</div>
           </div>
         ))}
       </div>
 
-      {/* Two Column Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
-        {/* Active Jobs */}
-        <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Active Jobs</h3>
-          {assignedJobs.length === 0 ? (
-            <p style={{ color: colors.gray }}>No active jobs</p>
-          ) : (
-            assignedJobs.slice(0, 3).map((job) => (
-              <div key={job.id} style={{ padding: '12px 0', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: '500' }}>{job.name}</span>
-                  <span style={{ fontSize: '0.8rem', color: colors.gray }}>{job.progress}%</span>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '8px' }}>{job.client}</p>
-                <div style={{ height: '6px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: accentPrimary, borderRadius: '3px' }} />
-                </div>
-              </div>
-            ))
-          )}
-          <button
-            onClick={() => setActiveTab('jobs')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
-          >
-            View All Jobs <ChevronRight size={16} />
-          </button>
-        </div>
-
-        {/* Recent Invoices */}
-        <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Recent Invoices</h3>
-          {contractorInvoices.length === 0 ? (
-            <p style={{ color: colors.gray }}>No invoices</p>
-          ) : (
-            contractorInvoices.slice(0, 4).map((invoice) => (
-              <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-                <div>
-                  <p style={{ fontWeight: '500', marginBottom: '2px' }}>{invoice.project}</p>
-                  <p style={{ fontSize: '0.8rem', color: colors.gray }}>{invoice.date}</p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontWeight: '600', marginBottom: '2px' }}>${invoice.amount.toLocaleString()}</p>
-                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', backgroundColor: `${getStatusColor(invoice.status)}20`, color: getStatusColor(invoice.status) }}>
-                    {invoice.status}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-          <button
-            onClick={() => setActiveTab('invoices')}
-            style={{ marginTop: '16px', backgroundColor: 'transparent', border: 'none', color: accentPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
-          >
-            View All Invoices <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-
       {/* Quick Actions */}
-      <div style={{ marginTop: '32px', backgroundColor: cardBg, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Quick Actions</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-          {[
-            { label: 'Submit Invoice', icon: Plus, color: accentSecondary, action: () => setActiveTab('invoices') },
-            { label: 'Upload COI', icon: Upload, color: accentPrimary, action: () => setActiveTab('documents') },
-            { label: 'View Rate Card', icon: DollarSign, color: accentPrimary, action: () => setActiveTab('rates') },
-          ].map((action, idx) => (
-            <button
-              key={idx}
-              onClick={action.action}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: `${action.color}15`,
-                border: `1px solid ${action.color}`,
-                borderRadius: '8px',
-                color: action.color,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontWeight: '500',
-              }}
-            >
-              <action.icon size={18} /> {action.label}
-            </button>
-          ))}
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        {[
+          { label: 'Log Production', icon: Activity, color: accentPrimary, tab: 'production' },
+          { label: 'Equipment Check', icon: Truck, color: accentSecondary, tab: 'equipment' },
+          { label: 'Submit Invoice', icon: DollarSign, color: '#f59e0b', tab: 'invoices' },
+          { label: 'Report Incident', icon: ShieldAlert, color: accentError, tab: 'incidents' },
+        ].map((action, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveTab(action.tab)}
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: '12px',
+              padding: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: `${action.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <action.icon size={22} color={action.color} />
+              </div>
+              <span style={{ fontWeight: '500', color: textColor }}>{action.label}</span>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
 
-  const renderJobs = () => (
+  const renderProduction = () => (
     <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Jobs & SOWs</h2>
-      <div style={{ display: 'grid', gap: '16px' }}>
-        {assignedJobs.map((job) => (
-          <div key={job.id} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '4px' }}>{job.name}</h3>
-                <p style={{ color: colors.gray }}>{job.client}</p>
-              </div>
-              <span style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', backgroundColor: `${accentSecondary}20`, color: accentSecondary }}>
-                {job.status}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', color: colors.gray, fontSize: '0.9rem' }}>
-              <span>Start: {job.startDate}</span>
-              <span>End: {job.endDate}</span>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.9rem', color: colors.gray }}>Progress</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{job.progress}%</span>
-              </div>
-              <div style={{ height: '8px', backgroundColor: darkMode ? colors.dark : '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${job.progress}%`, backgroundColor: accentPrimary, borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                View SOW
-              </button>
-              <button style={{ padding: '8px 16px', backgroundColor: 'transparent', color: accentPrimary, border: `1px solid ${accentPrimary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                Submit Work Log
-              </button>
-            </div>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Daily Production Log</h2>
+        <p style={{ color: mutedColor }}>Record your crew's daily work progress</p>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', maxWidth: '600px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Project *</label>
+          <select value={productionForm.project} onChange={(e) => setProductionForm({...productionForm, project: e.target.value})} style={formSelectStyle}>
+            <option value="">Select Project</option>
+            {projectOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Fiber Footage</label>
+            <input type="number" value={productionForm.fiberFootage} onChange={(e) => setProductionForm({...productionForm, fiberFootage: e.target.value})} placeholder="0" style={formInputStyle} />
           </div>
-        ))}
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Splices</label>
+            <input type="number" value={productionForm.splices} onChange={(e) => setProductionForm({...productionForm, splices: e.target.value})} placeholder="0" style={formInputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Drops</label>
+            <input type="number" value={productionForm.drops} onChange={(e) => setProductionForm({...productionForm, drops: e.target.value})} placeholder="0" style={formInputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Poles</label>
+            <input type="number" value={productionForm.poles} onChange={(e) => setProductionForm({...productionForm, poles: e.target.value})} placeholder="0" style={formInputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>HDD Footage</label>
+            <input type="number" value={productionForm.hddFootage} onChange={(e) => setProductionForm({...productionForm, hddFootage: e.target.value})} placeholder="0" style={formInputStyle} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Notes</label>
+          <textarea value={productionForm.notes} onChange={(e) => setProductionForm({...productionForm, notes: e.target.value})} rows={3} placeholder="Any delays, issues, or additional notes..." style={{ ...formInputStyle, resize: 'vertical' }} />
+        </div>
+
+        <button onClick={handleProductionSubmit} disabled={loading} style={{ width: '100%', padding: '14px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          {loading ? <Loader size={18} /> : <CheckCircle size={18} />}
+          {loading ? 'Submitting...' : 'Submit Production Log'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderEquipment = () => (
+    <div>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Equipment Inspection</h2>
+        <p style={{ color: mutedColor }}>Pre-use vehicle and equipment check</p>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', maxWidth: '600px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Vehicle/Equipment ID *</label>
+            <input type="text" value={equipmentForm.vehicleId} onChange={(e) => setEquipmentForm({...equipmentForm, vehicleId: e.target.value})} placeholder="e.g., T-101" style={formInputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Mileage/Hours</label>
+            <input type="text" value={equipmentForm.mileage} onChange={(e) => setEquipmentForm({...equipmentForm, mileage: e.target.value})} placeholder="Current reading" style={formInputStyle} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Safety Checklist</label>
+          {['Lights & Signals', 'Tires & Brakes', 'Fluid Levels', 'Safety Equipment', 'Clean Interior'].map((item) => (
+            <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: textColor, cursor: 'pointer' }}>
+              <input type="checkbox" checked={equipmentForm.safetyItems.includes(item)} onChange={(e) => {
+                if (e.target.checked) {
+                  setEquipmentForm({...equipmentForm, safetyItems: [...equipmentForm.safetyItems, item]});
+                } else {
+                  setEquipmentForm({...equipmentForm, safetyItems: equipmentForm.safetyItems.filter(i => i !== item)});
+                }
+              }} />
+              {item}
+            </label>
+          ))}
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Issues Found</label>
+          <textarea value={equipmentForm.issues} onChange={(e) => setEquipmentForm({...equipmentForm, issues: e.target.value})} rows={3} placeholder="Describe any issues found..." style={{ ...formInputStyle, resize: 'vertical' }} />
+        </div>
+
+        <button onClick={handleEquipmentSubmit} disabled={loading} style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          {loading ? <Loader size={18} /> : <CheckCircle size={18} />}
+          {loading ? 'Submitting...' : 'Submit Inspection'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderIncidents = () => (
+    <div>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Incident Report</h2>
+        <p style={{ color: mutedColor }}>Report safety incidents, near-misses, or property damage</p>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', maxWidth: '600px' }}>
+        <div style={{ backgroundColor: `${accentError}15`, padding: '12px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={20} color={accentError} />
+          <span style={{ color: accentError, fontSize: '0.9rem' }}>For emergencies, call 911 first!</span>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Incident Type *</label>
+          <select value={incidentForm.type} onChange={(e) => setIncidentForm({...incidentForm, type: e.target.value})} style={formSelectStyle}>
+            <option value="">Select Type</option>
+            <option value="Near Miss">Near Miss</option>
+            <option value="Property Damage">Property Damage</option>
+            <option value="Vehicle Accident">Vehicle Accident</option>
+            <option value="Injury">Injury</option>
+            <option value="Utility Strike">Utility Strike</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Project/Location</label>
+          <select value={incidentForm.project} onChange={(e) => setIncidentForm({...incidentForm, project: e.target.value})} style={formSelectStyle}>
+            <option value="">Select Project</option>
+            {projectOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Description *</label>
+          <textarea value={incidentForm.description} onChange={(e) => setIncidentForm({...incidentForm, description: e.target.value})} rows={4} placeholder="Describe what happened..." style={{ ...formInputStyle, resize: 'vertical' }} />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: textColor, cursor: 'pointer' }}>
+            <input type="checkbox" checked={incidentForm.injuries} onChange={(e) => setIncidentForm({...incidentForm, injuries: e.target.checked})} />
+            Were there any injuries?
+          </label>
+        </div>
+
+        <button onClick={handleIncidentSubmit} disabled={loading} style={{ width: '100%', padding: '14px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          {loading ? <Loader size={18} /> : <ShieldAlert size={18} />}
+          {loading ? 'Submitting...' : 'Submit Incident Report'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderCompliance = () => (
+    <div>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Compliance Status</h2>
+        <p style={{ color: mutedColor }}>Track your insurance, certifications, and required documents</p>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {[
+            { label: 'Certificate of Insurance (COI)', status: 'Current', expires: '2026-06-15', color: accentSecondary },
+            { label: 'Workers Comp', status: 'Current', expires: '2026-06-15', color: accentSecondary },
+            { label: 'General Liability', status: 'Current', expires: '2026-06-15', color: accentSecondary },
+            { label: 'Auto Insurance', status: 'Current', expires: '2026-06-15', color: accentSecondary },
+            { label: 'W-9', status: 'On File', expires: 'N/A', color: accentSecondary },
+            { label: 'Master Subcontractor Agreement', status: 'Signed', expires: 'N/A', color: accentSecondary },
+          ].map((doc, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: darkMode ? '#1e293b' : '#f8fafc', borderRadius: '8px' }}>
+              <div>
+                <div style={{ fontWeight: '500', color: textColor }}>{doc.label}</div>
+                <div style={{ fontSize: '0.8rem', color: mutedColor }}>Expires: {doc.expires}</div>
+              </div>
+              <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', backgroundColor: `${doc.color}20`, color: doc.color }}>{doc.status}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 
   const renderInvoices = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Invoices</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
-          <Plus size={18} /> Submit Invoice
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Invoices</h2>
+        <p style={{ color: mutedColor }}>Submit and track your invoices</p>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
+        <DollarSign size={48} color={mutedColor} style={{ marginBottom: '16px', opacity: 0.5 }} />
+        <h3 style={{ color: textColor, marginBottom: '8px' }}>Invoice Submission</h3>
+        <p style={{ color: mutedColor, marginBottom: '24px' }}>Submit your invoices using the Metronet-format daily work sheets</p>
+        <button onClick={() => setCurrentPage('daily-worksheet')} style={{ padding: '12px 24px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
+          Generate Daily Work Sheet
         </button>
-      </div>
-
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-            <thead>
-              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
-                <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Invoice #</th>
-                <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Project</th>
-                <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Date</th>
-                <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Due Date</th>
-                <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Amount</th>
-                <th style={{ textAlign: 'center', padding: '14px 16px', fontWeight: '600', fontSize: '0.85rem', color: colors.gray }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contractorInvoices.map((invoice) => (
-                <tr key={invoice.id} style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-                  <td style={{ padding: '14px 16px', fontWeight: '500' }}>INV-{invoice.id.toString().padStart(4, '0')}</td>
-                  <td style={{ padding: '14px 16px' }}>{invoice.project}</td>
-                  <td style={{ padding: '14px 16px', color: colors.gray }}>{invoice.date}</td>
-                  <td style={{ padding: '14px 16px', color: colors.gray }}>{invoice.dueDate}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600' }}>${invoice.amount.toLocaleString()}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                    <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500', backgroundColor: `${getStatusColor(invoice.status)}20`, color: getStatusColor(invoice.status) }}>
-                      {invoice.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderDocuments = () => (
-    <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Documents</h2>
-      
-      {/* Upload COI */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Certificate of Insurance</h3>
-        <div style={{ padding: '32px', border: `2px dashed ${colors.gray}`, borderRadius: '8px', textAlign: 'center', cursor: 'pointer' }}>
-          <Upload size={40} color={colors.gray} style={{ marginBottom: '12px' }} />
-          <p style={{ color: colors.gray, marginBottom: '8px' }}>Drop your COI here or click to upload</p>
-          <p style={{ color: colors.gray, fontSize: '0.85rem' }}>PDF, JPG, or PNG (max 10MB)</p>
-        </div>
-        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: `${accentError}15`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertCircle size={18} color={accentError} />
-          <span style={{ color: accentError, fontSize: '0.9rem' }}>Your COI expires on 2025-03-01. Please upload a renewed certificate.</span>
-        </div>
-      </div>
-
-      {/* Document List */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', padding: '16px 20px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>Your Documents</h3>
-        {mockFiles.slice(0, 4).map((file, idx) => (
-          <div key={file.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: idx < 3 ? `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` : 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <FileText size={20} color={accentPrimary} />
-              <div>
-                <p style={{ fontWeight: '500', marginBottom: '2px' }}>{file.name}</p>
-                <p style={{ fontSize: '0.8rem', color: colors.gray }}>{file.size} • {file.date}</p>
-              </div>
-            </div>
-            <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: accentPrimary }}>
-              <Download size={18} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderPersonnel = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Personnel & Fleet</h2>
-        <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
-          <Plus size={18} /> Add Personnel
-        </button>
-      </div>
-
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <p style={{ color: colors.gray }}>Manage your team and equipment here. Add personnel with their certifications and update your fleet inventory.</p>
-      </div>
-    </div>
-  );
-
-  const renderRates = () => (
-    <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Rate Card</h2>
-      
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <p style={{ color: colors.gray, marginBottom: '20px' }}>
-          View the current rate card for {LYT_INFO.name} projects. Specific rates are negotiated per SOW.
-        </p>
-        <a
-          href={`https://docs.google.com/spreadsheets/d/${URLS.rateCardSheet}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 24px',
-            backgroundColor: accentPrimary,
-            color: '#fff',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: '500',
-          }}
-        >
-          Open Rate Card (Google Sheets)
-        </a>
-      </div>
-    </div>
-  );
-
-  // Field Operations - Daily Production Log
-  const [productionLog, setProductionLog] = useState({
-    date: new Date().toISOString().split('T')[0],
-    project: '',
-    fiberFootage: '',
-    splicesCompleted: '',
-    polesSet: '',
-    hddBoreLength: '',
-    conduitInstalled: '',
-    notes: '',
-    photos: [],
-  });
-
-  const renderProduction = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Daily Production Log</h2>
-          <p style={{ color: colors.gray }}>Record your crew's daily work progress</p>
-        </div>
-      </div>
-
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
-            <input
-              type="date"
-              value={productionLog.date}
-              onChange={(e) => setProductionLog({ ...productionLog, date: e.target.value })}
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Project / SOW *</label>
-            <select
-              value={productionLog.project}
-              onChange={(e) => setProductionLog({ ...productionLog, project: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="">Select project...</option>
-              {mockProjects.filter(p => p.status === 'active').map(p => (
-                <option key={p.id} value={p.name}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Production Quantities</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Fiber Installed (ft)</label>
-            <input
-              type="number"
-              value={productionLog.fiberFootage}
-              onChange={(e) => setProductionLog({ ...productionLog, fiberFootage: e.target.value })}
-              placeholder="0"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Splices Completed</label>
-            <input
-              type="number"
-              value={productionLog.splicesCompleted}
-              onChange={(e) => setProductionLog({ ...productionLog, splicesCompleted: e.target.value })}
-              placeholder="0"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Poles Set</label>
-            <input
-              type="number"
-              value={productionLog.polesSet}
-              onChange={(e) => setProductionLog({ ...productionLog, polesSet: e.target.value })}
-              placeholder="0"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>HDD Bore (ft)</label>
-            <input
-              type="number"
-              value={productionLog.hddBoreLength}
-              onChange={(e) => setProductionLog({ ...productionLog, hddBoreLength: e.target.value })}
-              placeholder="0"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Conduit (ft)</label>
-            <input
-              type="number"
-              value={productionLog.conduitInstalled}
-              onChange={(e) => setProductionLog({ ...productionLog, conduitInstalled: e.target.value })}
-              placeholder="0"
-              style={formInputStyle}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Notes / Comments</label>
-          <textarea
-            value={productionLog.notes}
-            onChange={(e) => setProductionLog({ ...productionLog, notes: e.target.value })}
-            placeholder="Any delays, issues, or additional notes..."
-            rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>
-            <Camera size={16} style={{ display: 'inline', marginRight: '6px' }} />
-            Photo Documentation
-          </label>
-          <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '24px', textAlign: 'center' }}>
-            <Camera size={32} color={colors.gray} style={{ marginBottom: '8px' }} />
-            <p style={{ color: colors.gray, marginBottom: '8px' }}>Drag photos here or click to upload</p>
-            <input type="file" accept="image/*" multiple style={{ display: 'none' }} id="contractor-photo-upload" />
-            <label htmlFor="contractor-photo-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
-              Select Photos
-            </label>
-          </div>
-        </div>
-
-        <button
-          onClick={() => alert('Production log submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
-        >
-          Submit Production Log
-        </button>
-      </div>
-    </div>
-  );
-
-  // Field Operations - Equipment Pre-Use Inspection
-  const [equipmentCheck, setEquipmentCheck] = useState({
-    date: new Date().toISOString().split('T')[0],
-    equipmentType: '',
-    equipmentId: '',
-    mileage: '',
-    items: {
-      tires: null,
-      brakes: null,
-      lights: null,
-      fluids: null,
-      safetyEquipment: null,
-      fireExtinguisher: null,
-      firstAidKit: null,
-      triangles: null,
-    },
-    issues: '',
-  });
-
-  const equipmentTypes = [
-    'Pickup Truck',
-    'Service Van',
-    'Bucket Truck',
-    'Trailer',
-    'HDD Drill Rig',
-    'Mini Excavator',
-    'Fusion Splicer',
-    'OTDR',
-  ];
-
-  const inspectionItems = [
-    { key: 'tires', label: 'Tires / Wheels' },
-    { key: 'brakes', label: 'Brakes' },
-    { key: 'lights', label: 'Lights / Signals' },
-    { key: 'fluids', label: 'Fluids (Oil, Coolant)' },
-    { key: 'safetyEquipment', label: 'Safety Equipment' },
-    { key: 'fireExtinguisher', label: 'Fire Extinguisher' },
-    { key: 'firstAidKit', label: 'First Aid Kit' },
-    { key: 'triangles', label: 'Warning Triangles' },
-  ];
-
-  const renderEquipment = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Equipment Pre-Use Inspection</h2>
-          <p style={{ color: colors.gray }}>Complete before operating any equipment</p>
-        </div>
-      </div>
-
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
-            <input
-              type="date"
-              value={equipmentCheck.date}
-              onChange={(e) => setEquipmentCheck({ ...equipmentCheck, date: e.target.value })}
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Equipment Type *</label>
-            <select
-              value={equipmentCheck.equipmentType}
-              onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentType: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="">Select type...</option>
-              {equipmentTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Unit # / ID *</label>
-            <input
-              type="text"
-              value={equipmentCheck.equipmentId}
-              onChange={(e) => setEquipmentCheck({ ...equipmentCheck, equipmentId: e.target.value })}
-              placeholder="e.g., T-101"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Mileage / Hours</label>
-            <input
-              type="text"
-              value={equipmentCheck.mileage}
-              onChange={(e) => setEquipmentCheck({ ...equipmentCheck, mileage: e.target.value })}
-              placeholder="Current reading"
-              style={formInputStyle}
-            />
-          </div>
-        </div>
-
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', color: accentPrimary }}>Inspection Checklist</h4>
-        <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
-          {inspectionItems.map(item => (
-            <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-              <span>{item.label}</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'pass' } })}
-                  style={{
-                    padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'pass' ? accentSecondary : 'transparent',
-                    border: `1px solid ${accentSecondary}`,
-                    borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'pass' ? '#fff' : accentSecondary,
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  Pass
-                </button>
-                <button
-                  onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'fail' } })}
-                  style={{
-                    padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'fail' ? accentError : 'transparent',
-                    border: `1px solid ${accentError}`,
-                    borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'fail' ? '#fff' : accentError,
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  Fail
-                </button>
-                <button
-                  onClick={() => setEquipmentCheck({ ...equipmentCheck, items: { ...equipmentCheck.items, [item.key]: 'na' } })}
-                  style={{
-                    padding: '6px 16px',
-                    backgroundColor: equipmentCheck.items[item.key] === 'na' ? colors.gray : 'transparent',
-                    border: `1px solid ${colors.gray}`,
-                    borderRadius: '6px',
-                    color: equipmentCheck.items[item.key] === 'na' ? '#fff' : colors.gray,
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  N/A
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>
-            <AlertCircle size={16} style={{ display: 'inline', marginRight: '6px' }} />
-            Issues / Deficiencies Found
-          </label>
-          <textarea
-            value={equipmentCheck.issues}
-            onChange={(e) => setEquipmentCheck({ ...equipmentCheck, issues: e.target.value })}
-            placeholder="Describe any issues found..."
-            rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
-          />
-        </div>
-
-        <button
-          onClick={() => alert('Equipment inspection submitted!')}
-          style={{ width: '100%', padding: '14px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
-        >
-          Submit Inspection
-        </button>
-      </div>
-    </div>
-  );
-
-  // OTDR Test Results
-  const [otdrTests, setOtdrTests] = useState([
-    { id: 1, date: '2025-01-16', project: 'Metro Fiber Ring', segment: 'Span A1-A5', result: 'pass', loss: '0.18 dB/km', file: 'otdr_a1a5.sor' },
-    { id: 2, date: '2025-01-15', project: 'Metro Fiber Ring', segment: 'Span A5-A10', result: 'pass', loss: '0.21 dB/km', file: 'otdr_a5a10.sor' },
-  ]);
-
-  const [newOtdr, setNewOtdr] = useState({
-    date: new Date().toISOString().split('T')[0],
-    project: '',
-    segment: '',
-    result: 'pass',
-    loss: '',
-  });
-
-  const renderOtdr = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>OTDR Test Results</h2>
-          <p style={{ color: colors.gray }}>Upload and track fiber test results</p>
-        </div>
-      </div>
-
-      {/* Upload New Test */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Upload New Test Result</h3>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
-            <input
-              type="date"
-              value={newOtdr.date}
-              onChange={(e) => setNewOtdr({ ...newOtdr, date: e.target.value })}
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Project *</label>
-            <select
-              value={newOtdr.project}
-              onChange={(e) => setNewOtdr({ ...newOtdr, project: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="">Select project...</option>
-              {mockProjects.filter(p => p.status === 'active').map(p => (
-                <option key={p.id} value={p.name}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Fiber Segment *</label>
-            <input
-              type="text"
-              value={newOtdr.segment}
-              onChange={(e) => setNewOtdr({ ...newOtdr, segment: e.target.value })}
-              placeholder="e.g., Span A1-A5"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Loss (dB/km)</label>
-            <input
-              type="text"
-              value={newOtdr.loss}
-              onChange={(e) => setNewOtdr({ ...newOtdr, loss: e.target.value })}
-              placeholder="e.g., 0.18"
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Result *</label>
-            <select
-              value={newOtdr.result}
-              onChange={(e) => setNewOtdr({ ...newOtdr, result: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="pass">Pass</option>
-              <option value="fail">Fail - Needs Resplice</option>
-              <option value="marginal">Marginal</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>
-            <Upload size={16} style={{ display: 'inline', marginRight: '6px' }} />
-            OTDR Trace File (.sor, .trc)
-          </label>
-          <div style={{ border: `2px dashed ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
-            <input type="file" accept=".sor,.trc,.pdf" style={{ display: 'none' }} id="contractor-otdr-upload" />
-            <label htmlFor="contractor-otdr-upload" style={{ padding: '8px 16px', backgroundColor: accentPrimary, color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
-              Select File
-            </label>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            if (newOtdr.project && newOtdr.segment) {
-              const newTest = {
-                id: otdrTests.length + 1,
-                date: newOtdr.date,
-                project: newOtdr.project,
-                segment: newOtdr.segment,
-                result: newOtdr.result,
-                loss: newOtdr.loss || 'N/A',
-                file: 'uploaded.sor'
-              };
-              setOtdrTests([newTest, ...otdrTests]);
-              setNewOtdr({ date: new Date().toISOString().split('T')[0], project: '', segment: '', result: 'pass', loss: '' });
-              alert('OTDR test uploaded successfully!');
-            } else {
-              alert('Please fill in Project and Fiber Segment fields.');
-            }
-          }}
-          style={{ padding: '12px 24px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
-        >
-          Upload Test Result
-        </button>
-      </div>
-
-      {/* Recent Tests */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Recent Test Results</h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-            <thead>
-              <tr style={{ backgroundColor: darkMode ? '#111827' : '#f8fafc' }}>
-                <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Date</th>
-                <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Project</th>
-                <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Segment</th>
-                <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Loss</th>
-                <th style={{ textAlign: 'center', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Result</th>
-                <th style={{ textAlign: 'center', padding: '12px', fontSize: '0.85rem', color: colors.gray }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {otdrTests.map(test => (
-                <tr key={test.id} style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
-                  <td style={{ padding: '12px' }}>{test.date}</td>
-                  <td style={{ padding: '12px' }}>{test.project}</td>
-                  <td style={{ padding: '12px' }}>{test.segment}</td>
-                  <td style={{ padding: '12px' }}>{test.loss}</td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 10px',
-                      borderRadius: '4px',
-                      fontSize: '0.8rem',
-                      fontWeight: '500',
-                      backgroundColor: test.result === 'pass' ? `${accentSecondary}20` : `${accentError}20`,
-                      color: test.result === 'pass' ? accentSecondary : accentError,
-                      textTransform: 'capitalize',
-                    }}>
-                      {test.result}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
-                      <Eye size={18} color={accentPrimary} />
-                    </button>
-                    <button style={{ padding: '6px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
-                      <Download size={18} color={colors.gray} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 811 Ticket Tracking
-  const [tickets, setTickets] = useState([
-    { id: 1, ticketNumber: '2501160001', status: 'active', address: '123 Main St', expires: '2025-01-23', created: '2025-01-16' },
-    { id: 2, ticketNumber: '2501140002', status: 'active', address: '456 Oak Ave', expires: '2025-01-21', created: '2025-01-14' },
-  ]);
-
-  const [newTicket, setNewTicket] = useState({
-    ticketNumber: '',
-    address: '',
-    expires: '',
-  });
-
-  const renderTickets = () => {
-    const expiringSoon = tickets.filter(t => {
-      const daysUntil = Math.ceil((new Date(t.expires) - new Date()) / (1000 * 60 * 60 * 24));
-      return daysUntil <= 3 && daysUntil > 0;
-    });
-
-    return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>811 Ticket Tracking</h2>
-            <p style={{ color: colors.gray }}>Track underground utility locate tickets</p>
-          </div>
-        </div>
-
-        {expiringSoon.length > 0 && (
-          <div style={{ backgroundColor: `${accentError}15`, border: `1px solid ${accentError}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={24} color={accentError} />
-            <div>
-              <p style={{ fontWeight: '600', color: accentError }}>{expiringSoon.length} ticket(s) expiring within 3 days!</p>
-              <p style={{ fontSize: '0.9rem', color: colors.gray }}>Renew tickets before starting work.</p>
-            </div>
-          </div>
-        )}
-
-        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Add New Ticket</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Ticket Number *</label>
-              <input
-                type="text"
-                value={newTicket.ticketNumber}
-                onChange={(e) => setNewTicket({ ...newTicket, ticketNumber: e.target.value })}
-                placeholder="e.g., 2501160001"
-                style={formInputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Work Address *</label>
-              <input
-                type="text"
-                value={newTicket.address}
-                onChange={(e) => setNewTicket({ ...newTicket, address: e.target.value })}
-                placeholder="Street address"
-                style={formInputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Expiration Date *</label>
-              <input
-                type="date"
-                value={newTicket.expires}
-                onChange={(e) => setNewTicket({ ...newTicket, expires: e.target.value })}
-                style={formInputStyle}
-              />
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              if (newTicket.ticketNumber && newTicket.address && newTicket.expires) {
-                const ticket = {
-                  id: tickets.length + 1,
-                  ticketNumber: newTicket.ticketNumber,
-                  status: 'active',
-                  address: newTicket.address,
-                  expires: newTicket.expires,
-                  created: new Date().toISOString().split('T')[0]
-                };
-                setTickets([ticket, ...tickets]);
-                setNewTicket({ ticketNumber: '', address: '', expires: '' });
-                alert('Ticket added successfully!');
-              } else {
-                alert('Please fill in all required fields.');
-              }
-            }}
-            style={{ padding: '10px 20px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer' }}
-          >
-            Add Ticket
-          </button>
-        </div>
-
-        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>All Tickets</h3>
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {tickets.map(ticket => {
-              const daysUntil = Math.ceil((new Date(ticket.expires) - new Date()) / (1000 * 60 * 60 * 24));
-              const isExpired = daysUntil < 0;
-              const isExpiringSoon = daysUntil <= 3 && daysUntil >= 0;
-
-              return (
-                <div
-                  key={ticket.id}
-                  style={{
-                    padding: '16px',
-                    backgroundColor: darkMode ? '#111827' : '#f8fafc',
-                    borderRadius: '8px',
-                    borderLeft: `4px solid ${isExpired ? accentError : isExpiringSoon ? accentSecondary : accentSecondary}`,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <Phone size={16} color={accentPrimary} />
-                        <span style={{ fontWeight: '600' }}>#{ticket.ticketNumber}</span>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          backgroundColor: isExpired ? `${accentError}20` : `${accentSecondary}20`,
-                          color: isExpired ? accentError : accentSecondary,
-                        }}>
-                          {isExpired ? 'EXPIRED' : 'Active'}
-                        </span>
-                      </div>
-                      <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{ticket.address}</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '0.85rem', color: isExpiringSoon ? accentSecondary : colors.gray }}>
-                        Expires: {ticket.expires}
-                      </p>
-                      {isExpiringSoon && !isExpired && (
-                        <p style={{ fontSize: '0.8rem', color: accentSecondary, fontWeight: '500' }}>⚠️ {daysUntil} day(s)</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // COI / Compliance Tracking
-  // eslint-disable-next-line no-unused-vars
-  const [compliance, setCompliance] = useState({
-    coi: { expiry: '2025-04-15', carrier: 'Hartford Insurance', policyNumber: 'GL-12345678', liability: '$1,000,000', workersComp: '$500,000' },
-    vehicleInsurance: { expiry: '2025-06-01', carrier: 'Progressive', policyNumber: 'AUTO-87654321' },
-    businessLicense: { expiry: '2025-12-31', number: 'TX-BL-2024-5678' },
-  });
-
-  const renderCompliance = () => {
-    const today = new Date();
-    const coiExpiry = new Date(compliance.coi.expiry);
-    const coiDaysUntil = Math.ceil((coiExpiry - today) / (1000 * 60 * 60 * 24));
-    const coiExpired = coiDaysUntil < 0;
-    const coiExpiringSoon = coiDaysUntil <= 30 && coiDaysUntil > 0;
-
-    const vehicleExpiry = new Date(compliance.vehicleInsurance.expiry);
-    const vehicleDaysUntil = Math.ceil((vehicleExpiry - today) / (1000 * 60 * 60 * 24));
-    const vehicleExpiringSoon = vehicleDaysUntil <= 30 && vehicleDaysUntil > 0;
-
-    return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>COI / Compliance</h2>
-            <p style={{ color: colors.gray }}>Track insurance certificates and compliance documents</p>
-          </div>
-        </div>
-
-        {/* COI Alert */}
-        {(coiExpired || coiExpiringSoon) && (
-          <div style={{ backgroundColor: coiExpired ? `${accentError}15` : `${accentSecondary}15`, border: `1px solid ${coiExpired ? accentError : accentSecondary}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={24} color={coiExpired ? accentError : accentSecondary} />
-            <div>
-              <p style={{ fontWeight: '600', color: coiExpired ? accentError : accentSecondary }}>
-                {coiExpired ? 'Certificate of Insurance EXPIRED!' : `COI expires in ${coiDaysUntil} days`}
-              </p>
-              <p style={{ fontSize: '0.9rem', color: colors.gray }}>
-                {coiExpired ? 'Upload new COI immediately to continue work.' : 'Contact your insurance carrier for renewal.'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* General Liability COI */}
-        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Shield size={24} color={accentPrimary} />
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Certificate of Insurance (COI)</h3>
-                <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{compliance.coi.carrier}</p>
-              </div>
-            </div>
-            <span style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
-              fontSize: '0.85rem',
-              fontWeight: '500',
-              backgroundColor: coiExpired ? `${accentError}20` : coiExpiringSoon ? `${accentSecondary}20` : `${accentSecondary}20`,
-              color: coiExpired ? accentError : coiExpiringSoon ? accentSecondary : accentSecondary,
-            }}>
-              {coiExpired ? 'EXPIRED' : coiExpiringSoon ? 'EXPIRING SOON' : 'Active'}
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Policy Number</label>
-              <p style={{ fontWeight: '500' }}>{compliance.coi.policyNumber}</p>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>General Liability</label>
-              <p style={{ fontWeight: '500' }}>{compliance.coi.liability}</p>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Workers Comp</label>
-              <p style={{ fontWeight: '500' }}>{compliance.coi.workersComp}</p>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: colors.gray, marginBottom: '4px' }}>Expiration</label>
-              <p style={{ fontWeight: '500', color: coiExpired ? accentError : coiExpiringSoon ? accentSecondary : textColor }}>
-                {compliance.coi.expiry}
-                {coiExpiringSoon && <span style={{ display: 'block', fontSize: '0.8rem', color: accentSecondary }}>({coiDaysUntil} days)</span>}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={{ padding: '10px 20px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Upload size={18} /> Upload New COI
-            </button>
-            <button style={{ padding: '10px 20px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '8px', color: accentPrimary, cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Download size={18} /> Download Current
-            </button>
-          </div>
-        </div>
-
-        {/* Vehicle Insurance */}
-        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Truck size={24} color={accentPrimary} />
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Vehicle Insurance</h3>
-                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.vehicleInsurance.carrier} • {compliance.vehicleInsurance.policyNumber}</p>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontWeight: '500', color: vehicleExpiringSoon ? accentSecondary : textColor }}>Expires: {compliance.vehicleInsurance.expiry}</p>
-              {vehicleExpiringSoon && <p style={{ fontSize: '0.8rem', color: accentSecondary }}>⚠️ {vehicleDaysUntil} days</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Business License */}
-        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Award size={24} color={accentPrimary} />
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Business License</h3>
-                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{compliance.businessLicense.number}</p>
-              </div>
-            </div>
-            <p style={{ fontWeight: '500' }}>Expires: {compliance.businessLicense.expiry}</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Incident Reports
-  const [incidents, setIncidents] = useState([
-    { id: 1, date: '2025-01-08', type: 'Property Damage', description: 'Minor scratch on customer fence during cable installation', project: 'Metro Fiber Ring', status: 'closed' },
-  ]);
-
-  const [newIncident, setNewIncident] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: '',
-    type: '',
-    project: '',
-    location: '',
-    description: '',
-    injuries: 'no',
-    injuryDescription: '',
-    immediateActions: '',
-  });
-
-  const incidentTypes = [
-    'Near Miss',
-    'First Aid Injury',
-    'Recordable Injury',
-    'Property Damage',
-    'Vehicle Incident',
-    'Environmental Spill',
-    'Utility Strike',
-    'Third Party Incident',
-  ];
-
-  const renderIncidents = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Incident Reports</h2>
-          <p style={{ color: colors.gray }}>Report and track safety incidents for your crew</p>
-        </div>
-      </div>
-
-      {/* Report New Incident */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px', color: accentError }}>
-          <ShieldAlert size={20} style={{ display: 'inline', marginRight: '8px' }} />
-          Report New Incident
-        </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Date *</label>
-            <input
-              type="date"
-              value={newIncident.date}
-              onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Time *</label>
-            <input
-              type="time"
-              value={newIncident.time}
-              onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
-              style={formInputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Incident Type *</label>
-            <select
-              value={newIncident.type}
-              onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="">Select type...</option>
-              {incidentTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Project *</label>
-            <select
-              value={newIncident.project}
-              onChange={(e) => setNewIncident({ ...newIncident, project: e.target.value })}
-              style={formSelectStyle}
-            >
-              <option value="">Select project...</option>
-              {mockProjects.map(p => (
-                <option key={p.id} value={p.name}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Location *</label>
-          <input
-            type="text"
-            value={newIncident.location}
-            onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
-            placeholder="Specific location"
-            style={formInputStyle}
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '6px' }}>Description *</label>
-          <textarea
-            value={newIncident.description}
-            onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
-            placeholder="Describe what happened..."
-            rows={3}
-            style={{ width: '100%', padding: '10px', border: `1px solid ${darkMode ? '#374151' : '#ddd'}`, borderRadius: '8px', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: textColor, resize: 'vertical' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '10px' }}>Were there any injuries?</label>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input type="radio" name="contractor-injuries" value="no" checked={newIncident.injuries === 'no'} onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })} />
-              No
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input type="radio" name="contractor-injuries" value="yes" checked={newIncident.injuries === 'yes'} onChange={(e) => setNewIncident({ ...newIncident, injuries: e.target.value })} />
-              Yes
-            </label>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            if (newIncident.type && newIncident.project && newIncident.description) {
-              const incident = {
-                id: incidents.length + 1,
-                date: newIncident.date,
-                type: newIncident.type,
-                description: newIncident.description,
-                project: newIncident.project,
-                status: 'open'
-              };
-              setIncidents([incident, ...incidents]);
-              setNewIncident({
-                date: new Date().toISOString().split('T')[0],
-                time: '',
-                type: '',
-                project: '',
-                location: '',
-                description: '',
-                injuries: 'no',
-                injuryDescription: '',
-                immediateActions: '',
-              });
-              alert('Incident report submitted! Supervisor will be notified.');
-            } else {
-              alert('Please fill in Type, Project, and Description fields.');
-            }
-          }}
-          style={{ width: '100%', padding: '14px', backgroundColor: accentError, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
-        >
-          Submit Incident Report
-        </button>
-      </div>
-
-      {/* Previous Incidents */}
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Previous Reports</h3>
-        {incidents.map(incident => (
-          <div key={incident.id} style={{ padding: '16px', backgroundColor: darkMode ? '#111827' : '#f8fafc', borderRadius: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: '600' }}>{incident.type}</span>
-                  <span style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    backgroundColor: incident.status === 'closed' ? `${accentSecondary}20` : `${accentSecondary}20`,
-                    color: incident.status === 'closed' ? accentSecondary : accentSecondary,
-                  }}>
-                    {incident.status}
-                  </span>
-                </div>
-                <p style={{ color: colors.gray, fontSize: '0.9rem' }}>{incident.description}</p>
-                <p style={{ color: colors.gray, fontSize: '0.85rem' }}>{incident.project} • {incident.date}</p>
-              </div>
-              <button style={{ padding: '6px 12px', backgroundColor: 'transparent', border: `1px solid ${accentPrimary}`, borderRadius: '6px', color: accentPrimary, cursor: 'pointer', fontSize: '0.85rem' }}>
-                View
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderSettings = () => (
-    <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '24px' }}>Settings</h2>
-      <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>Company Information</h3>
-        <div style={{ display: 'grid', gap: '12px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Company</label>
-            <p style={{ fontWeight: '500' }}>{loggedInUser?.company}</p>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Contact</label>
-            <p style={{ fontWeight: '500' }}>{loggedInUser?.contact}</p>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Email</label>
-            <p style={{ fontWeight: '500' }}>{loggedInUser?.email}</p>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: colors.gray, marginBottom: '4px' }}>Status</label>
-            <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', backgroundColor: `${accentSecondary}20`, color: accentSecondary, textTransform: 'capitalize' }}>
-              {loggedInUser?.status}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1348,96 +485,70 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
       case 'production': return renderProduction();
-      case 'otdr': return renderOtdr();
-      case 'tickets': return renderTickets();
       case 'equipment': return renderEquipment();
       case 'compliance': return renderCompliance();
       case 'incidents': return renderIncidents();
-      case 'jobs': return renderJobs();
       case 'invoices': return renderInvoices();
-      case 'documents': return renderDocuments();
-      case 'personnel': return renderPersonnel();
-      case 'rates': return renderRates();
-      case 'settings': return renderSettings();
       default: return renderDashboard();
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor, display: 'flex' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex' }} onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
+      {/* Notification */}
+      {submitStatus.show && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '16px 24px', backgroundColor: submitStatus.success ? accentSecondary : accentError, color: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {submitStatus.success ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+          {submitStatus.message}
+        </div>
+      )}
+
       {/* Sidebar */}
-      <aside style={{ width: '260px', backgroundColor: colors.dark, padding: '24px 0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh' }}>
-        <div style={{ padding: '0 24px', marginBottom: '32px' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>
-            <span style={{ color: accentPrimary }}>LYT</span> Contractor
+      <div style={{ width: '260px', backgroundColor: cardBg, borderRight: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', overflowY: 'auto' }}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
+            <span style={{ color: mutedColor, fontSize: '0.9rem', marginLeft: '8px' }}>Contractor</span>
           </div>
         </div>
 
-        <nav style={{ flex: 1 }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentSecondary, fontWeight: '600' }}>
+              {loggedInUser?.name?.charAt(0) || 'C'}
+            </div>
+            <div>
+              <div style={{ fontWeight: '500', color: textColor }}>{loggedInUser?.name || 'Contractor'}</div>
+              <div style={{ fontSize: '0.75rem', color: mutedColor }}>{loggedInUser?.email}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
           {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.external) {
-                  setCurrentPage(item.external);
-                } else {
-                  setActiveTab(item.id);
-                }
-              }}
-              style={{
-                width: '100%',
-                padding: '14px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                backgroundColor: activeTab === item.id ? `${accentPrimary}20` : 'transparent',
-                border: 'none',
-                borderLeft: activeTab === item.id ? `3px solid ${accentPrimary}` : '3px solid transparent',
-                color: activeTab === item.id ? accentPrimary : '#9ca3af',
-                fontSize: '0.95rem',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <item.icon size={20} /> {item.label}
-              {item.external && (
-                <ChevronRight size={16} style={{ marginLeft: 'auto', opacity: 0.5 }} />
-              )}
+            <button key={item.id} onClick={() => item.external ? setCurrentPage(item.external) : setActiveTab(item.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', marginBottom: '4px', backgroundColor: activeTab === item.id ? `${accentPrimary}15` : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeTab === item.id ? accentPrimary : textColor, textAlign: 'left' }}>
+              <item.icon size={18} />
+              <span style={{ flex: 1, fontSize: '0.9rem' }}>{item.label}</span>
+              {item.external && <ChevronRight size={14} color={mutedColor} />}
             </button>
           ))}
-        </nav>
+        </div>
 
-        <div style={{ padding: '0 24px' }}>
-          <div style={{ padding: '16px', backgroundColor: colors.darkLight, borderRadius: '12px', marginBottom: '16px' }}>
-            <p style={{ color: '#fff', fontWeight: '500', fontSize: '0.9rem', marginBottom: '2px' }}>{loggedInUser?.company}</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{loggedInUser?.contact}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              backgroundColor: 'transparent',
-              border: `1px solid ${accentError}`,
-              color: accentError,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-            }}
-          >
+        <div style={{ padding: '16px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', backgroundColor: 'transparent', border: `1px solid ${accentError}`, borderRadius: '8px', color: accentError, cursor: 'pointer', fontSize: '0.9rem' }}>
             <LogOut size={18} /> Sign Out
           </button>
         </div>
-      </aside>
+      </div>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>
-        {renderContent()}
-      </main>
+      <div style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>{renderContent()}</div>
+
+      {showVersion && (
+        <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
+          ContractorDashboard v2.0
+        </div>
+      )}
     </div>
   );
 };
