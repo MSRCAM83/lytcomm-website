@@ -19,7 +19,13 @@ const ONBOARDING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 // Helper to handle GAS redirects
 const fetchWithRedirect = async (url, options = {}) => {
   try {
-    const response = await fetch(url, { ...options, redirect: 'follow' });
+    // Use text/plain to avoid CORS preflight - GAS still parses JSON body
+    const modifiedOptions = {
+      ...options,
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' }
+    };
+    const response = await fetch(url, modifiedOptions);
     const text = await response.text();
     if (text.trim().startsWith('<')) {
       const match = text.match(/HREF="([^"]+)"/i);
@@ -261,7 +267,7 @@ const ActivityLog = ({ darkMode, setCurrentPage }) => {
       {/* Version */}
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          ActivityLog v2.0
+          ActivityLog v1.2
         </div>
       )}
     </div>
