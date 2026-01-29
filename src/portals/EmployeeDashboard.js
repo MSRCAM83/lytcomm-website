@@ -1,4 +1,4 @@
-// EmployeeDashboard.js v2.0 - Connected to Real Backend
+// EmployeeDashboard.js v2.1 - Connected to Real Backend
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
 import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle } from 'lucide-react';
@@ -318,13 +318,34 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
   ];
 
   // Sample projects for dropdown (will be replaced with real data later)
-  const projectOptions = [
-    'Metronet - Webster Phase 3',
-    'Metronet - League City',
-    'Metronet - Pearland',
-    'Vexus - Lafayette',
-    'Lyte Fiber - Houston'
-  ];
+  const [projectOptions, setProjectOptions] = useState([]);
+
+  // Fetch projects from sheet
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const text = await fetchWithRedirect(GATEWAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: GATEWAY_SECRET,
+            action: 'sheetsRead',
+            params: { spreadsheetId: OPERATIONS_SHEET_ID, range: 'Projects!A2:A50' }
+          })
+        });
+        const result = JSON.parse(text);
+        if (result.success && result.data?.data) {
+          const projects = result.data.data.flat().filter(p => p);
+          setProjectOptions(projects);
+        }
+      } catch (err) {
+        console.error('Failed to fetch projects:', err);
+        // Fallback to default
+        setProjectOptions(['Metronet - Webster Phase 3', 'Metronet - League City', 'Vexus - Lafayette']);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   const renderDashboard = () => (
     <div>
@@ -712,7 +733,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       {/* Version Number - Triple Click to Show */}
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          EmployeeDashboard v2.0
+          EmployeeDashboard v2.1
         </div>
       )}
     </div>
