@@ -1,4 +1,4 @@
-// PortalLogin.js v3.6 - Fixed JSON payload for Portal Backend
+// PortalLogin.js v3.7 - Fixed JSON payload for Portal Backend
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
@@ -12,6 +12,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showVersion, setShowVersion] = useState(false);
   const [focused, setFocused] = useState(null);
 
   const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
@@ -129,7 +130,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
   });
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor }}>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor }} onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
       <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
         {setDarkMode && (
           <button onClick={() => setDarkMode(!darkMode)} style={{ backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 8px', borderRadius: '6px' }}>
@@ -161,7 +162,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
             </div>
             <h2 style={{ color: textColor, margin: '0 0 8px', fontSize: '1.5rem' }}>Welcome Back</h2>
             <p style={{ color: mutedColor, margin: 0, fontSize: '0.9rem' }}>Sign in to your account</p>
-            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v3.6</p>
+            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v3.7</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -198,6 +199,11 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
           </div>
         </div>
       </div>
+      {showVersion && (
+        <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
+          PortalLogin v3.7
+        </div>
+      )}
     </div>
   );
 }
