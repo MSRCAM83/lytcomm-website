@@ -163,7 +163,7 @@ const InvoiceGenerator = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
         )}
       </div>
 
-      {showVersion && <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>InvoiceGenerator v2.1</div>}
+      {showVersion && <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>InvoiceGenerator v2.2</div>}
     </div>
   );
 };
