@@ -1,7 +1,10 @@
-// SetPassword.js v2.0 - Updated with shared styling, Sun/Moon toggle, matching header/footer
-import React, { useState } from 'react';
-import { ArrowLeft, Lock, CheckCircle, AlertCircle, Eye, EyeOff, Sun, Moon } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
+// SetPassword.js v2.0 - Connected to Portal Backend
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Lock, Eye, EyeOff, Sun, Moon, CheckCircle, AlertCircle } from 'lucide-react';
+import { colors } from '../config/constants';
+
+// Portal Backend URL
+const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
 
 function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
   const [password, setPassword] = useState('');
@@ -9,23 +12,28 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(null);
+  const [token, setToken] = useState('');
+  const [email, setEmail] = useState('');
 
-  // Portal section accent colors (purple/teal)
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
-  const accentSecondary = darkMode ? '#c850c0' : '#28a745';
+  // Get token and email from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    setToken(params.get('token') || '');
+    setEmail(params.get('email') || '');
+  }, []);
+
+  const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
+  const accentError = '#dc2626';
   const accentGradient = darkMode 
-    ? 'linear-gradient(135deg, #667eea 0%, #c850c0 100%)'
-    : 'linear-gradient(135deg, #00b4d8 0%, #0077B6 100%)';
-  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';
+    ? 'linear-gradient(135deg, #c850c0 0%, #ff6b35 100%)'
+    : 'linear-gradient(135deg, #0077B6 0%, #00b4d8 100%)';
   
-  // Logo colors
   const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';
   const logoT = darkMode ? '#e6c4d9' : '#2ec7c0';
-  const logoComm = darkMode ? '#ffffff' : '#1e293b';
-
   const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
   const cardBg = darkMode ? '#1e293b' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
@@ -33,10 +41,9 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
 
   const requirements = [
     { label: 'At least 8 characters', test: (p) => p.length >= 8 },
-    { label: 'Contains uppercase letter', test: (p) => /[A-Z]/.test(p) },
-    { label: 'Contains lowercase letter', test: (p) => /[a-z]/.test(p) },
-    { label: 'Contains number', test: (p) => /[0-9]/.test(p) },
-    { label: 'Contains special character (!@#$%^&*)', test: (p) => /[!@#$%^&*]/.test(p) },
+    { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+    { label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+    { label: 'One number', test: (p) => /[0-9]/.test(p) },
   ];
 
   const allRequirementsMet = requirements.every(req => req.test(password));
@@ -44,11 +51,75 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!allRequirementsMet) { setError('Please meet all password requirements.'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+    
+    if (!allRequirementsMet) { 
+      setError('Please meet all password requirements.'); 
+      return; 
+    }
+    if (password !== confirmPassword) { 
+      setError('Passwords do not match.'); 
+      return; 
+    }
+    
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSuccess(true);
+
+    try {
+      const payload = {
+        action: 'setPassword',
+        email: email,
+        token: token,
+        password: password
+      };
+
+      const response = await fetch(PORTAL_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: new URLSearchParams({ payload: JSON.stringify(payload) })
+      });
+
+      const text = await response.text();
+      let result;
+
+      // Handle GAS redirect
+      if (text.trim().startsWith('<')) {
+        const match = text.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const redirectResponse = await fetch(redirectUrl);
+          const redirectText = await redirectResponse.text();
+          try {
+            result = JSON.parse(redirectText);
+          } catch (e) {
+            setError('Server error. Please try again.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          setError('Server error. Please try again.');
+          setLoading(false);
+          return;
+        }
+      } else {
+        try {
+          result = JSON.parse(text);
+        } catch (e) {
+          setError('Server error. Please try again.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (result.success) {
+        setSuccess(true);
+      } else {
+        setError(result.message || 'Failed to set password. Please try again.');
+      }
+      
+    } catch (err) {
+      console.error('Set password error:', err);
+      setError('Unable to connect. Please try again.');
+    }
+
     setLoading(false);
   };
 
@@ -67,152 +138,167 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
     boxShadow: focused === field ? `0 0 0 3px ${accentPrimary}30` : 'none',
   });
 
-  const navLinks = [{ id: 'home', label: 'Home' }, { id: 'about', label: 'About' }, { id: 'services', label: 'Services' }, { id: 'contact', label: 'Contact' }];
-
-  const renderTopBar = () => (
-    <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
-      {setDarkMode && (
-        <button onClick={() => setDarkMode(!darkMode)} style={{ backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 8px', borderRadius: '6px' }}>
-          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          <span className="hide-mobile">{darkMode ? 'Light' : 'Dark'} Mode</span>
-        </button>
-      )}
-    </div>
-  );
-
-  const renderHeader = () => (
-    <header style={{ backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', padding: '16px 20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={() => setCurrentPage('home')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <div style={{ fontSize: '1.75rem', fontWeight: '700' }}>
-            <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
-            <span style={{ fontWeight: '400', fontSize: '1.25rem', marginLeft: '4px', color: logoComm }}>Communications</span>
-          </div>
-        </button>
-        <button onClick={() => setCurrentPage('portal-login')} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '8px 12px', borderRadius: '8px' }}>
-          <ArrowLeft size={18} /> Back to Portal
-        </button>
-      </div>
-    </header>
-  );
-
-  const renderFooter = () => (
-    <footer style={{ backgroundColor: darkMode ? '#112240' : '#f8fafc', padding: '40px 20px 24px', marginTop: 'auto' }}>
-      <div style={{ height: '3px', background: accentGradient, marginBottom: '32px', borderRadius: '2px', maxWidth: '1200px', margin: '0 auto 32px' }} />
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px', marginBottom: '24px' }}>
-          <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '12px' }}>
-              <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
-              <span style={{ fontWeight: '400', fontSize: '1.1rem', marginLeft: '4px', color: logoComm }}>Communications</span>
-            </div>
-            <p style={{ fontSize: '0.9rem', lineHeight: '1.6', maxWidth: '280px', color: darkMode ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Professional fiber optic construction across the Gulf Coast.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
-            <div>
-              <h4 style={{ color: textColor, fontWeight: '600', marginBottom: '12px', fontSize: '0.9rem' }}>Navigate</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {navLinks.map(link => <button key={link.id} onClick={() => setCurrentPage(link.id)} style={{ background: 'none', border: 'none', color: mutedColor, cursor: 'pointer', textAlign: 'left', padding: 0, fontSize: '0.85rem' }}>{link.label}</button>)}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style={{ borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <p style={{ fontSize: '0.8rem', color: darkMode ? 'rgba(255,255,255,0.5)' : '#94a3b8' }}>© {new Date().getFullYear()} {LYT_INFO.name}</p>
-        </div>
-      </div>
-    </footer>
-  );
-
-  if (success) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex', flexDirection: 'column' }}>
-        {renderTopBar()}
-        {renderHeader()}
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-          <div style={{ width: '100%', maxWidth: '420px' }}>
-            <div style={{ background: accentGradient, padding: '2px', borderRadius: '18px' }}>
-              <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                  <CheckCircle size={40} color={accentSecondary} />
-                </div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '12px' }}>Password Set <span style={{ color: accentSecondary }}>Successfully!</span></h1>
-                <p style={{ color: mutedColor, marginBottom: '32px' }}>Your account is now active. You can sign in to access your dashboard.</p>
-                <button onClick={() => setCurrentPage('portal-login')} style={{ width: '100%', padding: '14px', background: accentGradient, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s ease' }}>Sign In to Portal</button>
-              </div>
-            </div>
-          </div>
-        </main>
-        {renderFooter()}
-        <style>{`@media (max-width: 768px) { .hide-mobile { display: none !important; } }`}</style>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex', flexDirection: 'column' }}>
-      {renderTopBar()}
-      {renderHeader()}
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <div style={{ width: '100%', maxWidth: '420px' }}>
-          <div style={{ background: accentGradient, padding: '2px', borderRadius: '18px' }}>
-            <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '40px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: `${accentPrimary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <Lock size={32} color={accentPrimary} />
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor }}>
+      {/* Top Bar */}
+      <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        {setDarkMode && (
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.85rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+            }}
+          >
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+          </button>
+        )}
+      </div>
+
+      {/* Header */}
+      <header style={{ padding: '16px 20px', backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+        <button
+          onClick={() => setCurrentPage('portal-login')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: '1rem', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px' }}
+        >
+          <ArrowLeft size={20} /> Back
+        </button>
+        <div style={{ fontSize: '1.25rem', fontWeight: '700', color: textColor }}>
+          <span style={{ color: accentPrimary }}>Set</span> Password
+        </div>
+        <button onClick={() => setCurrentPage('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+            <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
+          </div>
+        </button>
+      </header>
+
+      {/* Form */}
+      <div style={{ maxWidth: '400px', margin: '60px auto', padding: '0 20px' }}>
+        <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: accentGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Lock size={28} color="#fff" />
+            </div>
+            <h2 style={{ color: textColor, margin: '0 0 8px', fontSize: '1.5rem' }}>Create Password</h2>
+            <p style={{ color: mutedColor, margin: 0, fontSize: '0.9rem' }}>Set up your account password</p>
+            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v2.0</p>
+          </div>
+
+          {success ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle size={32} color={accentSecondary} />
+              </div>
+              <h3 style={{ color: textColor, margin: '0 0 8px' }}>Password Set!</h3>
+              <p style={{ color: mutedColor, fontSize: '0.9rem', margin: '0 0 24px' }}>
+                Your password has been set successfully. You can now sign in.
+              </p>
+              <button
+                onClick={() => setCurrentPage('portal-login')}
+                style={{ width: '100%', padding: '14px', background: accentGradient, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Sign In
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>New Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showPassword ? 'text' : 'password'} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    onFocus={() => setFocused('password')} 
+                    onBlur={() => setFocused(null)} 
+                    placeholder="Create a password" 
+                    required 
+                    style={getInputStyle('password')} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '8px' }}>Set Your <span style={{ color: accentPrimary }}>Password</span></h1>
-                <p style={{ color: mutedColor }}>Create a secure password for your account</p>
               </div>
 
-              <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>New Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} placeholder="Create a password" required style={getInputStyle('password')} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}>
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
+              <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? '#112240' : '#f8fafc', borderRadius: '8px' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: '500', color: textColor, marginBottom: '8px' }}>Password Requirements:</p>
+                {requirements.map((req, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    {req.test(password) ? <CheckCircle size={14} color={accentSecondary} /> : <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `1px solid ${mutedColor}` }} />}
+                    <span style={{ fontSize: '0.8rem', color: req.test(password) ? accentSecondary : mutedColor }}>{req.label}</span>
                   </div>
-                </div>
+                ))}
+              </div>
 
-                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? '#112240' : '#f8fafc', borderRadius: '8px' }}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: '500', color: textColor, marginBottom: '8px' }}>Password Requirements:</p>
-                  {requirements.map((req, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      {req.test(password) ? <CheckCircle size={14} color={accentSecondary} /> : <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `1px solid ${mutedColor}` }} />}
-                      <span style={{ fontSize: '0.8rem', color: req.test(password) ? accentSecondary : mutedColor }}>{req.label}</span>
-                    </div>
-                  ))}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Confirm Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showConfirm ? 'text' : 'password'} 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    onFocus={() => setFocused('confirm')} 
+                    onBlur={() => setFocused(null)} 
+                    placeholder="Confirm your password" 
+                    required 
+                    style={getInputStyle('confirm')} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowConfirm(!showConfirm)} 
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}
+                  >
+                    {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: textColor }}>Confirm Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setFocused('confirm')} onBlur={() => setFocused(null)} placeholder="Confirm your password" required style={getInputStyle('confirm')} />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}>
-                      {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                  {confirmPassword && password !== confirmPassword && <p style={{ color: accentError, fontSize: '0.8rem', marginTop: '6px' }}>Passwords do not match</p>}
-                </div>
-
-                {error && (
-                  <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AlertCircle size={18} color={accentError} /><span style={{ color: accentError, fontSize: '0.9rem' }}>{error}</span>
-                  </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p style={{ color: accentError, fontSize: '0.8rem', marginTop: '6px' }}>Passwords do not match</p>
                 )}
+              </div>
 
-                <button type="submit" disabled={loading || !allRequirementsMet || password !== confirmPassword} style={{ width: '100%', padding: '14px', background: (loading || !allRequirementsMet || password !== confirmPassword) ? (darkMode ? '#374151' : '#9ca3af') : accentGradient, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: (loading || !allRequirementsMet || password !== confirmPassword) ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease' }}>
-                  {loading ? 'Setting Password...' : 'Set Password'}
-                </button>
-              </form>
-            </div>
-          </div>
+              {error && (
+                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: `${accentError}20`, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={18} color={accentError} />
+                  <span style={{ color: accentError, fontSize: '0.9rem' }}>{error}</span>
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={loading || !allRequirementsMet} 
+                style={{ 
+                  width: '100%', 
+                  padding: '14px', 
+                  background: (loading || !allRequirementsMet) ? (darkMode ? '#374151' : '#9ca3af') : accentGradient, 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  cursor: (loading || !allRequirementsMet) ? 'not-allowed' : 'pointer' 
+                }}
+              >
+                {loading ? 'Setting Password...' : 'Set Password'}
+              </button>
+            </form>
+          )}
         </div>
-      </main>
-      {renderFooter()}
-      <style>{`@media (max-width: 768px) { .hide-mobile { display: none !important; } }`}</style>
+      </div>
     </div>
   );
 }
