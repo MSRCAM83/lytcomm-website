@@ -183,7 +183,7 @@ function App() {
       case 'admin-users':
         return <AdminUserManagement darkMode={darkMode} currentUser={loggedInUser} />;
       case 'recruiting':
-        return <RecruitingTracker darkMode={darkMode} user={loggedInUser} />;
+        return <RecruitingTracker darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'work-map':
         return <WorkMap darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} />;
       case 'potholes':
