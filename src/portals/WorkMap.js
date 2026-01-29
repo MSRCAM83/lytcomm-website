@@ -225,7 +225,7 @@ function WorkMap({ darkMode, user, userType, setCurrentPage, loggedInUser }) {
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          WorkMap v2.0
+          WorkMap v1.2
         </div>
       )}
     </div>
