@@ -385,7 +385,7 @@ const RecruitingTracker = ({ darkMode, setCurrentPage }) => {
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          RecruitingTracker v2.0
+          RecruitingTracker v2.2
         </div>
       )}
     </div>
