@@ -1,12 +1,10 @@
-// PortalLogin.js v3.4 - Uses Gateway sheetsRead for authentication
+// PortalLogin.js v3.5 - Uses LYT Portal Backend for authentication
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
-import { colors, LYT_INFO, URLS } from '../config/constants';
+import { colors, LYT_INFO } from '../config/constants';
 
-// Gateway configuration
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyz_BihP2CsJf37P0RCDZoTDTH1FkH3D9zY_x0V-Dy1_QzjPQLmtppTbNiybAfev4ehtw/exec';
-const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
-const USERS_SHEET_ID = '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw';
+// Portal Backend URL - handles login directly
+const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode }) {
   const [email, setEmail] = useState('');
@@ -34,112 +32,86 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode, setDarkMode })
     setLoading(true);
 
     try {
-      // Read users from sheet via Gateway
+      // Call Portal Backend login action
       const payload = {
-        secret: GATEWAY_SECRET,
-        action: 'sheetsRead',
-        params: {
-          spreadsheetId: USERS_SHEET_ID,
-          range: 'A:H'
-        }
+        action: 'login',
+        email: email.trim().toLowerCase(),
+        password: password
       };
 
-      const response = await fetch(GATEWAY_URL, {
+      // Use form submission approach to handle GAS redirects
+      const formData = new URLSearchParams();
+      formData.append('payload', JSON.stringify(payload));
+      
+      const response = await fetch(PORTAL_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        redirect: 'follow',
+        body: formData
       });
 
-      const result = await response.json();
-
-      if (result.success && result.data && result.data.data) {
-        const rows = result.data.data;
-        const headers = rows[0];
-        
-        const emailCol = headers.indexOf('email');
-        const nameCol = headers.indexOf('name');
-        const roleCol = headers.indexOf('role');
-        const statusCol = headers.indexOf('status');
-        const passwordCol = headers.indexOf('passwordHash');
-
-        let foundUser = null;
-        const inputEmail = email.toLowerCase().trim();
-
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (row[emailCol] && row[emailCol].toString().toLowerCase() === inputEmail) {
-            // Found user
-            if (row[statusCol] !== 'active') {
-              setError('Account is not active');
-              setLoading(false);
-              return;
-            }
-            
-            if (row[passwordCol] === password) {
-              foundUser = {
-                email: row[emailCol],
-                name: row[nameCol],
-                role: row[roleCol],
-                status: row[statusCol]
-              };
-              break;
-            } else {
-              setError('Invalid password');
-              setLoading(false);
-              return;
-            }
-          }
-        }
-
-        if (foundUser) {
-          // Update last login via sheetsWrite
+      const text = await response.text();
+      
+      // Check if we got HTML (redirect issue) or JSON
+      if (text.trim().startsWith('<') || text.trim().startsWith('<!')) {
+        // Try to extract redirect URL and fetch it
+        const match = text.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const redirectResponse = await fetch(redirectUrl);
+          const redirectText = await redirectResponse.text();
+          
           try {
-            const lastLoginCol = headers.indexOf('lastLogin');
-            if (lastLoginCol >= 0) {
-              for (let i = 1; i < rows.length; i++) {
-                if (rows[i][emailCol] && rows[i][emailCol].toString().toLowerCase() === inputEmail) {
-                  const updatePayload = {
-                    secret: GATEWAY_SECRET,
-                    action: 'sheetsWrite',
-                    params: {
-                      spreadsheetId: USERS_SHEET_ID,
-                      range: `${String.fromCharCode(65 + lastLoginCol)}${i + 1}`,
-                      values: [[new Date().toISOString()]]
-                    }
-                  };
-                  fetch(GATEWAY_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatePayload)
-                  });
-                  break;
-                }
-              }
-            }
+            const result = JSON.parse(redirectText);
+            handleLoginResult(result);
+            return;
           } catch (e) {
-            console.log('Could not update last login');
+            console.error('Redirect parse error:', redirectText.substring(0, 200));
           }
-
-          setLoggedInUser(foundUser);
-          if (foundUser.role === 'admin') {
-            setCurrentPage('admin-dashboard');
-          } else if (foundUser.role === 'employee') {
-            setCurrentPage('employee-dashboard');
-          } else if (foundUser.role === 'contractor') {
-            setCurrentPage('contractor-dashboard');
-          }
-        } else {
-          setError('User not found');
         }
-      } else {
-        setError('Unable to verify credentials');
+        setError('Server configuration issue. Please try again.');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const result = JSON.parse(text);
+        handleLoginResult(result);
+      } catch (parseErr) {
+        console.error('Parse error:', text.substring(0, 200));
+        setError('Invalid server response');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Login error:', err);
       setError('Unable to connect. Please try again.');
+      setLoading(false);
     }
+  };
 
+  const handleLoginResult = (result) => {
     setLoading(false);
+    
+    if (result.success) {
+      const user = result.user || result.data;
+      setLoggedInUser({
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status || 'active'
+      });
+      
+      if (user.role === 'admin') {
+        setCurrentPage('admin-dashboard');
+      } else if (user.role === 'employee') {
+        setCurrentPage('employee-dashboard');
+      } else if (user.role === 'contractor') {
+        setCurrentPage('contractor-dashboard');
+      } else {
+        setCurrentPage('home');
+      }
+    } else {
+      setError(result.message || 'Login failed');
+    }
   };
 
   const getInputStyle = (fieldName) => ({
