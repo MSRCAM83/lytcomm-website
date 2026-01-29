@@ -11,7 +11,7 @@ import {
 import { colors } from '../config/constants';
 
 // API URLs
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwv_5HDf9EhFPi0HhW0zqah5TzR1G3o4Hqo8ytdnq-G2xMuIl9_CbHPVcWCU2T2pgvK/exec';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 const RECRUITING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 
