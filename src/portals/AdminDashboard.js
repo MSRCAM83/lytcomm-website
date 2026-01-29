@@ -1,4 +1,4 @@
-// AdminDashboard.js v3.1 - Connected to Real Backend Data
+// AdminDashboard.js v3.2 - Connected to Real Backend Data
 // Fetches users, onboarding submissions from Google Sheets via Portal Backend
 import React, { useState, useEffect } from 'react';
 import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader } from 'lucide-react';
@@ -12,18 +12,28 @@ const ONBOARDING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 
 // Helper to handle GAS redirects
 const fetchWithRedirect = async (url, options = {}) => {
-  const response = await fetch(url, { ...options, redirect: 'follow' });
-  const text = await response.text();
-  
-  if (text.trim().startsWith('<')) {
-    const match = text.match(/HREF="([^"]+)"/i);
-    if (match) {
-      const redirectUrl = match[1].replace(/&amp;/g, '&');
-      const redirectResponse = await fetch(redirectUrl);
-      return redirectResponse.text();
+  try {
+    const response = await fetch(url, { 
+      ...options, 
+      redirect: 'follow',
+      mode: 'cors'
+    });
+    const text = await response.text();
+    
+    // Handle GAS redirect page
+    if (text.trim().startsWith('<') || text.includes('HREF=')) {
+      const match = text.match(/HREF="([^"]+)"/i) || text.match(/href="([^"]+)"/i);
+      if (match) {
+        const redirectUrl = match[1].replace(/&amp;/g, '&');
+        const redirectResponse = await fetch(redirectUrl, { mode: 'cors' });
+        return redirectResponse.text();
+      }
     }
+    return text;
+  } catch (err) {
+    console.error('fetchWithRedirect error:', err);
+    throw err;
   }
-  return text;
 };
 
 const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
@@ -842,7 +852,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           padding: '4px 8px',
           borderRadius: '4px'
         }}>
-          AdminDashboard v3.1
+          AdminDashboard v3.2
         </div>
       )}
     </div>
