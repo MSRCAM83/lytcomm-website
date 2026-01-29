@@ -1,4 +1,4 @@
-// AdminUserManagement.js v1.2 - Uses Gateway for user management
+// AdminUserManagement.js v2.0 - Uses Portal Backend with redirect handling
 // Create users, assign roles, manage portal access, send invites
 import React, { useState, useEffect } from 'react';
 import { 
@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 
 // Gateway configuration
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
+const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
+const GATEWAY_URL = PORTAL_URL; // Alias for backwards compatibility
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 const USERS_SHEET_ID = '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw';
 
@@ -488,7 +489,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
             <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor, marginBottom: '4px' }}>
               User Management
             </h1>
-            <p style={{ color: mutedColor }}>Manage portal access and user permissions</p>
+            <p style={{ color: mutedColor }}>Manage portal access and user permissions <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>(v2.0)</span></p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
