@@ -1,4 +1,4 @@
-// AdminDashboard.js v3.0 - Connected to Real Backend Data
+// AdminDashboard.js v3.1 - Connected to Real Backend Data
 // Fetches users, onboarding submissions from Google Sheets via Portal Backend
 import React, { useState, useEffect } from 'react';
 import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader } from 'lucide-react';
@@ -160,20 +160,57 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
   };
 
   const handleApproveOnboarding = async (submission) => {
-    // TODO: Implement approval logic - update sheet status
-    alert(`Approved: ${submission.name}\nThis will be fully implemented with sheet update.`);
-    // For now, remove from local state
-    setOnboardingSubmissions(prev => 
-      prev.map(s => s.id === submission.id ? { ...s, status: 'Approved' } : s)
-    );
+    try {
+      // Update the sheet - find the row and update status column
+      const rowNumber = submission.id + 1; // +1 for header row
+      await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET,
+          action: 'sheetsUpdate',
+          params: {
+            spreadsheetId: ONBOARDING_SHEET_ID,
+            range: `O${rowNumber}`,
+            values: [['Approved']]
+          }
+        })
+      });
+      setOnboardingSubmissions(prev => 
+        prev.map(s => s.id === submission.id ? { ...s, status: 'Approved' } : s)
+      );
+      alert(`Approved: ${submission.name}`);
+    } catch (err) {
+      console.error('Failed to approve:', err);
+      alert('Failed to update status');
+    }
   };
 
   const handleRejectOnboarding = async (submission) => {
-    // TODO: Implement rejection logic
-    alert(`Rejected: ${submission.name}`);
-    setOnboardingSubmissions(prev => 
-      prev.map(s => s.id === submission.id ? { ...s, status: 'Rejected' } : s)
-    );
+    const reason = prompt('Reason for rejection (optional):');
+    try {
+      const rowNumber = submission.id + 1;
+      await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: GATEWAY_SECRET,
+          action: 'sheetsUpdate',
+          params: {
+            spreadsheetId: ONBOARDING_SHEET_ID,
+            range: `O${rowNumber}:P${rowNumber}`,
+            values: [['Rejected', reason || '']]
+          }
+        })
+      });
+      setOnboardingSubmissions(prev => 
+        prev.map(s => s.id === submission.id ? { ...s, status: 'Rejected' } : s)
+      );
+      alert(`Rejected: ${submission.name}`);
+    } catch (err) {
+      console.error('Failed to reject:', err);
+      alert('Failed to update status');
+    }
   };
 
   const renderDashboard = () => (
@@ -805,7 +842,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           padding: '4px 8px',
           borderRadius: '4px'
         }}>
-          AdminDashboard v3.0
+          AdminDashboard v3.1
         </div>
       )}
     </div>
