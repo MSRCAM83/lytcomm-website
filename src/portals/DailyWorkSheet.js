@@ -333,7 +333,7 @@ const DailyWorkSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          DailyWorkSheet v2.1
+          DailyWorkSheet v2.2
         </div>
       )}
     </div>
