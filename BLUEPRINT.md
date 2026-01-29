@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 24, 2026 - 12:15 AM CST
+### Last Updated: January 29, 2026 - 3:55 AM CST
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## 🚀 CURRENT STATUS (Jan 24, 2026 - 1:50 AM CST)
 
-### ✅ Live Version: v2.87
+### ✅ Live Version: v3.6
 Website deployed and working.
 
 ### ✅ ARCHITECTURE SUMMARY
@@ -238,6 +238,8 @@ const CONFIG = {
 ---
 
 ## 🔄 VERSION HISTORY
+- **v3.6** (Jan 29, 2026): Fixed Portal Login - new Portal Backend deployment, added redirect handling, visible version numbers
+- **v3.5** (Jan 29, 2026): Updated PortalLogin to use Portal Backend with CORS redirect workaround
 
 | Version | Date | Changes |
 |---------|------|---------|
@@ -578,4 +580,79 @@ update_result = call_gateway("updateScript", {
 
 print("Update result:", update_result)
 ```
+
+
+## 🚨 CRITICAL: GOOGLE APPS SCRIPT CORS/REDIRECT ISSUE
+
+### THE PROBLEM
+Google Apps Script web apps return a **302 redirect** to `script.googleusercontent.com`. While curl can follow this redirect with `-L`, **browsers CANNOT follow cross-origin redirects** when using `fetch()`. This causes "Unable to connect" errors even when the script is working.
+
+### HOW TO TEST IF A SCRIPT IS ACTUALLY WORKING
+```bash
+# Step 1: Get the redirect URL
+curl -s "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" | grep -oP 'HREF="\K[^"]+'
+
+# Step 2: Follow the redirect manually (decode &amp; to &)
+curl -s "REDIRECT_URL_HERE" 
+```
+If Step 2 returns JSON, the script IS working - the problem is CORS, not the script.
+
+### HOW TO FIX IN FRONTEND CODE
+The frontend must handle the redirect manually:
+```javascript
+const response = await fetch(SCRIPT_URL, {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+const text = await response.text();
+
+// Check if we got HTML redirect instead of JSON
+if (text.trim().startsWith('<')) {
+  const match = text.match(/HREF="([^"]+)"/i);
+  if (match) {
+    const redirectUrl = match[1].replace(/&amp;/g, '&');
+    const redirectResponse = await fetch(redirectUrl);
+    const result = await redirectResponse.json();
+    // Use result...
+  }
+}
+```
+
+### WHEN DEPLOYMENTS LOSE AUTHORIZATION
+If a script returns "Page Not Found" after following redirect, it means the **deployment lost OAuth authorization**. This happens when:
+1. Drive restrictions are changed
+2. Script permissions are modified
+3. Too much time passes without use
+
+**FIX:** Create a NEW deployment:
+1. Open the script in script.google.com
+2. Deploy → New deployment
+3. Type: Web app
+4. Execute as: Me
+5. Who has access: Anyone
+6. Copy the NEW URL and update the frontend code
+
+### CURRENT WORKING URLS (Jan 29, 2026)
+
+| Script | Purpose | Deployment URL |
+|--------|---------|----------------|
+| **LYT Portal Backend v1.0** | Portal login, user mgmt | `AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg` |
+| **LYT Onboarding v5.0** | Employee/Contractor forms | `AKfycbw3cnZ7eZJu1wWovxE-_xKDyyWwPR2Mw3jqH05rjrF2XN00jqeaQW3S3aiRwXaxi2skJw` |
+| **Claude Gateway** | Claude's API access | `AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ` |
+
+### ALWAYS ADD VISIBLE VERSION NUMBERS
+Every page that gets updated MUST show a visible version number in the UI so the user can verify they're seeing the new version. Example:
+```jsx
+<p style={{ fontSize: '0.7rem', opacity: 0.5 }}>v3.6</p>
+```
+
+### FILES THAT USE THESE SCRIPTS
+| File | Script Used | Variable/Constant |
+|------|-------------|-------------------|
+| `PortalLogin.js` | Portal Backend | `PORTAL_URL` constant |
+| `AdminUserManagement.js` | Claude Gateway | `GATEWAY_URL` constant |
+| `EmployeeOnboarding.js` | Onboarding v5.0 | `URLS.appsScript` from constants |
+| `ContractorOnboarding.js` | Onboarding v5.0 | `URLS.appsScript` from constants |
+| `NDASignPage.js` | Onboarding v5.0 | `URLS.appsScript` from constants |
+| `constants.js` | Both | `URLS.appsScript`, `URLS.portalScript`, `GATEWAY_CONFIG.url` |
 
