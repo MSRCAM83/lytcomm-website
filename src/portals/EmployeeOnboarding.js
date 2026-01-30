@@ -1,9 +1,19 @@
+// EmployeeOnboarding.js v1.1 - Added phone auto-formatting
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle, Upload, ChevronDown, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, User, FileText, CreditCard, Heart, Shield, AlertCircle, Upload, ChevronDown, Sun, Moon, Menu, X } from 'lucide-react';
 import { colors, LYT_INFO, URLS } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import SSNInput from '../components/SSNInput';
 import { fillW4, createFormPdf } from '../services/pdfService';
+
+// Format phone number as (000) 000-0000
+const formatPhoneNumber = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+};
 
 const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
   // Onboarding section accent colors (orange/green)
@@ -166,10 +176,15 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    // Auto-format phone numbers
+    if (name === 'phone' || name === 'emergencyPhone') {
+      setFormData({ ...formData, [name]: formatPhoneNumber(value) });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value,
+      });
+    }
   };
 
   const handleSSNChange = (value) => {
