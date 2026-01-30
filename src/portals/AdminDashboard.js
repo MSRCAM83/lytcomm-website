@@ -1,7 +1,7 @@
-// AdminDashboard.js v3.2 - Connected to Real Backend Data
+// AdminDashboard.js v3.3 - Mobile Responsive with Collapsible Sidebar
 // Fetches users, onboarding submissions from Google Sheets via Portal Backend
 import React, { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X } from 'lucide-react';
 import { colors } from '../config/constants';
 
 // API URLs
@@ -57,6 +57,22 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [showVersion, setShowVersion] = useState(false);
+  
+  // Mobile state
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false); // Close sidebar when switching to desktop
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch real data on mount
   useEffect(() => {
@@ -732,10 +748,75 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
 
   return (
     <div 
-      style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex' }}
+      style={{ 
+        minHeight: '100vh', 
+        backgroundColor: bgColor, 
+        display: 'flex',
+        // Mobile touch scrolling fix
+        WebkitOverflowScrolling: 'touch',
+        overflowX: 'hidden'
+      }}
       onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}
     >
-      {/* Sidebar */}
+      {/* Mobile Header - Only shows on mobile */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '56px',
+          backgroundColor: cardBg,
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          zIndex: 1000
+        }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: textColor,
+              cursor: 'pointer',
+              padding: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '44px',
+              minHeight: '44px'
+            }}
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
+            <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Admin</span>
+          </div>
+          <div style={{ width: '44px' }} /> {/* Spacer for centering */}
+        </div>
+      )}
+
+      {/* Mobile Overlay - closes sidebar when clicking outside */}
+      {isMobile && sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1001
+          }}
+        />
+      )}
+
+      {/* Sidebar - Fixed on desktop, slide-in overlay on mobile */}
       <div style={{ 
         width: '260px', 
         backgroundColor: cardBg, 
@@ -744,15 +825,42 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         flexDirection: 'column',
         position: 'fixed',
         height: '100vh',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        zIndex: isMobile ? 1002 : 1,
+        // Mobile: slide in from left
+        transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)',
+        transition: isMobile ? 'transform 0.3s ease' : 'none',
+        top: 0,
+        left: 0
       }}>
         {/* Logo */}
-        <div style={{ padding: '20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
             <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.9rem', marginLeft: '8px' }}>Admin</span>
           </div>
+          {/* Close button on mobile */}
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: mutedColor,
+                cursor: 'pointer',
+                padding: '8px',
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* User Info */}
@@ -769,17 +877,24 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         </div>
 
         {/* Navigation */}
-        <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: '12px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => item.external ? setCurrentPage(item.external) : setActiveTab(item.id)}
+              onClick={() => {
+                if (item.external) {
+                  setCurrentPage(item.external);
+                } else {
+                  setActiveTab(item.id);
+                }
+                if (isMobile) setSidebarOpen(false); // Close sidebar on mobile after selection
+              }}
               style={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: isMobile ? '14px 16px' : '12px 16px',
                 marginBottom: '4px',
                 backgroundColor: activeTab === item.id ? `${accentPrimary}15` : 'transparent',
                 border: 'none',
@@ -787,7 +902,8 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 cursor: 'pointer',
                 color: activeTab === item.id ? accentPrimary : textColor,
                 textAlign: 'left',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                minHeight: isMobile ? '48px' : 'auto'
               }}
             >
               <item.icon size={18} />
@@ -819,13 +935,14 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              padding: '12px',
+              padding: isMobile ? '14px' : '12px',
               backgroundColor: 'transparent',
               border: `1px solid ${accentError}`,
               borderRadius: '8px',
               color: accentError,
               cursor: 'pointer',
-              fontSize: '0.9rem'
+              fontSize: '0.9rem',
+              minHeight: isMobile ? '48px' : 'auto'
             }}
           >
             <LogOut size={18} />
@@ -835,7 +952,14 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>
+      <div style={{ 
+        flex: 1, 
+        marginLeft: isMobile ? 0 : '260px', 
+        padding: isMobile ? '72px 16px 24px' : '32px',
+        minHeight: '100vh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch'
+      }}>
         {renderContent()}
       </div>
 
@@ -850,9 +974,10 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           color: textColor,
           backgroundColor: cardBg,
           padding: '4px 8px',
-          borderRadius: '4px'
+          borderRadius: '4px',
+          zIndex: 9999
         }}>
-          AdminDashboard v3.2
+          AdminDashboard v3.3
         </div>
       )}
     </div>
