@@ -84,10 +84,10 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     setError('');
     
     try {
-      // Fetch users from Portal Backend
+      // Fetch users from Portal Backend - use text/plain to avoid CORS preflight
       const usersText = await fetchWithRedirect(PORTAL_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'listUsers' })
       });
       
@@ -96,10 +96,10 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         setUsers(usersResult.users || []);
       }
 
-      // Fetch onboarding submissions from Gateway
+      // Fetch onboarding submissions from Gateway - use text/plain to avoid CORS preflight
       const onboardingText = await fetchWithRedirect(GATEWAY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           secret: GATEWAY_SECRET,
           action: 'sheetsRead',
