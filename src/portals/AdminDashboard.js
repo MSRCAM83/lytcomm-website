@@ -1,12 +1,37 @@
-// AdminDashboard.js v3.4 - Direct Google Sheets CSV fetch (bypasses broken Gateway)
+// AdminDashboard.js v3.5 - Direct CSV fetch + Gateway for updates
 // Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
 import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon } from 'lucide-react';
 import { colors } from '../config/constants';
 
-// Direct Google Sheets CSV URLs (bypasses broken Apps Script)
+// Direct Google Sheets CSV URLs (for reading data)
 const USERS_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw/gviz/tq?tqx=out:csv';
 const ONBOARDING_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc/gviz/tq?tqx=out:csv';
+
+// Gateway URL for write operations (approve/reject)
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyz_BihP2CsJf37P0RCDZoTDTH1FkH3D9zY_x0V-Dy1_QzjPQLmtppTbNiybAfev4ehtw/exec';
+const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
+const ONBOARDING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
+
+// Helper to handle GAS redirects (for write operations)
+const fetchWithRedirect = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, { ...options, redirect: 'follow', mode: 'cors' });
+    const text = await response.text();
+    if (text.trim().startsWith('<') || text.includes('HREF=')) {
+      const match = text.match(/HREF="([^"]+)"/i) || text.match(/href="([^"]+)"/i);
+      if (match) {
+        const redirectUrl = match[1].replace(/&amp;/g, '&');
+        const redirectResponse = await fetch(redirectUrl, { mode: 'cors' });
+        return redirectResponse.text();
+      }
+    }
+    return text;
+  } catch (err) {
+    console.error('fetchWithRedirect error:', err);
+    throw err;
+  }
+};
 
 // Parse CSV text into array of objects
 const parseCSV = (csvText) => {
@@ -1019,7 +1044,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           borderRadius: '4px',
           zIndex: 9999
         }}>
-          AdminDashboard v3.4
+          AdminDashboard v3.5
         </div>
       )}
     </div>
