@@ -1,7 +1,7 @@
-// EmployeeDashboard.js v2.1 - Connected to Real Backend
+// EmployeeDashboard.js v2.2 - Mobile Responsive with Collapsible Sidebar
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle } from 'lucide-react';
+import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle, Menu, X } from 'lucide-react';
 import { colors } from '../config/constants';
 
 // API URLs
@@ -73,6 +73,22 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ show: false, success: false, message: '' });
   const [showVersion, setShowVersion] = useState(false);
+
+  // Mobile state
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Production log form state
   const [productionForm, setProductionForm] = useState({
@@ -630,21 +646,28 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
   return (
     <div 
-      style={{ minHeight: '100vh', backgroundColor: bgColor, display: 'flex' }}
+      style={{ 
+        minHeight: '100vh', 
+        backgroundColor: bgColor, 
+        display: 'flex',
+        WebkitOverflowScrolling: 'touch',
+        overflowX: 'hidden'
+      }}
       onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}
     >
       {/* Notification */}
       {submitStatus.show && (
         <div style={{
           position: 'fixed',
-          top: '20px',
+          top: isMobile ? '70px' : '20px',
           right: '20px',
+          left: isMobile ? '20px' : 'auto',
           padding: '16px 24px',
           backgroundColor: submitStatus.success ? accentSecondary : accentError,
           color: '#fff',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000,
+          zIndex: 1100,
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
@@ -652,6 +675,42 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
           {submitStatus.success ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
           {submitStatus.message}
         </div>
+      )}
+
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '56px',
+          backgroundColor: cardBg,
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          zIndex: 1000
+        }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer', padding: '8px', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
+            <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Field</span>
+          </div>
+          <div style={{ width: '44px' }} />
+        </div>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1001 }} />
       )}
 
       {/* Sidebar */}
@@ -663,15 +722,26 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         flexDirection: 'column',
         position: 'fixed',
         height: '100vh',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        zIndex: isMobile ? 1002 : 1,
+        transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)',
+        transition: isMobile ? 'transform 0.3s ease' : 'none',
+        top: 0,
+        left: 0
       }}>
         {/* Logo */}
-        <div style={{ padding: '20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
             <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.9rem', marginLeft: '8px' }}>Field</span>
           </div>
+          {isMobile && (
+            <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', color: mutedColor, cursor: 'pointer', padding: '8px', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* User Info */}
@@ -688,17 +758,21 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
         </div>
 
         {/* Navigation */}
-        <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: '12px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => item.external ? setCurrentPage(item.external) : setActiveTab(item.id)}
+              onClick={() => {
+                if (item.external) setCurrentPage(item.external);
+                else setActiveTab(item.id);
+                if (isMobile) setSidebarOpen(false);
+              }}
               style={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: isMobile ? '14px 16px' : '12px 16px',
                 marginBottom: '4px',
                 backgroundColor: activeTab === item.id ? `${accentPrimary}15` : 'transparent',
                 border: 'none',
@@ -706,7 +780,8 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
                 cursor: 'pointer',
                 color: activeTab === item.id ? accentPrimary : textColor,
                 textAlign: 'left',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                minHeight: isMobile ? '48px' : 'auto'
               }}
             >
               <item.icon size={18} />
@@ -718,7 +793,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
 
         {/* Logout */}
         <div style={{ padding: '16px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
-          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', backgroundColor: 'transparent', border: `1px solid ${accentError}`, borderRadius: '8px', color: accentError, cursor: 'pointer', fontSize: '0.9rem' }}>
+          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: isMobile ? '14px' : '12px', backgroundColor: 'transparent', border: `1px solid ${accentError}`, borderRadius: '8px', color: accentError, cursor: 'pointer', fontSize: '0.9rem', minHeight: isMobile ? '48px' : 'auto' }}>
             <LogOut size={18} />
             Sign Out
           </button>
@@ -726,14 +801,21 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>
+      <div style={{ 
+        flex: 1, 
+        marginLeft: isMobile ? 0 : '260px', 
+        padding: isMobile ? '72px 16px 24px' : '32px',
+        minHeight: '100vh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch'
+      }}>
         {renderContent()}
       </div>
 
       {/* Version Number - Triple Click to Show */}
       {showVersion && (
-        <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          EmployeeDashboard v2.1
+        <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px', zIndex: 9999 }}>
+          EmployeeDashboard v2.2
         </div>
       )}
     </div>
