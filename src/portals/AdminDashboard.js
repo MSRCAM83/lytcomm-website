@@ -1,42 +1,54 @@
-// AdminDashboard.js v3.3 - Mobile Responsive with Collapsible Sidebar
-// Fetches users, onboarding submissions from Google Sheets via Portal Backend
+// AdminDashboard.js v3.4 - Direct Google Sheets CSV fetch (bypasses broken Gateway)
+// Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon } from 'lucide-react';
 import { colors } from '../config/constants';
 
-// API URLs
-const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
-const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
-const ONBOARDING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
+// Direct Google Sheets CSV URLs (bypasses broken Apps Script)
+const USERS_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw/gviz/tq?tqx=out:csv';
+const ONBOARDING_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc/gviz/tq?tqx=out:csv';
 
-// Helper to handle GAS redirects
-const fetchWithRedirect = async (url, options = {}) => {
-  try {
-    const response = await fetch(url, { 
-      ...options, 
-      redirect: 'follow',
-      mode: 'cors'
-    });
-    const text = await response.text();
-    
-    // Handle GAS redirect page
-    if (text.trim().startsWith('<') || text.includes('HREF=')) {
-      const match = text.match(/HREF="([^"]+)"/i) || text.match(/href="([^"]+)"/i);
-      if (match) {
-        const redirectUrl = match[1].replace(/&amp;/g, '&');
-        const redirectResponse = await fetch(redirectUrl, { mode: 'cors' });
-        return redirectResponse.text();
+// Parse CSV text into array of objects
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  // Parse header row (handle quoted values)
+  const parseRow = (row) => {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
       }
     }
-    return text;
-  } catch (err) {
-    console.error('fetchWithRedirect error:', err);
-    throw err;
+    values.push(current.trim());
+    return values;
+  };
+  
+  const headers = parseRow(lines[0]);
+  const data = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseRow(lines[i]);
+    const obj = {};
+    headers.forEach((header, idx) => {
+      obj[header] = values[idx] || '';
+    });
+    data.push(obj);
   }
+  
+  return data;
 };
 
-const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode }) => {
+const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode, setDarkMode }) => {
   // Dynamic colors based on theme
   const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
   const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
@@ -84,52 +96,63 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     setError('');
     
     try {
-      // Fetch users from Portal Backend - use text/plain to avoid CORS preflight
-      const usersText = await fetchWithRedirect(PORTAL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'listUsers' })
-      });
+      // Fetch users directly from Google Sheets CSV export
+      const usersResponse = await fetch(USERS_SHEET_CSV);
+      const usersCSV = await usersResponse.text();
+      const usersData = parseCSV(usersCSV);
       
-      const usersResult = JSON.parse(usersText);
-      if (usersResult.success) {
-        setUsers(usersResult.users || []);
-      }
+      // Filter out empty rows and map to expected format
+      const validUsers = usersData
+        .filter(u => u.email && u.email.includes('@'))
+        .map(u => ({
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          status: u.status || 'active',
+          createdAt: u.createdAt,
+          lastLogin: u.lastLogin,
+          invitedBy: u.invitedBy
+        }));
+      
+      setUsers(validUsers);
 
-      // Fetch onboarding submissions from Gateway - use text/plain to avoid CORS preflight
-      const onboardingText = await fetchWithRedirect(GATEWAY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          secret: GATEWAY_SECRET,
-          action: 'sheetsRead',
-          params: {
-            spreadsheetId: ONBOARDING_SHEET_ID,
-            range: 'A1:Z200'
-          }
-        })
-      });
-
-      const onboardingResult = JSON.parse(onboardingText);
-      if (onboardingResult.success && onboardingResult.data?.data) {
-        const rows = onboardingResult.data.data;
-        const headers = rows[0];
-        const submissions = rows.slice(1)
-          .filter(row => row[0]) // Has timestamp
-          .map((row, idx) => ({
-            id: idx + 1,
-            timestamp: row[0] || '',
-            type: row[1] || '',
-            name: row[2] || '',
-            email: row[3] || '',
-            phone: row[4] || '',
-            status: row[14] || 'Pending',
-            folderLink: row[12] || ''
-          }))
-          .filter(s => s.name && !s.name.includes('Unknown')); // Filter out empty/unknown
+      // Try to fetch onboarding data (may fail if sheet is private)
+      try {
+        const onboardingResponse = await fetch(ONBOARDING_SHEET_CSV);
+        const onboardingCSV = await onboardingResponse.text();
         
-        setOnboardingSubmissions(submissions);
+        // Check if we got HTML (login page) instead of CSV
+        if (!onboardingCSV.includes('<!DOCTYPE') && !onboardingCSV.includes('<html')) {
+          const onboardingData = parseCSV(onboardingCSV);
+          const submissions = onboardingData
+            .filter(row => row.Timestamp || row.timestamp)
+            .map((row, idx) => ({
+              id: idx + 1,
+              timestamp: row.Timestamp || row.timestamp || '',
+              type: row.Type || row.type || '',
+              name: row.Name || row.name || row['Company'] || '',
+              email: row.Email || row.email || '',
+              phone: row.Phone || row.phone || '',
+              status: row.Status || row.status || 'Pending',
+              folderLink: row['Folder Link'] || row.folderLink || ''
+            }))
+            .filter(s => s.name && !s.name.includes('Unknown'));
+          
+          setOnboardingSubmissions(submissions);
+        }
+      } catch (onboardingErr) {
+        console.log('Onboarding sheet not accessible:', onboardingErr);
+        // Onboarding data unavailable - that's ok, just show users
       }
+
+      setLastRefresh(new Date());
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError('Failed to load data. Please refresh.');
+    }
+    
+    setLoading(false);
+  };
 
       setLastRefresh(new Date());
     } catch (err) {
@@ -796,7 +819,26 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Admin</span>
           </div>
-          <div style={{ width: '44px' }} /> {/* Spacer for centering */}
+          {/* Dark Mode Toggle */}
+          {setDarkMode && (
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: textColor,
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              {darkMode ? <Sun size={22} /> : <Moon size={22} />}
+            </button>
+          )}
         </div>
       )}
 
@@ -977,7 +1019,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           borderRadius: '4px',
           zIndex: 9999
         }}>
-          AdminDashboard v3.3
+          AdminDashboard v3.4
         </div>
       )}
     </div>
