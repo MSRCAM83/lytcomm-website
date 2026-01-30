@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: January 30, 2026 - 11:05 AM CST
+### Last Updated: January 30, 2026 - 12:25 PM CST
 
 ---
 
@@ -10,9 +10,9 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-## 🚀 CURRENT STATUS (Jan 30, 2026 - 11:05 AM CST)
+## 🚀 CURRENT STATUS (Jan 30, 2026 - 12:25 PM CST)
 
-### ✅ Live Version: v3.9
+### ✅ Live Version: v3.10
 Website deployed and working. All dashboards mobile-optimized with hamburger menu.
 
 ### ✅ ARCHITECTURE SUMMARY
@@ -238,6 +238,7 @@ const CONFIG = {
 ---
 
 ## 🔄 VERSION HISTORY
+- **v3.10** (Jan 30, 2026): AdminDashboard v3.4 - Direct Google Sheets CSV fetch (bypasses broken Gateway), dark mode toggle in mobile header
 - **v3.9** (Jan 30, 2026): Fixed CORS errors on mobile (text/plain content-type), fixed touch scrolling (index.css v2.1)
 - **v3.8** (Jan 30, 2026): Dashboard mobile optimization - AdminDashboard v3.3, EmployeeDashboard v2.2, ContractorDashboard v2.2 (hamburger menu, collapsible sidebar, touch scrolling with WebkitOverflowScrolling)
 - **v3.7** (Jan 30, 2026): Mobile optimization - PortalLogin v3.8, SetPassword v2.1, ForgotPassword v2.1, InviteCodePage v2.0, index.css v2.0 (44px touch targets, iOS zoom prevention, responsive layouts)
