@@ -1,11 +1,20 @@
-// ContractorOnboarding.js v2.57 - Updated styling with Sun/Moon toggle, matching header/footer
+// ContractorOnboarding.js v2.58 - Added phone auto-formatting
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown, Sun, Moon, Menu, X } from 'lucide-react';
 import { colors, LYT_INFO, URLS, skillOptions } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import EINInput from '../components/EINInput';
 import SSNInput from '../components/SSNInput';
 import { fillW9, fillMSA, createFormPdf } from '../services/pdfService';
+
+// Format phone number as (000) 000-0000
+const formatPhoneNumber = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+};
 
 const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
   // Onboarding section accent colors (orange/green)
@@ -241,10 +250,15 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    // Auto-format phone numbers
+    if (name === 'phone' || name === 'contactPhone') {
+      setFormData({ ...formData, [name]: formatPhoneNumber(value) });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value,
+      });
+    }
   };
 
   const handleSkillToggle = (skill) => {
