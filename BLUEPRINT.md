@@ -12,7 +12,7 @@
 
 ## 🚀 CURRENT STATUS (Jan 30, 2026 - 12:25 PM CST)
 
-### ✅ Live Version: v3.10
+### ✅ Live Version: v3.11
 Website deployed and working. All dashboards mobile-optimized with hamburger menu.
 
 ### ✅ ARCHITECTURE SUMMARY
@@ -238,6 +238,7 @@ const CONFIG = {
 ---
 
 ## 🔄 VERSION HISTORY
+- **v3.11** (Jan 30, 2026): UserProfile v2.1 (fixed CSV fetch, mobile hamburger), EmployeeOnboarding v1.1, ContractorOnboarding v2.58 (phone auto-format)
 - **v3.10** (Jan 30, 2026): AdminDashboard v3.4 - Direct Google Sheets CSV fetch (bypasses broken Gateway), dark mode toggle in mobile header
 - **v3.9** (Jan 30, 2026): Fixed CORS errors on mobile (text/plain content-type), fixed touch scrolling (index.css v2.1)
 - **v3.8** (Jan 30, 2026): Dashboard mobile optimization - AdminDashboard v3.3, EmployeeDashboard v2.2, ContractorDashboard v2.2 (hamburger menu, collapsible sidebar, touch scrolling with WebkitOverflowScrolling)
