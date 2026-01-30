@@ -1,18 +1,23 @@
-// UserProfile.js v2.0 - Connected to Real Backend
+// UserProfile.js v2.1 - Direct CSV fetch, mobile hamburger, phone formatting
 // Self-service profile management for employees and contractors
 import React, { useState, useEffect } from 'react';
 import { 
   User, Mail, Phone, MapPin, Building, Shield, Bell, Lock, 
   Camera, Save, Eye, EyeOff, CheckCircle, AlertCircle, 
   FileText, Award, Calendar, Clock, ChevronRight, Edit2,
-  Smartphone, Globe, Moon, Sun, LogOut, Loader, ArrowLeft
+  Smartphone, Globe, Moon, Sun, LogOut, Loader, ArrowLeft, Menu, X
 } from 'lucide-react';
 import { colors } from '../config/constants';
 
-// API URLs
-const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
+// Direct Google Sheets CSV URL for reading users
+const USERS_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw/gviz/tq?tqx=out:csv';
 
-// Helper to handle GAS redirects
+// Gateway for write operations
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyz_BihP2CsJf37P0RCDZoTDTH1FkH3D9zY_x0V-Dy1_QzjPQLmtppTbNiybAfev4ehtw/exec';
+const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
+const USERS_SHEET_ID = '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw';
+
+// Helper to handle GAS redirects (for write operations)
 const fetchWithRedirect = async (url, options = {}) => {
   try {
     const response = await fetch(url, { ...options, redirect: 'follow' });
@@ -30,6 +35,41 @@ const fetchWithRedirect = async (url, options = {}) => {
     console.error('Fetch error:', err);
     throw err;
   }
+};
+
+// Parse CSV to array of objects
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  const parseRow = (row) => {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') inQuotes = !inQuotes;
+      else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+      else current += char;
+    }
+    values.push(current.trim());
+    return values;
+  };
+  const headers = parseRow(lines[0]);
+  return lines.slice(1).map(line => {
+    const values = parseRow(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = values[i] || '');
+    return obj;
+  });
+};
+
+// Format phone number as (000) 000-0000
+const formatPhoneNumber = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
 };
 
 const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser }) => {
@@ -53,6 +93,21 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
   const [showVersion, setShowVersion] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  
+  // Mobile responsive state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Profile data from backend
   const [profileData, setProfileData] = useState({
@@ -93,25 +148,37 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
 
     setLoading(true);
     try {
-      const text = await fetchWithRedirect(PORTAL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'getUser', email: currentUser.email })
-      });
-
-      const result = JSON.parse(text);
-      if (result.success && result.user) {
-        const u = result.user;
-        const nameParts = (u.name || '').split(' ');
+      // Fetch users from CSV and find current user
+      const response = await fetch(USERS_SHEET_CSV);
+      const csvText = await response.text();
+      const users = parseCSV(csvText);
+      
+      const foundUser = users.find(u => u.email?.toLowerCase() === currentUser.email.toLowerCase());
+      
+      if (foundUser) {
+        const nameParts = (foundUser.name || '').split(' ');
         setProfileData({
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
-          email: u.email || '',
-          phone: u.phone || '',
-          role: u.role || '',
-          status: u.status || '',
-          createdAt: u.createdAt || '',
-          lastLogin: u.lastLogin || ''
+          email: foundUser.email || '',
+          phone: formatPhoneNumber(foundUser.phone || ''),
+          role: foundUser.role || '',
+          status: foundUser.status || 'active',
+          createdAt: foundUser.createdAt || '',
+          lastLogin: foundUser.lastLogin || ''
+        });
+      } else {
+        // Use data from loggedInUser if not found in sheet
+        const nameParts = (currentUser.name || '').split(' ');
+        setProfileData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          email: currentUser.email || '',
+          phone: '',
+          role: currentUser.role || '',
+          status: 'active',
+          createdAt: '',
+          lastLogin: ''
         });
       }
     } catch (err) {
@@ -253,7 +320,7 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
         </div>
         <div>
           <label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Phone</label>
-          <input type="tel" value={profileData.phone} onChange={(e) => handleProfileChange('phone', e.target.value)} disabled={!editing} placeholder="(xxx) xxx-xxxx" style={inputStyle} />
+          <input type="tel" value={profileData.phone} onChange={(e) => handleProfileChange('phone', formatPhoneNumber(e.target.value))} disabled={!editing} placeholder="(000) 000-0000" style={inputStyle} />
         </div>
       </div>
 
@@ -389,10 +456,38 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor, padding: '32px' }} onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor, padding: isMobile ? '72px 16px 24px' : '32px' }} onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '56px',
+          backgroundColor: cardBg, borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 1000
+        }}>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer', padding: '8px', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#0a3a7d' }}>ly</span>
+            <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
+            <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Profile</span>
+          </div>
+          {setDarkMode && (
+            <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer', padding: '8px', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {darkMode ? <Sun size={22} /> : <Moon size={22} />}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1001 }} />
+      )}
+
       {/* Message Toast */}
       {message && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '16px 24px', backgroundColor: message.type === 'success' ? accentSecondary : '#ef4444', color: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ position: 'fixed', top: isMobile ? '70px' : '20px', right: '20px', padding: '16px 24px', backgroundColor: message.type === 'success' ? accentSecondary : '#ef4444', color: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px' }}>
           {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           {message.text}
         </div>
@@ -401,21 +496,35 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-          <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '8px', color: textColor, cursor: 'pointer' }}>
+          <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '8px', color: textColor, cursor: 'pointer', minHeight: '44px' }}>
             <ArrowLeft size={18} /> Back
           </button>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: textColor }}>My Profile</h1>
-            <p style={{ color: mutedColor }}>Manage your account settings</p>
+            <h1 style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: '700', color: textColor }}>My Profile</h1>
+            <p style={{ color: mutedColor, fontSize: isMobile ? '0.85rem' : '1rem' }}>Manage your account settings</p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-          {/* Sidebar Nav */}
-          <div style={{ width: '200px', flexShrink: 0 }}>
+          {/* Sidebar Nav - Slide in on mobile */}
+          <div style={{ 
+            width: isMobile ? '260px' : '200px', 
+            flexShrink: 0,
+            position: isMobile ? 'fixed' : 'static',
+            top: isMobile ? '56px' : 'auto',
+            left: 0,
+            bottom: isMobile ? 0 : 'auto',
+            backgroundColor: isMobile ? cardBg : 'transparent',
+            transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+            transition: isMobile ? 'transform 0.3s ease' : 'none',
+            zIndex: isMobile ? 1002 : 1,
+            padding: isMobile ? '16px' : 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}>
             <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '12px' }}>
               {navItems.map((item) => (
-                <button key={item.id} onClick={() => setActiveTab(item.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', marginBottom: '4px', backgroundColor: activeTab === item.id ? `${accentPrimary}15` : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeTab === item.id ? accentPrimary : textColor, textAlign: 'left' }}>
+                <button key={item.id} onClick={() => { setActiveTab(item.id); if (isMobile) setSidebarOpen(false); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', marginBottom: '4px', backgroundColor: activeTab === item.id ? `${accentPrimary}15` : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeTab === item.id ? accentPrimary : textColor, textAlign: 'left', minHeight: '44px' }}>
                   <item.icon size={18} />
                   <span>{item.label}</span>
                 </button>
@@ -433,7 +542,7 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
       {/* Version */}
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          UserProfile v2.0
+          UserProfile v2.1
         </div>
       )}
     </div>
