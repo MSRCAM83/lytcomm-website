@@ -1,4 +1,4 @@
-// SetPassword.js v2.0 - Connected to Portal Backend
+// SetPassword.js v2.1 - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Lock, Eye, EyeOff, Sun, Moon, CheckCircle, AlertCircle } from 'lucide-react';
 import { colors } from '../config/constants';
@@ -17,6 +17,15 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
   const [focused, setFocused] = useState(null);
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Get token and email from URL params
   useEffect(() => {
@@ -125,9 +134,9 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
 
   const getInputStyle = (field) => ({
     width: '100%',
-    padding: '14px 16px',
-    paddingRight: '48px',
-    fontSize: '1rem',
+    padding: isMobile ? '16px' : '14px 16px',
+    paddingRight: '52px',
+    fontSize: '16px', // Prevents iOS zoom
     border: `2px solid ${focused === field ? accentPrimary : (darkMode ? '#374151' : '#e5e7eb')}`,
     borderRadius: '8px',
     backgroundColor: '#ffffff',
@@ -141,7 +150,12 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor }}>
       {/* Top Bar */}
-      <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '6px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ 
+        backgroundColor: darkMode ? '#112240' : '#f1f5f9', 
+        padding: isMobile ? '8px 16px' : '6px 20px', 
+        display: 'flex', 
+        justifyContent: 'flex-end' 
+      }}>
         {setDarkMode && (
           <button
             onClick={() => setDarkMode(!darkMode)}
@@ -154,50 +168,110 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
               alignItems: 'center',
               gap: '6px',
               fontSize: '0.85rem',
-              padding: '4px 8px',
+              padding: '8px 12px',
               borderRadius: '6px',
+              minHeight: '44px',
             }}
           >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            <span className="hide-mobile">{darkMode ? 'Light' : 'Dark'} Mode</span>
           </button>
         )}
       </div>
 
       {/* Header */}
-      <header style={{ padding: '16px 20px', backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+      <header style={{ 
+        padding: isMobile ? '12px 16px' : '16px 20px', 
+        backgroundColor: darkMode ? '#0d1b2a' : '#ffffff', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` 
+      }}>
         <button
           onClick={() => setCurrentPage('portal-login')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'transparent', border: 'none', color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: '1rem', cursor: 'pointer', padding: '8px 12px', borderRadius: '8px' }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            backgroundColor: 'transparent', 
+            border: 'none', 
+            color: darkMode ? 'rgba(255,255,255,0.8)' : '#64748b', 
+            fontSize: isMobile ? '0.9rem' : '1rem', 
+            cursor: 'pointer', 
+            padding: '10px 12px', 
+            borderRadius: '8px',
+            minHeight: '44px',
+          }}
         >
-          <ArrowLeft size={20} /> Back
+          <ArrowLeft size={isMobile ? 18 : 20} /> {!isMobile && 'Back'}
         </button>
-        <div style={{ fontSize: '1.25rem', fontWeight: '700', color: textColor }}>
+        <div style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '700', color: textColor }}>
           <span style={{ color: accentPrimary }}>Set</span> Password
         </div>
-        <button onClick={() => setCurrentPage('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+        <button 
+          onClick={() => setCurrentPage('home')} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            cursor: 'pointer', 
+            padding: '10px',
+            minHeight: '44px',
+            minWidth: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '700' }}>
             <span style={{ color: logoLY }}>ly</span><span style={{ color: logoT }}>t</span>
           </div>
         </button>
       </header>
 
       {/* Form */}
-      <div style={{ maxWidth: '400px', margin: '60px auto', padding: '0 20px' }}>
-        <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: accentGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <Lock size={28} color="#fff" />
+      <div style={{ 
+        maxWidth: '400px', 
+        margin: isMobile ? '24px auto' : '60px auto', 
+        padding: isMobile ? '0 16px' : '0 20px' 
+      }}>
+        <div style={{ 
+          backgroundColor: cardBg, 
+          borderRadius: isMobile ? '12px' : '16px', 
+          padding: isMobile ? '24px 20px' : '32px', 
+          boxShadow: '0 4px 24px rgba(0,0,0,0.1)' 
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? '20px' : '24px' }}>
+            <div style={{ 
+              width: isMobile ? '56px' : '64px', 
+              height: isMobile ? '56px' : '64px', 
+              borderRadius: '50%', 
+              background: accentGradient, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 16px' 
+            }}>
+              <Lock size={isMobile ? 24 : 28} color="#fff" />
             </div>
-            <h2 style={{ color: textColor, margin: '0 0 8px', fontSize: '1.5rem' }}>Create Password</h2>
+            <h2 style={{ color: textColor, margin: '0 0 8px', fontSize: isMobile ? '1.35rem' : '1.5rem' }}>Create Password</h2>
             <p style={{ color: mutedColor, margin: 0, fontSize: '0.9rem' }}>Set up your account password</p>
-            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v2.0</p>
+            <p style={{ color: mutedColor, margin: '8px 0 0', fontSize: '0.7rem', opacity: 0.5 }}>v2.1</p>
           </div>
 
           {success ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle size={32} color={accentSecondary} />
+              <div style={{ 
+                width: isMobile ? '56px' : '64px', 
+                height: isMobile ? '56px' : '64px', 
+                borderRadius: '50%', 
+                backgroundColor: `${accentSecondary}20`, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                margin: '0 auto 16px' 
+              }}>
+                <CheckCircle size={isMobile ? 28 : 32} color={accentSecondary} />
               </div>
               <h3 style={{ color: textColor, margin: '0 0 8px' }}>Password Set!</h3>
               <p style={{ color: mutedColor, fontSize: '0.9rem', margin: '0 0 24px' }}>
@@ -205,7 +279,18 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
               </p>
               <button
                 onClick={() => setCurrentPage('portal-login')}
-                style={{ width: '100%', padding: '14px', background: accentGradient, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
+                style={{ 
+                  width: '100%', 
+                  padding: isMobile ? '16px' : '14px', 
+                  background: accentGradient, 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  cursor: 'pointer',
+                  minHeight: '50px',
+                }}
               >
                 Sign In
               </button>
@@ -223,12 +308,28 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
                     onBlur={() => setFocused(null)} 
                     placeholder="Create a password" 
                     required 
-                    style={getInputStyle('password')} 
+                    style={getInputStyle('password')}
+                    autoComplete="new-password"
                   />
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)} 
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '4px', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      color: mutedColor,
+                      padding: '12px',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -238,9 +339,9 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
               <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: darkMode ? '#112240' : '#f8fafc', borderRadius: '8px' }}>
                 <p style={{ fontSize: '0.85rem', fontWeight: '500', color: textColor, marginBottom: '8px' }}>Password Requirements:</p>
                 {requirements.map((req, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    {req.test(password) ? <CheckCircle size={14} color={accentSecondary} /> : <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `1px solid ${mutedColor}` }} />}
-                    <span style={{ fontSize: '0.8rem', color: req.test(password) ? accentSecondary : mutedColor }}>{req.label}</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', padding: '4px 0' }}>
+                    {req.test(password) ? <CheckCircle size={16} color={accentSecondary} /> : <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: `1px solid ${mutedColor}` }} />}
+                    <span style={{ fontSize: '0.85rem', color: req.test(password) ? accentSecondary : mutedColor }}>{req.label}</span>
                   </div>
                 ))}
               </div>
@@ -256,18 +357,34 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
                     onBlur={() => setFocused(null)} 
                     placeholder="Confirm your password" 
                     required 
-                    style={getInputStyle('confirm')} 
+                    style={getInputStyle('confirm')}
+                    autoComplete="new-password"
                   />
                   <button 
                     type="button" 
                     onClick={() => setShowConfirm(!showConfirm)} 
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: mutedColor }}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '4px', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      color: mutedColor,
+                      padding: '12px',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
-                  <p style={{ color: accentError, fontSize: '0.8rem', marginTop: '6px' }}>Passwords do not match</p>
+                  <p style={{ color: accentError, fontSize: '0.85rem', marginTop: '8px' }}>Passwords do not match</p>
                 )}
               </div>
 
@@ -283,14 +400,15 @@ function SetPassword({ setCurrentPage, darkMode, setDarkMode }) {
                 disabled={loading || !allRequirementsMet} 
                 style={{ 
                   width: '100%', 
-                  padding: '14px', 
+                  padding: isMobile ? '16px' : '14px', 
                   background: (loading || !allRequirementsMet) ? (darkMode ? '#374151' : '#9ca3af') : accentGradient, 
                   color: '#fff', 
                   border: 'none', 
                   borderRadius: '8px', 
                   fontSize: '1rem', 
                   fontWeight: '600', 
-                  cursor: (loading || !allRequirementsMet) ? 'not-allowed' : 'pointer' 
+                  cursor: (loading || !allRequirementsMet) ? 'not-allowed' : 'pointer',
+                  minHeight: '50px',
                 }}
               >
                 {loading ? 'Setting Password...' : 'Set Password'}
