@@ -1,4 +1,4 @@
-/* Global styles for LYT Communications - v2.0 Mobile Optimized */
+/* Global styles for LYT Communications - v2.1 Mobile Touch Scrolling Fixed */
 
 * {
   box-sizing: border-box;
@@ -10,6 +10,10 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
+  /* Allow scrolling */
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -19,8 +23,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent overscroll bounce on iOS */
-  overscroll-behavior: none;
+  /* Allow vertical scrolling, prevent horizontal only */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Prevent iOS zoom on input focus - inputs must be 16px+ */
@@ -105,15 +118,10 @@ select[style*="background-color:#0d1b2a"] option {
   }
 }
 
-/* Prevent horizontal scroll */
-body, html {
-  overflow-x: hidden;
-}
-
-/* Improve touch scrolling */
-.scroll-container {
+/* Improve touch scrolling on all scrollable areas */
+.scroll-container,
+[style*="overflow"] {
   -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
 }
 
 /* Focus styles for accessibility */
