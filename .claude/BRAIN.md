@@ -234,7 +234,7 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - ComfyUI MCP (joenorton) successfully started with COMFYUI_URL=http://localhost:18188 on port 9000
 - Env var is COMFYUI_URL (NOT COMFYUI_HOST) — this was a blocker in past attempts
 - MCP server uses streamable-http transport, requires Accept headers for both application/json and text/event-stream
-- Cloudflare tunnel LIVE at https://persons-guitars-python-folder.trycloudflare.com/mcp
+- Cloudflare tunnel VERIFIED WORKING at https://persons-guitars-python-folder.trycloudflare.com/mcp (HTTP 200)
 - DNS rebinding protection must be DISABLED in server.py for Cloudflare tunnel to work (MCP lib v1.26.0 defaults to enabled)
 - Fix: add TransportSecuritySettings(enable_dns_rebinding_protection=False) before mcp.run() in server.py line ~230
 - SSH MCP server not yet installed
