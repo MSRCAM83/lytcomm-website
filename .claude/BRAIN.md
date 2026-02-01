@@ -1,7 +1,7 @@
 # CLAUDE-BRAIN.md
 ## Matt Roy — Complete Knowledge Base
-### Last Updated: 2026-01-31
-### Version: 1.0.0
+### Last Updated: 2026-02-01
+### Version: 1.2.0
 
 ---
 
@@ -196,59 +196,72 @@ Claude SEVERELY struggles with using auth tokens correctly. This causes Matt ext
 
 ---
 
-## 🔌 MCP ARCHITECTURE (TARGET STATE)
+## 🔌 MCP ARCHITECTURE (ACHIEVED ✅)
 
-### Goal
-Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, connected to Claude.ai as custom connectors. This gives Claude complete hands-on access to:
-- Queue ComfyUI generations
-- View generated images
-- Read/edit workflow JSON files
-- Upload source images
-- Install custom nodes
-- Execute shell commands
-- Manage ComfyUI queue
+### Overview
+Two MCP servers running on Vast.ai GPU instance, exposed via Cloudflare named tunnel with multi-host ingress, connected to Claude.ai as custom connectors. Fully zero-touch provisioning — user says "start my MCP" and Claude handles everything via Vast.ai API.
 
 ### MCP Server 1: ComfyUI MCP
-- **Source:** joenorton/comfyui-mcp-server (or Overseer66 fork)
+- **Source:** joenorton/comfyui-mcp-server
 - **Transport:** streamable-http
-- **Default port:** 9000
-- **Endpoint:** `http://127.0.0.1:9000/mcp`
-- **Key tools:** generate_image, view_image, list_workflows, run_workflow, get_node_definition, list_available_nodes, search_nodes, regenerate, get_queue_status, cancel_job, list_models, get_defaults, set_defaults
+- **Port:** 9000
+- **Endpoint:** https://mcp.comfyui-mcp.uk/mcp
+- **Tools:** generate_image, generate_song, view_image, list_workflows, run_workflow, regenerate, get_queue_status, cancel_job, list_models, get_defaults, set_defaults, list_assets, get_asset_metadata, publish_asset
 - **Workflow discovery:** Auto-discovers from `workflows/` directory
 - **Placeholders:** PARAM_PROMPT, PARAM_INT_STEPS, PARAM_FLOAT_CFG
 - **Asset IDs are ephemeral** — lost on server restart
+- **Env var:** COMFYUI_URL (NOT COMFYUI_HOST) — set to http://localhost:18188
 
-### MCP Server 2: SSH/Filesystem MCP
-- **Options evaluated:** shaike1/mcp-server-ssh, patrickomatik/mcp-file-edit, mcp-remote-fs
-- **Purpose:** File upload/download, shell command execution, editing files
-- **Fills the gap:** ComfyUI MCP alone cannot upload/download/edit files
+### MCP Server 2: Shell MCP (CUSTOM BUILT ✅)
+- **Source:** MSRCAM83/lytcomm-website/.claude/shell-mcp-server-v0.01.py
+- **Transport:** streamable-http
+- **Port:** 9001
+- **Endpoint:** https://shell.comfyui-mcp.uk/mcp
+- **17 Tools:**
+  - run_command (bash with timeout + cwd)
+  - read_file, write_file, append_file
+  - list_directory (recursive, depth control)
+  - file_info (stat/perms/ownership)
+  - delete_path, move_path
+  - upload_base64, download_base64
+  - process_list, kill_process
+  - disk_usage, system_info, gpu_info
+  - install_package (pip/apt)
+  - environment (get/set env vars)
+- **Purpose:** Full OS-level control — model downloads, node installs, config editing, GPU monitoring, process management
 
-### Exposure Method
-- **Cloudflare Tunnel** — `cloudflared` running on Vast instance
-- **Generates random URLs** like `xxx-yyy-zzz-injection.trycloudflare.com`
-- **No auth needed** (disposable instance, random URL provides security-through-obscurity)
-- **Claude.ai connection:** Settings → Custom Connectors → add tunnel URLs
+### Cloudflare Tunnel
+- **Named tunnel ID:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d
+- **Domain:** comfyui-mcp.uk
+- **Multi-host config.yml ingress:**
+  - shell.comfyui-mcp.uk → localhost:9001
+  - mcp.comfyui-mcp.uk → localhost:9000
+  - catch-all → http_status:404
+- **Startup:** `cloudflared tunnel run comfyui-mcp` (reads config.yml, no --url flag)
+- **Account:** Matthewsroy@gmail.com, free Zero Trust plan, team: lytcomm
+- **DNS routes:** Both mcp.comfyui-mcp.uk and shell.comfyui-mcp.uk point to tunnel
 
-### Previous Attempt Status
-- Instance C.30811990: RTX PRO 6000 Blackwell (98GB VRAM), 124GB disk, ComfyUI on 18188 (Caddy proxy 8188)
-- ComfyUI MCP (joenorton) successfully started with COMFYUI_URL=http://localhost:18188 on port 9000
-- Env var is COMFYUI_URL (NOT COMFYUI_HOST) — this was a blocker in past attempts
-- MCP server uses streamable-http transport, requires Accept headers for both application/json and text/event-stream
-- PERMANENT tunnel: https://mcp.comfyui-mcp.uk/mcp (named tunnel ID: 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d)
-- DNS rebinding protection must be DISABLED in server.py for Cloudflare tunnel to work (MCP lib v1.26.0 defaults to enabled)
-- Fix: add TransportSecuritySettings(enable_dns_rebinding_protection=False) before mcp.run() in server.py line ~230
-- Cloudflare account: Matthewsroy@gmail.com, free Zero Trust plan, team name: lytcomm
-- Domain: comfyui-mcp.uk | Permanent endpoint: https://mcp.comfyui-mcp.uk/mcp
-- Named tunnel startup: cloudflared tunnel --url http://localhost:9000 run comfyui-mcp
-- Vast.ai API key stored in memory — enables remote instance creation
-- Custom provisioning script at .claude/vast-comfyui-mcp-provision-v0.01.sh auto-starts MCP on new instances
-- To create instance: PUT /api/v0/asks/OFFER_ID/ with runtype:jupyter_direct + PROVISIONING_SCRIPT
-- CRITICAL: runtype defaults to ssh if omitted, instances boot dead without jupyter_direct
-- MCP setup script at .claude/vast-mcp-setup-v0.01.sh (also works standalone via curl | bash)
-- FULL ZERO-TOUCH FLOW: Claude searches cheapest GPU → creates via API → custom provisioning auto-boots ComfyUI + MCP + tunnel
-- User just says "start my MCP" — no SSH, no pasting, no manual steps
-- SSH MCP server not yet installed
-- Previous "vast control" connector at dis-luck-scotland-injection.trycloudflare.com/sse is dead
+### Technical Notes
+- DNS rebinding protection must be DISABLED in both servers (TransportSecuritySettings)
+- MCP lib v1.26.0+ defaults DNS rebinding to enabled — patch required
+- streamable-http requires Accept headers: application/json AND text/event-stream
+- Tunnel credentials: cert.pem + {tunnel_id}.json in /root/.cloudflared/
+
+### Provisioning Flow
+- **Setup script:** .claude/vast-mcp-setup-v0.05.sh (dual MCP, 10 steps)
+- **Wrapper:** .claude/vast-comfyui-mcp-provision-v0.01.sh (downloads + executes setup)
+- **Instance create:** PUT /api/v0/asks/{OFFER_ID}/ with:
+  - runtype: jupyter_direct (CRITICAL — ssh default boots dead)
+  - template_hash_id: 3eb6117d50a4702f4beba00d0fc22289
+  - onstart: `curl -sL {provision_url} | bash`
+- **Zero-touch:** Claude searches GPU → creates via API → provisioning auto-boots ComfyUI + both MCPs + tunnel
+- **Timeline:** ~4 minutes from instance create to both endpoints live
+
+### Claude.ai Connection
+- Settings → MCP Servers (Connectors)
+- Add: https://mcp.comfyui-mcp.uk/mcp (ComfyUI tools)
+- Add: https://shell.comfyui-mcp.uk/mcp (Shell tools)
+- Both appear as tool sets in Claude's interface
 
 ---
 
@@ -296,9 +309,9 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 7. **DWPose node failure** → NumPy version conflict, same fix as #1
 
 ### Unresolved / In Progress
-1. **Full MCP pipeline on Vast.ai** → ComfyUI MCP + SSH MCP + Cloudflare tunnel → Claude.ai connectors (never completed end-to-end)
-2. **Grok Director node** → Designed but not built
-3. **Automated instance environment dump** → Script that inventories installed nodes/models and writes to GitHub brain
+1. **Grok Director node** → Designed but not built
+2. **Automated instance environment dump** → Script that inventories installed nodes/models and writes to GitHub brain
+3. **ACE-Step model download** → Script ready (vast-model-download-v0.01.sh) but needs Shell MCP to execute remotely
 
 ---
 
@@ -308,6 +321,7 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 |------|---------|---------|
 | 2026-01-31 | 1.0.0 | Initial brain creation — compiled from 50+ past conversations |
 | 2026-02-01 | 1.1.0 | MCP server successfully started on Vast instance C.30811990, COMFYUI_URL fix documented |
+| 2026-02-01 | 1.2.0 | DUAL MCP ACHIEVED: Shell MCP v0.01 (17 tools), setup v0.05, multi-host Cloudflare tunnel, shell.comfyui-mcp.uk DNS route. Full MCP pipeline complete. |
 
 ---
 
