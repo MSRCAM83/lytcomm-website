@@ -230,9 +230,13 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - **Claude.ai connection:** Settings → Custom Connectors → add tunnel URLs
 
 ### Previous Attempt Status
-- A "vast control" MCP was connected at `dis-luck-scotland-injection.trycloudflare.com/sse` — status unknown, likely dead instance
-- MCP setup has been attempted multiple times but never fully completed end-to-end
-- Main blockers: tunnel configuration, server startup reliability, Claude.ai connector setup
+- Instance C.30811990: RTX PRO 6000 Blackwell (98GB VRAM), 124GB disk, ComfyUI on 18188 (Caddy proxy 8188)
+- ComfyUI MCP (joenorton) successfully started with COMFYUI_URL=http://localhost:18188 on port 9000
+- Env var is COMFYUI_URL (NOT COMFYUI_HOST) — this was a blocker in past attempts
+- MCP server uses streamable-http transport, requires Accept headers for both application/json and text/event-stream
+- Cloudflare tunnel setup in progress — exposing port 9000 via cloudflared
+- SSH MCP server not yet installed
+- Previous "vast control" connector at dis-luck-scotland-injection.trycloudflare.com/sse is dead
 
 ---
 
@@ -291,6 +295,7 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-31 | 1.0.0 | Initial brain creation — compiled from 50+ past conversations |
+| 2026-02-01 | 1.1.0 | MCP server successfully started on Vast instance C.30811990, COMFYUI_URL fix documented |
 
 ---
 
