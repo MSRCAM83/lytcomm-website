@@ -179,14 +179,6 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     setLoading(false);
   };
 
-      setLastRefresh(new Date());
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Failed to load data. Please refresh.');
-    }
-    
-    setLoading(false);
-  };
 
   const handleLogout = () => {
     setLoggedInUser(null);
