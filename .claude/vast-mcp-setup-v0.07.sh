@@ -227,42 +227,14 @@ ok "mcp package installed"
 if grep -q "enable_dns_rebinding_protection=False" /workspace/comfyui-mcp-server/server.py 2>/dev/null; then
     ok "DNS rebinding patch already applied"
 else
-    $PYTHON -c "
-content = open('/workspace/comfyui-mcp-server/server.py').read()
-# Try the known pattern from joenorton's server
-old = '        mcp.run(transport=\"streamable-http\")'
-new = '''        # Disable DNS rebinding protection for Cloudflare tunnel access
-        from mcp.server.transport_security import TransportSecuritySettings
-        mcp.settings.transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-        mcp.run(transport=\"streamable-http\")'''
-if old in content:
-    content = content.replace(old, new)
-    open('/workspace/comfyui-mcp-server/server.py', 'w').write(content)
-    print('PATCHED')
-else:
-    # Alternative: try without leading whitespace
-    import re
-    pattern = r'mcp\.run\(transport=\"streamable-http\"\)'
-    match = re.search(pattern, content)
-    if match:
-        indent = ''
-        line_start = content.rfind('\n', 0, match.start()) + 1
-        indent = content[line_start:match.start()]
-        replacement = f'''# Disable DNS rebinding protection for Cloudflare tunnel access
-{indent}from mcp.server.transport_security import TransportSecuritySettings
-{indent}mcp.settings.transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-{indent}mcp.run(transport=\"streamable-http\")'''
-        content = content[:match.start()] + replacement + content[match.end():]
-        open('/workspace/comfyui-mcp-server/server.py', 'w').write(content)
-        print('PATCHED (alt)')
-    else:
-        print('WARNING: Could not find mcp.run pattern to patch')
-" 2>&1
-    PATCH_RESULT=$?
-    if [ $PATCH_RESULT -eq 0 ]; then
-        ok "DNS rebinding protection patched in server.py"
+    # Find the line with mcp.run(transport="streamable-http") and replace it
+    # Use sed — more reliable than Python pattern matching across versions
+    LINE=$(grep -n 'mcp.run(transport="streamable-http")' /workspace/comfyui-mcp-server/server.py | tail -1 | cut -d: -f1)
+    if [ -n "$LINE" ]; then
+        sed -i "${LINE}s|.*|        from mcp.server.transport_security import TransportSecuritySettings\n        mcp.settings.transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)\n        mcp.run(transport=\"streamable-http\")|" /workspace/comfyui-mcp-server/server.py
+        ok "DNS rebinding protection patched in server.py (line ${LINE})"
     else
-        warn "Could not patch server.py — ComfyUI MCP may reject tunnel requests"
+        warn "Could not find mcp.run pattern — ComfyUI MCP may reject tunnel requests"
     fi
 fi
 
@@ -356,7 +328,7 @@ sleep 2
 
 # Detect if supervisord is already running (comfy template)
 SUPERVISOR_RUNNING=0
-if pgrep -x supervisord > /dev/null 2>&1; then
+if pgrep -f supervisord > /dev/null 2>&1; then
     SUPERVISOR_RUNNING=1
     info "Existing supervisord detected (template image) — adding MCP programs to it"
 else
