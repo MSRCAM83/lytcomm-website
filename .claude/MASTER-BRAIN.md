@@ -1,7 +1,7 @@
 # 🧠 MASTER-BRAIN.md
 ## Matt Roy — Universal Knowledge Base
 ### Last Updated: 2026-02-01
-### Version: 1.0.0
+### Version: 1.0.2
 
 ---
 
@@ -260,6 +260,7 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 
 ### Key Models
 - Diffusion: SmoothMix Wan 2.2 I2V GGUF (High + Low)
+- SDXL: RealVisXL_V5.0_Lightning.safetensors (checkpoints/)
 - Text Encoder: umt5-xxl GGUF Q8_0
 - VAE: Wan 2.1 FP32
 - LoRAs: LightX2V 4-step + 30+ style/NSFW LoRAs from CivitAI
@@ -291,6 +292,7 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 | Ollama chat trap | Exit with `/bye` before running terminal commands |
 | Apps Script cross-account | Use `shareWithAdmin()` function |
 | Gateway large updates | >8000 chars URL encoded fails — chunk or manual edit |
+| Vercel 34 failed deploys | Duplicate try/catch block in AdminDashboard.js line 182-189. Removed 8 orphaned lines. |
 
 ---
 
@@ -299,6 +301,8 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-02-01 | 1.0.0 | Initial MASTER-BRAIN creation — compiled from 50+ conversations, memory edits, and existing BRAIN.md |
+| 2026-02-01 | 1.0.1 | Tokens segmented (never redacted), CivitAI token fix, GitHub PAT added |
+| 2026-02-01 | 1.0.2 | Fixed Vercel build failure (duplicate try/catch in AdminDashboard.js). RealVisXL_V5.0_Lightning added to model inventory. Rule: NEVER redact tokens — always segment. |
 
 ---
 
