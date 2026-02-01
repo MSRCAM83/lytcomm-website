@@ -237,6 +237,9 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - Cloudflare tunnel VERIFIED WORKING at https://persons-guitars-python-folder.trycloudflare.com/mcp (HTTP 200)
 - DNS rebinding protection must be DISABLED in server.py for Cloudflare tunnel to work (MCP lib v1.26.0 defaults to enabled)
 - Fix: add TransportSecuritySettings(enable_dns_rebinding_protection=False) before mcp.run() in server.py line ~230
+- Cloudflare account: Matthewsroy@gmail.com, free Zero Trust plan, team name: lytcomm
+- Domain purchased: comfyui-mcp.uk (permanent MCP endpoint will be comfyui.comfyui-mcp.uk/mcp or similar)
+- Named tunnel setup in progress via cloudflared CLI on Vast instance
 - SSH MCP server not yet installed
 - Previous "vast control" connector at dis-luck-scotland-injection.trycloudflare.com/sse is dead
 
