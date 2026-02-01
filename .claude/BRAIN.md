@@ -1,7 +1,7 @@
 # CLAUDE-BRAIN.md
 ## Matt Roy — Complete Knowledge Base
 ### Last Updated: 2026-02-01
-### Version: 1.2.1
+### Version: 1.2.0
 
 ---
 
@@ -125,9 +125,6 @@ Claude SEVERELY struggles with using auth tokens correctly. This causes Matt ext
 6. When building scripts, add a comment `# AUTH: HF token included` or `# AUTH: CivitAI token included` next to every download line as a self-check
 
 ### Model Inventory (Known/Used)
-
-#### SDXL Checkpoints — `/workspace/ComfyUI/models/checkpoints/`
-- RealVisXL_V5.0_Lightning.safetensors (SDXL Lightning, fp16)
 
 #### Diffusion Models (GGUF) — `/workspace/ComfyUI/models/diffusion_models/`
 - SmoothMix Wan 2.2 I2V High Noise (GGUF) — from CivitAI
@@ -327,7 +324,6 @@ Two MCP servers running on Vast.ai GPU instance, exposed via Cloudflare named tu
 |------|---------|---------|
 | 2026-01-31 | 1.0.0 | Initial brain creation — compiled from 50+ past conversations |
 | 2026-02-01 | 1.1.0 | MCP server successfully started on Vast instance C.30811990, COMFYUI_URL fix documented |
-| 2026-02-01 | 1.2.1 | Added RealVisXL_V5.0_Lightning to checkpoints. Vercel build fix (AdminDashboard.js duplicate block). MASTER-BRAIN.md created as universal brain. |
 | 2026-02-01 | 1.2.0 | DUAL MCP ACHIEVED: Shell MCP v0.01 (17 tools), setup v0.05, multi-host Cloudflare tunnel, shell.comfyui-mcp.uk DNS route. Full MCP pipeline complete. |
 
 ---
