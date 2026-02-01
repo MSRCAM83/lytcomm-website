@@ -32,7 +32,7 @@
 | Server | Local | Tunnel | Claude.ai |
 |--------|-------|--------|-----------|
 | ComfyUI MCP | localhost:9000 ✅ | mcp.comfyui-mcp.uk ✅ | Connected as "Vast MCP" |
-| Shell MCP | localhost:9001 ✅ | shell.comfyui-mcp.uk ✅ | Connected as "comfyui-mcp" |
+| Shell MCP | localhost:9001 ✅ | sh.comfyui-mcp.uk ✅ | Connected as "comfyui-mcp" |
 
 ### What Still Needs Doing
 - [ ] Verify Shell MCP tools actually load (need new conversation — tools load at chat start)
@@ -86,7 +86,7 @@ curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
 # Step 3: Wait ~4 minutes. Provisioning is automatic via onstart.
 # Step 4: Health check both endpoints
 curl -s -o /dev/null -w "%{http_code}" -X POST https://mcp.comfyui-mcp.uk/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
-curl -s -o /dev/null -w "%{http_code}" -X POST https://shell.comfyui-mcp.uk/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
+curl -s -o /dev/null -w "%{http_code}" -X POST https://sh.comfyui-mcp.uk/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 ```
 
 ### If Instance Is Running But MCPs Are Down
@@ -119,7 +119,7 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 | Server | Port | Endpoint | Source |
 |--------|------|----------|--------|
 | **ComfyUI MCP** | 9000 | `https://mcp.comfyui-mcp.uk/mcp` | joenorton/comfyui-mcp-server |
-| **Shell MCP** | 9001 | `https://shell.comfyui-mcp.uk/mcp` | Custom: shell-mcp-server-v0.03.py |
+| **Shell MCP** | 9001 | `https://sh.comfyui-mcp.uk/mcp` | Custom: shell-mcp-server-v0.03.py |
 
 ### ComfyUI MCP Tools
 generate_image, generate_song, view_image, list_workflows, run_workflow, regenerate, get_queue_status, cancel_job, list_models, get_defaults, set_defaults, list_assets, get_asset_metadata, publish_asset
