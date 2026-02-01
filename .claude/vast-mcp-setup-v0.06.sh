@@ -240,7 +240,7 @@ mkdir -p "${SHELL_MCP_DIR}"
 
 echo "Downloading shell-mcp-server from GitHub..."
 for i in $(seq 1 $RETRY_MAX); do
-    curl -sL "${GITHUB_RAW}/shell-mcp-server-v0.01.py" -o "${SHELL_MCP_FILE}" && break
+    curl -sL "${GITHUB_RAW}/shell-mcp-server-v0.02.py" -o "${SHELL_MCP_FILE}" && break
     warn "Retry $i/$RETRY_MAX..."
     sleep 2
 done
@@ -327,7 +327,16 @@ step 12 "Starting Shell MCP server"
 pkill -f "shell-mcp-server/server.py" 2>/dev/null || true
 sleep 1
 
-nohup python ${SHELL_MCP_FILE} > /tmp/mcp-shell.log 2>&1 &
+# Install mcp package for shell server (may already be installed from ComfyUI MCP)
+SHELL_PYTHON=$(which python3 || echo "/venv/main/bin/python")
+if [ -f "/venv/main/bin/python" ]; then
+    SHELL_PYTHON="/venv/main/bin/python"
+fi
+$SHELL_PYTHON -m pip install mcp --quiet --break-system-packages 2>/dev/null || true
+
+# Start with DNS rebinding protection disabled for Cloudflare tunnel
+MCP_TRANSPORT_SECURITY__ENABLE_DNS_REBINDING_PROTECTION=false \
+nohup $SHELL_PYTHON ${SHELL_MCP_FILE} > /tmp/mcp-shell.log 2>&1 &
 SHELL_MCP_PID=$!
 echo "Shell MCP server PID: $SHELL_MCP_PID"
 
