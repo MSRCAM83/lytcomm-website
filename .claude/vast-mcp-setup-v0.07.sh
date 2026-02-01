@@ -292,6 +292,22 @@ pkill -f "comfyui-mcp-server/server.py" 2>/dev/null || true
 pkill -f "shell-mcp-server/server.py" 2>/dev/null || true
 pkill -f "comfyui_mcp_server" 2>/dev/null || true
 pkill -f "cloudflared tunnel" 2>/dev/null || true
+
+# Kill template's tunnel_manager — it conflicts with our cloudflared tunnel
+supervisorctl stop tunnel_manager 2>/dev/null || true
+# Prevent it from auto-restarting
+if [ -f /etc/supervisor/conf.d/tunnel_manager.conf ]; then
+    sed -i 's/autostart=true/autostart=false/' /etc/supervisor/conf.d/tunnel_manager.conf 2>/dev/null || true
+fi
+# Also check the main supervisord.conf or any combined config
+for f in /etc/supervisor/supervisord.conf /etc/supervisor/conf.d/*.conf; do
+    if grep -q "\[program:tunnel_manager\]" "$f" 2>/dev/null; then
+        sed -i '/\[program:tunnel_manager\]/,/^\[/{s/autostart=true/autostart=false/}' "$f" 2>/dev/null || true
+    fi
+done
+supervisorctl reread 2>/dev/null || true
+supervisorctl update 2>/dev/null || true
+
 sleep 2
 
 # Detect if supervisord is already running (comfy template)
