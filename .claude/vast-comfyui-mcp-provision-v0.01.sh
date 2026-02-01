@@ -71,7 +71,7 @@ function setup_mcp_server() {
     TUNNEL_ID="73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d"
     TUNNEL_NAME="comfyui-mcp"
     COMFYUI_PORT=18188
-    MCP_SCRIPT_URL="https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.04.sh"
+    MCP_SCRIPT_URL="https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.05.sh"
     
     # Wait for ComfyUI to actually be running before starting MCP
     echo "Waiting for ComfyUI to start on port ${COMFYUI_PORT}..."
