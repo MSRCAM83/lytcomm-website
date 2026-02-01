@@ -119,7 +119,7 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 | Server | Port | Endpoint | Source |
 |--------|------|----------|--------|
 | **ComfyUI MCP** | 9000 | `https://mcp.comfyui-mcp.uk/mcp` | joenorton/comfyui-mcp-server |
-| **Shell MCP** | 9001 | `https://shell.comfyui-mcp.uk/mcp` | Custom: shell-mcp-server-v0.02.py |
+| **Shell MCP** | 9001 | `https://shell.comfyui-mcp.uk/mcp` | Custom: shell-mcp-server-v0.03.py |
 
 ### ComfyUI MCP Tools
 generate_image, generate_song, view_image, list_workflows, run_workflow, regenerate, get_queue_status, cancel_job, list_models, get_defaults, set_defaults, list_assets, get_asset_metadata, publish_asset
@@ -289,7 +289,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | MASTER-BRAIN.md | God brain — universal knowledge | v1.0.2 |
 | COMFYUI-MCP-BRAIN.md | This file — project brain | v2.0.0 |
 | vast-mcp-setup-v0.07.sh | Provisioning script | v0.07 |
-| shell-mcp-server-v0.02.py | Shell MCP server | v0.02 |
+| shell-mcp-server-v0.03.py | Shell MCP server | v0.02 |
 | start-mcps.sh | Mid-session MCP restart | v0.01 |
 | vast-model-download-v0.01.sh | Model download script | v0.01 |
 | PROJECT-INSTRUCTIONS-v0.02.md | Claude Project bootstrap | v0.02 |
