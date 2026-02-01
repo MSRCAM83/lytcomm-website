@@ -249,7 +249,7 @@ mkdir -p "${SHELL_MCP_DIR}"
 # Always download fresh v0.02 to avoid stale v0.01 issues
 info "Downloading shell-mcp-server v0.02..."
 for i in $(seq 1 $RETRY_MAX); do
-    curl -sL "${GITHUB_RAW}/shell-mcp-server-v0.02.py" -o "${SHELL_MCP_FILE}" && break
+    curl -sL "${GITHUB_RAW}/shell-mcp-server-v0.03.py" -o "${SHELL_MCP_FILE}" && break
     warn "Retry $i/$RETRY_MAX..."
     sleep 2
 done
