@@ -6,7 +6,7 @@
 # Permanent endpoint: https://mcp.comfyui-mcp.uk/mcp
 #
 # CHANGELOG:
-# v0.02 - Added cloudflared installation, removed set -e, explicit python
+# v0.02 - Added cloudflared install, removed set -e for background exec
 # v0.01 - Initial version
 ###############################################################################
 
@@ -36,9 +36,8 @@ echo -e "${BOLD}  Permanent endpoint: https://mcp.comfyui-mcp.uk/mcp${NC}"
 echo -e "${BOLD}========================================================${NC}"
 
 ###############################################################################
-step 1 "Installing system packages (aria2c, cloudflared)"
+step 1 "Installing aria2c"
 ###############################################################################
-# Install aria2c
 if command -v aria2c &>/dev/null; then
     ok "aria2c already installed"
 else
@@ -47,26 +46,28 @@ else
         warn "Retry $i/$RETRY_MAX..."
         sleep 2
     done
-    command -v aria2c &>/dev/null && ok "aria2c installed" || warn "Failed to install aria2c"
+    command -v aria2c &>/dev/null && ok "aria2c installed" || fail "Failed to install aria2c"
 fi
 
-# Install cloudflared
+###############################################################################
+step 2 "Installing cloudflared"
+###############################################################################
 if command -v cloudflared &>/dev/null; then
     ok "cloudflared already installed"
 else
-    echo "Installing cloudflared..."
+    echo "Downloading cloudflared..."
     for i in $(seq 1 $RETRY_MAX); do
-        curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb && \
+        curl -sL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb" -o /tmp/cloudflared.deb && \
         dpkg -i /tmp/cloudflared.deb > /dev/null 2>&1 && \
         rm -f /tmp/cloudflared.deb && break
         warn "Retry $i/$RETRY_MAX..."
         sleep 2
     done
-    command -v cloudflared &>/dev/null && ok "cloudflared installed ($(cloudflared --version 2>&1 | head -1))" || fail "Failed to install cloudflared"
+    command -v cloudflared &>/dev/null && ok "cloudflared installed" || fail "Failed to install cloudflared"
 fi
 
 ###############################################################################
-step 2 "Cloning ComfyUI MCP server"
+step 3 "Cloning ComfyUI MCP server"
 ###############################################################################
 if [ -d "/workspace/comfyui-mcp-server" ]; then
     ok "ComfyUI MCP server already cloned"
@@ -80,12 +81,10 @@ else
 fi
 
 ###############################################################################
-step 3 "Installing MCP server dependencies"
+step 4 "Installing MCP server dependencies"
 ###############################################################################
 cd /workspace/comfyui-mcp-server
 for i in $(seq 1 $RETRY_MAX); do
-    pip install --break-system-packages -r requirements.txt > /dev/null 2>&1 && break
-    # Also try without --break-system-packages for venv environments
     pip install -r requirements.txt > /dev/null 2>&1 && break
     warn "Retry $i/$RETRY_MAX..."
     sleep 2
@@ -93,7 +92,7 @@ done
 ok "Dependencies installed"
 
 ###############################################################################
-step 4 "Patching DNS rebinding protection"
+step 5 "Patching DNS rebinding protection"
 ###############################################################################
 if grep -q "enable_dns_rebinding_protection=False" /workspace/comfyui-mcp-server/server.py; then
     ok "Already patched"
@@ -112,15 +111,13 @@ open('/workspace/comfyui-mcp-server/server.py', 'w').write(content)
 fi
 
 ###############################################################################
-step 5 "Writing Cloudflare tunnel credentials"
+step 6 "Writing Cloudflare tunnel credentials"
 ###############################################################################
 mkdir -p /root/.cloudflared
 
-# Write cert.pem
 echo "LS0tLS1CRUdJTiBBUkdPIFRVTk5FTCBUT0tFTi0tLS0tCmV5SjZiMjVsU1VRaU9pSTFOemN6TVRkbFl6STFNamxsTnpsak5ERTNObVU1WWpJek9ETmpNVEU0TUNJc0ltRmoKWTI5MWJuUlNSQ0k2SW1Ka05XWmlZMlUyTW1NNU1UQTVaVFV5WmpBM1lqQTBZVGt6TkdVME1qQTFJaXdpWVhCcApWRzlyWlc0aU9pSTJiMFE1YlV3Mk16RmpOV1ppZFZaaU4zRkdkbFIwTUU4dFp5MDVkelJDZGxKUVdEUjZZbkp3CkluMD0KLS0tLS1FTkQgQVJHTyBUVU5ORUwgVE9LRU4tLS0tLQo=" | base64 -d > /root/.cloudflared/cert.pem
 chmod 600 /root/.cloudflared/cert.pem
 
-# Write tunnel credentials JSON
 cat > /root/.cloudflared/${TUNNEL_ID}.json << 'TUNNEL_EOF'
 {"AccountTag":"bd5fbce62c9109e52f07b04a934e4205","TunnelSecret":"WMYTqK5pi5hmnf5tE07r8RMX+4lfQIni2C7JPKeyE64=","TunnelID":"73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d","Endpoint":""}
 TUNNEL_EOF
@@ -129,36 +126,21 @@ chmod 600 /root/.cloudflared/${TUNNEL_ID}.json
 ok "Tunnel credentials written to /root/.cloudflared/"
 
 ###############################################################################
-step 6 "Waiting for ComfyUI"
-###############################################################################
-echo -n "Waiting for ComfyUI on port ${COMFYUI_PORT}..."
-for i in $(seq 1 60); do
-    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:${COMFYUI_PORT}" 2>/dev/null | grep -q "200"; then
-        echo ""
-        ok "ComfyUI running on port ${COMFYUI_PORT}"
-        break
-    fi
-    echo -n "."
-    sleep 5
-    if [ "$i" -eq 60 ]; then
-        echo ""
-        warn "ComfyUI not detected after 5 minutes — proceeding anyway"
-    fi
-done
-
-###############################################################################
 step 7 "Starting ComfyUI MCP server"
 ###############################################################################
-# Kill any existing MCP server
 pkill -f "comfyui-mcp-server/server.py" 2>/dev/null || true
 sleep 1
 
-# Start MCP server
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:${COMFYUI_PORT} | grep -q "200"; then
+    ok "ComfyUI running on port ${COMFYUI_PORT}"
+else
+    warn "ComfyUI not responding on port ${COMFYUI_PORT} — MCP server will retry"
+fi
+
 COMFYUI_URL=http://localhost:${COMFYUI_PORT} nohup python /workspace/comfyui-mcp-server/server.py > /tmp/mcp-server.log 2>&1 &
 MCP_PID=$!
 echo "MCP server PID: $MCP_PID"
 
-# Wait for it to be ready
 echo -n "Waiting for MCP server..."
 for i in $(seq 1 15); do
     sleep 2
@@ -181,7 +163,6 @@ done
 ###############################################################################
 step 8 "Starting Cloudflare tunnel"
 ###############################################################################
-# Kill any existing tunnel
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 sleep 1
 
@@ -189,7 +170,6 @@ nohup cloudflared tunnel --url http://localhost:9000 run ${TUNNEL_NAME} > /tmp/c
 CF_PID=$!
 echo "Cloudflared PID: $CF_PID"
 
-# Wait for tunnel to register
 echo -n "Waiting for tunnel..."
 for i in $(seq 1 15); do
     sleep 2
@@ -202,11 +182,9 @@ for i in $(seq 1 15); do
     if [ "$i" -eq 15 ]; then
         echo ""
         warn "Tunnel not registered after 30s — check /tmp/cloudflared.log"
-        cat /tmp/cloudflared.log 2>/dev/null | tail -20
     fi
 done
 
-# Final verification
 sleep 3
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://mcp.comfyui-mcp.uk/mcp \
     -H "Content-Type: application/json" \
