@@ -1,62 +1,77 @@
 # 🧠 COMFYUI-MCP-BRAIN.md
 ## Project Brain — ComfyUI + Vast.ai + MCP Infrastructure
 ### Last Updated: 2026-02-01
-### Version: 2.0.0
+### Version: 2.0.1
 
 ---
 
 ## ⚡ CURRENT STATE (Short-Term — Updated Every Session)
 
-### Active Instance
+### Session: 2026-02-01 (Evening)
+
+### What Was Accomplished This Session
+1. Built v0.07 provisioning script with supervisord auto-restart
+2. Fixed supervisord collision with Vast comfy template (reread/update, not restart)
+3. Fixed supervisor detection (pgrep -f, not pgrep -x)
+4. Fixed DNS rebinding "Invalid Host header" (sed patch on server.py, env var alone insufficient)
+5. Killed template's tunnel_manager that was conflicting with our Cloudflare tunnel
+6. Both MCPs confirmed 200 through Cloudflare tunnel
+7. Image generation tested successfully (RealVisXL Lightning on A100)
+8. Both MCP connectors added in Claude.ai settings (ComfyUI + Shell)
+9. Brain restructured: BRAIN.md → COMFYUI-MCP-BRAIN.md, tiered architecture
+
+### Last Known Instance
 - **Instance ID:** 30838160
 - **GPU:** A100 SXM4 80GB
 - **Location:** Massachusetts, USA
 - **Cost:** $0.83/hr
 - **Image:** vastai/comfy:v0.10.0-cuda-12.9-py312
-- **Status:** RUNNING ✅
+- **Status at session end:** RUNNING — but this is a Vast instance, it may be destroyed by now
 
-### MCP Status
-| Server | Local | Tunnel | Status |
-|--------|-------|--------|--------|
-| ComfyUI MCP | http://localhost:9000 ✅ | https://mcp.comfyui-mcp.uk/mcp ✅ | Connected in Claude.ai |
-| Shell MCP | http://localhost:9001 ✅ | https://shell.comfyui-mcp.uk/mcp ✅ | Connected in Claude.ai |
+### Last Known MCP Status
+| Server | Local | Tunnel | Claude.ai |
+|--------|-------|--------|-----------|
+| ComfyUI MCP | localhost:9000 ✅ | mcp.comfyui-mcp.uk ✅ | Connected as "Vast MCP" |
+| Shell MCP | localhost:9001 ✅ | shell.comfyui-mcp.uk ✅ | Connected as "comfyui-mcp" |
 
-### Current Task
-- v0.07 provisioning script — COMPLETE ✅
-- Both MCPs live through Cloudflare tunnel
-- Image generation tested and working (RealVisXL Lightning on A100)
-- Next: Shell MCP tools need new conversation to load
+### What Still Needs Doing
+- [ ] Verify Shell MCP tools actually load (need new conversation — tools load at chat start)
+- [ ] Test full lifecycle: no instance → recovery command → both MCPs live
+- [ ] Model manifest system (download profiles: sdxl, wan22, flux)
+- [ ] Output persistence (auto-sync generations to cloud storage)
+- [ ] Claude-initiated instance launcher ("spin me up a 4090")
 
-### Recent Fixes (This Session)
-1. Supervisord collision with template — use `reread/update` not restart
-2. Supervisor detection — `pgrep -f` not `pgrep -x`
-3. DNS rebinding patch — `sed` on actual line number, not Python pattern matching
-4. tunnel_manager conflict — stop + disable template's competing tunnel
-5. ComfyUI MCP "Invalid Host header" — patch server.py directly
+### ⚠️ BEFORE DOING ANYTHING — CHECK INSTANCE STATUS
+The instance may be dead. First action every session:
+```bash
+VAST_TOKEN="339786fe805ebc1c56f2b44bcec4b82aa0bf9f52247af363ff4711783b96e926"
+curl -s -H "Authorization: Bearer $VAST_TOKEN" "https://console.vast.ai/api/v0/instances?owner=me" | python3 -c "
+import sys,json
+instances = json.load(sys.stdin).get('instances',[])
+if not instances:
+    print('NO INSTANCES RUNNING — need to create one')
+else:
+    for i in instances:
+        print(f'ID: {i["id"]} | GPU: {i.get("gpu_name","?")} | Status: {i.get("actual_status","?")} | Cost: \${i.get("dph_total",0):.2f}/hr')
+"
+```
 
-### Pending Work
-- [ ] Verify Shell MCP tools load in new conversation
-- [ ] Test full instance lifecycle: create → provision → both MCPs live
-- [ ] Model manifest system (download profiles)
-- [ ] Output persistence (sync to R2/S3/GitHub)
-- [ ] Instance launcher from Claude (say "spin me up a 4090")
+If no instance is running, ask Matt before creating one. Then use the recovery commands below.
 
 ---
 
-## 🔧 RECOVERY COMMAND
+## 🔧 RECOVERY COMMANDS (Reference — DO NOT auto-execute)
 
-One command to restore full stack on any Vast.ai instance:
-```bash
-curl -sL https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh | bash
-```
+These commands get back to full operational state. Wait for Matt's go-ahead before running any of them.
 
-### Full Instance Creation Flow
+### If Instance Is Dead — Create New One
 ```bash
-# 1. Search for GPU
+# Step 1: Search for GPU (budget $1/hr, 24GB+ VRAM, 500Mbps+ download)
 VAST_TOKEN="339786fe805ebc1c56f2b44bcec4b82aa0bf9f52247af363ff4711783b96e926"
-curl -s -H "Authorization: Bearer $VAST_TOKEN" "https://console.vast.ai/api/v0/bundles?q={\"rentable\":{\"eq\":true},\"dph_total\":{\"lte\":1.0},\"gpu_ram\":{\"gte\":24},\"inet_down\":{\"gte\":500},\"reliability2\":{\"gte\":0.95},\"num_gpus\":{\"eq\":1},\"order\":[[\"dph_total\",\"asc\"]]}&limit=5"
+curl -s -H "Authorization: Bearer $VAST_TOKEN" \
+  "https://console.vast.ai/api/v0/bundles?q=%7B%22rentable%22%3A%7B%22eq%22%3Atrue%7D%2C%22dph_total%22%3A%7B%22lte%22%3A1.0%7D%2C%22gpu_ram%22%3A%7B%22gte%22%3A24%7D%2C%22inet_down%22%3A%7B%22gte%22%3A500%7D%2C%22reliability2%22%3A%7B%22gte%22%3A0.95%7D%2C%22num_gpus%22%3A%7B%22eq%22%3A1%7D%2C%22order%22%3A%5B%5B%22dph_total%22%2C%22asc%22%5D%5D%7D&limit=5"
 
-# 2. Create instance (use offer ID from search)
+# Step 2: Create instance (replace {OFFER_ID} with best result from step 1)
 curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
   "https://console.vast.ai/api/v0/asks/{OFFER_ID}/" \
   -H "Content-Type: application/json" \
@@ -68,14 +83,30 @@ curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
     "onstart": "curl -sL https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh | bash"
   }'
 
-# 3. Wait ~4 minutes, then both endpoints are live
+# Step 3: Wait ~4 minutes. Provisioning is automatic via onstart.
+# Step 4: Health check both endpoints
+curl -s -o /dev/null -w "%{http_code}" -X POST https://mcp.comfyui-mcp.uk/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
+curl -s -o /dev/null -w "%{http_code}" -X POST https://shell.comfyui-mcp.uk/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 ```
 
-### Mid-Session Restart (if MCPs crash)
+### If Instance Is Running But MCPs Are Down
 ```bash
+# Option A: Re-run full provisioning (safe, idempotent)
+curl -sL https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh | bash
+
+# Option B: Quick restart (if everything is already installed)
 /workspace/start-mcps.sh
-# OR
+
+# Option C: Targeted restart via supervisord
 supervisorctl restart comfyui-mcp shell-mcp cloudflared
+```
+
+### If DNS Rebinding Error Returns (421 or "Invalid Host header")
+```bash
+# Patch server.py and restart
+LINE=$(grep -n 'mcp.run(transport="streamable-http")' /workspace/comfyui-mcp-server/server.py | tail -1 | cut -d: -f1)
+sed -i "${LINE}s|.*|        from mcp.server.transport_security import TransportSecuritySettings\n        mcp.settings.transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)\n        mcp.run(transport=\"streamable-http\")|" /workspace/comfyui-mcp-server/server.py
+supervisorctl restart comfyui-mcp
 ```
 
 ---
@@ -273,7 +304,9 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | 2026-02-01 | 1.1.0 | MCP server on Vast, COMFYUI_URL fix |
 | 2026-02-01 | 1.2.0 | Dual MCP achieved, Shell MCP v0.01, setup v0.05 |
 | 2026-02-01 | 2.0.0 | **RENAMED** BRAIN.md → COMFYUI-MCP-BRAIN.md. Restructured with Current State section. Added v0.07 provisioning (supervisord, template detection, DNS rebinding sed patch, tunnel_manager kill). Full troubleshooting reference. File inventory. |
+| 2026-02-01 | 2.0.1 | Updated CURRENT STATE as session handoff briefing. Recovery commands as reference (not auto-execute). Added instance status check. |
 
 ---
 
 *This is the ComfyUI + MCP project brain. Fetch at conversation start when doing AI/ComfyUI/Vast work. Update after every meaningful session.*
+
