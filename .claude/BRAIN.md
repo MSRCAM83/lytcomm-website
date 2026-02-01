@@ -242,7 +242,8 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - Named tunnel startup: cloudflared tunnel --url http://localhost:9000 run comfyui-mcp
 - Vast.ai API key stored in memory — enables remote instance creation
 - Custom provisioning script at .claude/vast-comfyui-mcp-provision-v0.01.sh auto-starts MCP on new instances
-- To create instance: PUT to /api/v0/asks/OFFER_ID/ with PROVISIONING_SCRIPT pointing to our custom script
+- To create instance: PUT /api/v0/asks/OFFER_ID/ with runtype:jupyter_direct + PROVISIONING_SCRIPT
+- CRITICAL: runtype defaults to ssh if omitted, instances boot dead without jupyter_direct
 - MCP setup script at .claude/vast-mcp-setup-v0.01.sh (also works standalone via curl | bash)
 - FULL ZERO-TOUCH FLOW: Claude searches cheapest GPU → creates via API → custom provisioning auto-boots ComfyUI + MCP + tunnel
 - User just says "start my MCP" — no SSH, no pasting, no manual steps
