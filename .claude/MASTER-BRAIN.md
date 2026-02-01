@@ -1,7 +1,7 @@
 # 🧠 MASTER-BRAIN.md
 ## Matt Roy — Universal Knowledge Base
 ### Last Updated: 2026-02-01
-### Version: 1.0.2
+### Version: 1.1.0
 
 ---
 
@@ -11,29 +11,37 @@ This is **Claude's master brain** — the single source of truth that spans ALL 
 
 ### Brain Architecture
 
-| Brain | Location | Scope | Purpose |
-|-------|----------|-------|---------|
-| **MASTER-BRAIN.md** | `MSRCAM83/lytcomm-website/.claude/MASTER-BRAIN.md` | **UNIVERSAL** | Identity, preferences, credentials, access methods, cross-project rules. Loaded EVERY conversation. |
-| **BRAIN.md** | `MSRCAM83/lytcomm-website/.claude/BRAIN.md` | **ComfyUI / AI** | ComfyUI models, nodes, workflows, Vast.ai configs, MCP servers, ReActor settings, Wan 2.2 details. Loaded when doing AI/ComfyUI work. |
-| **PROJECT-INSTRUCTIONS.md** | Claude Project system prompt | **Per-Project** | Short bootstrap rules pasted into a Claude Project. Points to brains for details. |
-| **Memory Edits** | Claude's built-in memory system | **Quick Reference** | 22-slot memory for high-priority rules and tokens. Always present in every conversation automatically. |
+| Tier | Brain | Scope | Purpose |
+|------|-------|-------|---------|
+| 🔴 **GOD** | `MASTER-BRAIN.md` | **UNIVERSAL** | Identity, tokens, preferences, hard rules. Loaded EVERY conversation. Rarely changes. |
+| 🟡 **PROJECT** | `{PROJECT}-BRAIN.md` | **Per-Project** | All domain knowledge + [CURRENT STATE] section for volatile data. Loaded when working on that project. |
+| 🟢 **MEMORY** | Memory Edits (30 slots) | **Instant** | Active instance, current task, token quick-refs. Always present automatically. |
+| 🔵 **RECALL** | Conversation Search | **Short-Term** | Natural session memory. Automatic, no file needed. |
+
+### Project Brain Index
+
+| Brain File | Domain | Status |
+|-----------|--------|--------|
+| `COMFYUI-MCP-BRAIN.md` | ComfyUI, Vast.ai, MCP servers, image/video generation | ✅ Active |
+| `LYTCOMM-BRAIN.md` | LYT website, employee portal, contractor portal | 📋 Future |
+| `FIBER-PM-BRAIN.md` | Fiber project management, Supabase, 811spotter | 📋 Future |
 
 ### Loading Rules
-- **MASTER-BRAIN.md** → Fetch at the START of every conversation, always
-- **BRAIN.md** → Fetch when the topic involves ComfyUI, Vast.ai, AI generation, or MCP
-- **Both** → Fetch both when unsure. Better to have it and not need it.
-- **Update** → Push changes to GitHub after meaningful work. Update version + date.
+- **MASTER-BRAIN.md** → Fetch FIRST, every conversation, always
+- **{PROJECT}-BRAIN.md** → Fetch the relevant project brain based on topic
+- **Both** → When unsure, fetch both. Better to have it and not need it.
+- **Update** → Push changes after meaningful work. Update version + date.
 
 ### Fetch Commands
 ```bash
-# Fetch Master Brain
+# Fetch Master Brain (God Brain)
 curl -s -H "Authorization: token {PAT}" \
   https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/.claude/MASTER-BRAIN.md \
   | python3 -c "import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)['content']).decode())"
 
-# Fetch ComfyUI Brain
+# Fetch ComfyUI/MCP Project Brain
 curl -s -H "Authorization: token {PAT}" \
-  https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/.claude/BRAIN.md \
+  https://api.github.com/repos/MSRCAM83/lytcomm-website/contents/.claude/COMFYUI-MCP-BRAIN.md \
   | python3 -c "import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)['content']).decode())"
 ```
 
@@ -243,7 +251,7 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 
 ## 🤖 COMFYUI / AI GENERATION
 
-*Detailed configuration in BRAIN.md — this section is a summary.*
+*Detailed configuration in COMFYUI-MCP-BRAIN.md — this section is a summary.*
 
 ### Vast.ai Preferences
 - Budget: $1/hr — ALWAYS ask before renting or deleting
@@ -300,10 +308,12 @@ Two servers on Vast.ai, exposed via Cloudflare named tunnel, connected to Claude
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2026-02-01 | 1.0.0 | Initial MASTER-BRAIN creation — compiled from 50+ conversations, memory edits, and existing BRAIN.md |
+| 2026-02-01 | 1.0.0 | Initial MASTER-BRAIN creation — compiled from 50+ conversations, memory edits, and existing brain docs |
 | 2026-02-01 | 1.0.1 | Tokens segmented (never redacted), CivitAI token fix, GitHub PAT added |
 | 2026-02-01 | 1.0.2 | Fixed Vercel build failure (duplicate try/catch in AdminDashboard.js). RealVisXL_V5.0_Lightning added to model inventory. Rule: NEVER redact tokens — always segment. |
+| 2026-02-01 | 1.1.0 | **Brain restructure:** BRAIN.md → COMFYUI-MCP-BRAIN.md. Added Project Brain Index. Tiered architecture (God → Project → Memory → Recall). All references updated. |
 
 ---
 
 *This is Claude's master brain. It is the FIRST document loaded in every conversation. When in doubt, fetch this. Matt should never have to repeat himself.*
+
