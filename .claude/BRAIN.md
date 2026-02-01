@@ -244,6 +244,8 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - Custom provisioning script at .claude/vast-comfyui-mcp-provision-v0.01.sh auto-starts MCP on new instances
 - To create instance: PUT to /api/v0/asks/OFFER_ID/ with PROVISIONING_SCRIPT pointing to our custom script
 - MCP setup script at .claude/vast-mcp-setup-v0.01.sh (also works standalone via curl | bash)
+- FULL ZERO-TOUCH FLOW: Claude searches cheapest GPU → creates via API → custom provisioning auto-boots ComfyUI + MCP + tunnel
+- User just says "start my MCP" — no SSH, no pasting, no manual steps
 - SSH MCP server not yet installed
 - Previous "vast control" connector at dis-luck-scotland-injection.trycloudflare.com/sse is dead
 
