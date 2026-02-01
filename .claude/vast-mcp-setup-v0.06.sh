@@ -21,8 +21,6 @@
 # v0.01 - Initial version
 ###############################################################################
 
-set -euo pipefail
-
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,7 +42,7 @@ GITHUB_RAW="https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.cla
 step() { echo -e "\n${CYAN}${BOLD}[$1/$TOTAL] $2${NC}"; }
 ok()   { echo -e "${GREEN}✅ $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
-fail() { echo -e "${RED}❌ $1${NC}"; exit 1; }
+fail() { echo -e "${RED}❌ $1${NC}"; }
 info() { echo -e "${CYAN}ℹ  $1${NC}"; }
 
 TOTAL=13
