@@ -87,10 +87,13 @@ curl -X PUT -H "Authorization: token {PAT}" \
 
 ### Infrastructure
 - **Platform:** Vast.ai cloud GPU instances
-- **VRAM:** Varies per session — has used 48GB, 96GB+ instances
+- **Budget:** $1/hr max — ALWAYS ask Matt before creating or destroying instances
+- **GPU preference:** PRO 6000 (96GB), A100 (80GB), L40S (45GB) — NO consumer 4090s (they fail too often)
+- **Instance selection priority:** Download speed (CRITICAL) → Reliability (≥0.95) → VRAM → CPU/RAM → Location (US preferred)
+- **Vast.ai API key:** Stored in memory — enables remote instance management
 - **Instances are DISPOSABLE** — started and stopped to save money
 - **Everything must be installable from a single script on a fresh instance**
-- **Base image:** Usually PyTorch-based or ComfyUI template on Vast.ai
+- **Base image:** ComfyUI template (template_hash_id: 3eb6117d50a4702f4beba00d0fc22289)
 - **ComfyUI path:** `/workspace/ComfyUI/`
 
 ### Authentication Tokens
