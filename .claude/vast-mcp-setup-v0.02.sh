@@ -115,7 +115,7 @@ step 6 "Writing Cloudflare tunnel credentials"
 ###############################################################################
 mkdir -p /root/.cloudflared
 
-echo "LS0tLS1CRUdJTiBBUkdPIFRVTk5FTCBUT0tFTi0tLS0tCmV5SjZiMjVsU1VRaU9pSTFOemN6TVRkbFl6STFNamxsTnpsak5ERTNObVU1WWpJek9ETmpNVEU0TUNJc0ltRmoKWTI5MWJuUlNSQ0k2SW1Ka05XWmlZMlUyTW1NNU1UQTVaVFV5WmpBM1lqQTBZVGt6TkdVME1qQTFJaXdpWVhCcApWRzlyWlc0aU9pSTJiMFE1YlV3Mk16RmpOV1ppZFZaaU4zRkdkbFIwTUU4dFp5MDVkelJDZGxKUVdEUjZZbkp3CkluMD0KLS0tLS1FTkQgQVJHTyBUVU5ORUwgVE9LRU4tLS0tLQo=" | base64 -d > /root/.cloudflared/cert.pem
+echo "LS0tLS1CRUdJTiBBUkdPIFRVTk5FTCBUT0tFTi0tLS0tCmV5SjZiMjVsU1VRaU9pSTFOemN6TVRkbFl6STFNamxsTnpsak5ERTNObVU1WWpJek9ETmpNVEU0TUNJc0ltRmoKWTI5MWJuUkpSQ0k2SW1Ka05XWmlZMlUyTW1NNU1UQTVaVFV5WmpBM1lqQTBZVGt6TkdVME1qQTFJaXdpWVhCcApWRzlyWlc0aU9pSlRNVTlJUm5wSE9WOWFjV0p2ZWtOcmFVSTRTVjlHVFZKdldrWmliM0V0WjJSWGVFVlBibEZ5CkluMD0KLS0tLS1FTkQgQVJHTyBUVU5ORUwgVE9LRU4tLS0tLQo=" | base64 -d > /root/.cloudflared/cert.pem
 chmod 600 /root/.cloudflared/cert.pem
 
 cat > /root/.cloudflared/${TUNNEL_ID}.json << 'TUNNEL_EOF'
