@@ -287,18 +287,73 @@ ok "start-mcps.sh installed at /workspace/start-mcps.sh"
 step 11 "Writing supervisord configuration"
 ###############################################################################
 
-# Kill any existing managed processes first
-pkill -f "main.py.*--listen" 2>/dev/null || true
+# Kill only OUR processes — never touch ComfyUI (template manages it)
 pkill -f "comfyui-mcp-server/server.py" 2>/dev/null || true
 pkill -f "shell-mcp-server/server.py" 2>/dev/null || true
 pkill -f "comfyui_mcp_server" 2>/dev/null || true
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 sleep 2
 
+# Detect if supervisord is already running (comfy template)
+SUPERVISOR_RUNNING=0
+if supervisorctl status > /dev/null 2>&1; then
+    SUPERVISOR_RUNNING=1
+    info "Existing supervisord detected (template image) — adding MCP programs to it"
+else
+    info "No supervisord running — will start fresh (bare image)"
+fi
+
+# If template is managing ComfyUI, DON'T include [program:comfyui] — it conflicts
+if [ "$SUPERVISOR_RUNNING" -eq 1 ]; then
+
 cat > /etc/supervisor/conf.d/vast-mcp.conf << SUPEOF
 ; ============================================================================
-; VAST.AI MCP STACK — Supervisord v0.07
-; All processes auto-restart on crash. Use supervisorctl to manage.
+; VAST.AI MCP STACK — Supervisord v0.07 (template mode — ComfyUI managed by template)
+; ============================================================================
+
+[program:comfyui-mcp]
+command=${PYTHON} /workspace/comfyui-mcp-server/server.py
+directory=/workspace/comfyui-mcp-server
+environment=COMFYUI_URL="http://localhost:${COMFYUI_PORT}",MCP_TRANSPORT_SECURITY__ENABLE_DNS_REBINDING_PROTECTION="false"
+autostart=true
+autorestart=true
+startretries=10
+startsecs=5
+stopwaitsecs=5
+stdout_logfile=/tmp/mcp-comfyui.log
+stderr_logfile=/tmp/mcp-comfyui.log
+redirect_stderr=true
+
+[program:shell-mcp]
+command=${PYTHON} /workspace/shell-mcp-server/server.py
+directory=/workspace/shell-mcp-server
+environment=MCP_TRANSPORT_SECURITY__ENABLE_DNS_REBINDING_PROTECTION="false"
+autostart=true
+autorestart=true
+startretries=10
+startsecs=5
+stopwaitsecs=5
+stdout_logfile=/tmp/mcp-shell.log
+stderr_logfile=/tmp/mcp-shell.log
+redirect_stderr=true
+
+[program:cloudflared]
+command=cloudflared tunnel run ${TUNNEL_NAME}
+autostart=true
+autorestart=true
+startretries=5
+startsecs=5
+stopwaitsecs=10
+stdout_logfile=/tmp/cloudflared.log
+stderr_logfile=/tmp/cloudflared.log
+redirect_stderr=true
+SUPEOF
+
+else
+# Bare image — we manage everything including ComfyUI
+cat > /etc/supervisor/conf.d/vast-mcp.conf << SUPEOF
+; ============================================================================
+; VAST.AI MCP STACK — Supervisord v0.07 (bare image — manages all processes)
 ; ============================================================================
 
 [program:comfyui]
@@ -353,25 +408,27 @@ stdout_logfile=/tmp/cloudflared.log
 stderr_logfile=/tmp/cloudflared.log
 redirect_stderr=true
 priority=300
-
-[group:mcp-stack]
-programs=comfyui,comfyui-mcp,shell-mcp,cloudflared
-priority=999
 SUPEOF
+
+fi
 
 ok "Supervisord config written to /etc/supervisor/conf.d/vast-mcp.conf"
 
 ###############################################################################
-step 12 "Starting supervisord (all processes)"
+step 12 "Starting managed processes"
 ###############################################################################
 
-# Stop supervisord if already running
-supervisorctl shutdown 2>/dev/null || true
-sleep 2
-
-# Start supervisord
-supervisord -c /etc/supervisor/supervisord.conf
-sleep 3
+if [ "$SUPERVISOR_RUNNING" -eq 1 ]; then
+    # Template mode — just reload config and start our programs
+    supervisorctl reread
+    supervisorctl update
+    sleep 3
+    info "Added MCP programs to existing supervisord"
+else
+    # Bare image — start supervisord fresh
+    supervisord -c /etc/supervisor/supervisord.conf
+    sleep 3
+fi
 
 # Verify processes are starting
 info "Supervisor status:"
@@ -387,7 +444,7 @@ supervisorctl status all 2>/dev/null | while read line; do
     fi
 done
 
-ok "Supervisord started — all processes managed"
+ok "Processes started"
 
 ###############################################################################
 step 13 "Waiting for services + health checks"
