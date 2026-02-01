@@ -240,6 +240,10 @@ Two MCP servers running on Vast.ai instance, exposed via Cloudflare tunnel, conn
 - Cloudflare account: Matthewsroy@gmail.com, free Zero Trust plan, team name: lytcomm
 - Domain: comfyui-mcp.uk | Permanent endpoint: https://mcp.comfyui-mcp.uk/mcp
 - Named tunnel startup: cloudflared tunnel --url http://localhost:9000 run comfyui-mcp
+- Vast.ai API key stored in memory — enables remote instance creation
+- Custom provisioning script at .claude/vast-comfyui-mcp-provision-v0.01.sh auto-starts MCP on new instances
+- To create instance: PUT to /api/v0/asks/OFFER_ID/ with PROVISIONING_SCRIPT pointing to our custom script
+- MCP setup script at .claude/vast-mcp-setup-v0.01.sh (also works standalone via curl | bash)
 - SSH MCP server not yet installed
 - Previous "vast control" connector at dis-luck-scotland-injection.trycloudflare.com/sse is dead
 
