@@ -1,32 +1,28 @@
 # 🧠 COMFYUI-MCP-BRAIN.md
 ## Project Brain — ComfyUI + Vast.ai + MCP Infrastructure
 ### Last Updated: 2026-02-01
-### Version: 2.0.1
+### Version: 2.0.5
 
 ---
 
 ## ⚡ CURRENT STATE (Short-Term — Updated Every Session)
 
-### Session: 2026-02-01 (Evening)
+### Session: 2026-02-02 (Early AM)
 
 ### What Was Accomplished This Session
-1. Built v0.07 provisioning script with supervisord auto-restart
-2. Fixed supervisord collision with Vast comfy template (reread/update, not restart)
-3. Fixed supervisor detection (pgrep -f, not pgrep -x)
-4. Fixed DNS rebinding "Invalid Host header" (sed patch on server.py, env var alone insufficient)
-5. Killed template's tunnel_manager that was conflicting with our Cloudflare tunnel
-6. Both MCPs confirmed 200 through Cloudflare tunnel
-7. Image generation tested successfully (RealVisXL Lightning on A100)
-8. Both MCP connectors added in Claude.ai settings (ComfyUI + Shell)
-9. Brain restructured: BRAIN.md → COMFYUI-MCP-BRAIN.md, tiered architecture
+1. Shell MCP v0.03 deployed with `stateless_http=True` fix — 34 tools confirmed in Claude.ai
+2. Fresh subdomain `sh.comfyui-mcp.uk/mcp` bypassed Claude.ai MCP cache issue
+3. COMFYUI-MCP-BRAIN.md v2.0.4 published with LOCKED COMPONENTS section
+4. **CRITICAL FIX:** Discovered API launches need `template_id`, `extra_env` (PORTAL_CONFIG + ports), and `runtype: "jupyter_direct"` — without these, portal.yaml never generates and ALL services fail to start (SSH, ComfyUI, Jupyter, tunnel)
+5. Verified v0.07 provisioning script is clean (git history audit)
+6. Multiple instance launch failures diagnosed — all caused by missing template config in API call, NOT host issues
+7. Successful launch with full template config (instance 30844128) — SSH up in <10 seconds
 
-### Last Known Instance
-- **Instance ID:** 30838160
-- **GPU:** A100 SXM4 80GB
-- **Location:** Massachusetts, USA
-- **Cost:** $0.83/hr
+### Last Known Instances
+- **Instance 30838160:** A100 SXM4 80GB, Massachusetts, $0.83/hr — RUNNING, both MCPs operational
+- **Instance 30844128:** H100 PCIE, France, $1.14/hr — RUNNING, fresh launch for verification test
 - **Image:** vastai/comfy:v0.10.0-cuda-12.9-py312
-- **Status at session end:** RUNNING — but this is a Vast instance, it may be destroyed by now
+- **Cloudflare tunnel:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d (on instance 30838160)
 
 ### Last Known MCP Status
 | Server | Local | Tunnel | Claude.ai |
@@ -72,6 +68,8 @@ curl -s -H "Authorization: Bearer $VAST_TOKEN" \
   "https://console.vast.ai/api/v0/bundles?q=%7B%22rentable%22%3A%7B%22eq%22%3Atrue%7D%2C%22dph_total%22%3A%7B%22lte%22%3A1.0%7D%2C%22gpu_ram%22%3A%7B%22gte%22%3A24%7D%2C%22inet_down%22%3A%7B%22gte%22%3A500%7D%2C%22reliability2%22%3A%7B%22gte%22%3A0.95%7D%2C%22num_gpus%22%3A%7B%22eq%22%3A1%7D%2C%22order%22%3A%5B%5B%22dph_total%22%2C%22asc%22%5D%5D%7D&limit=5"
 
 # Step 2: Create instance (replace {OFFER_ID} with best result from step 1)
+# ⚠️ CRITICAL: Must include template_id + extra_env or portal.yaml never generates
+# and ALL services (SSH, ComfyUI, Jupyter) will fail to start in a loop.
 curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
   "https://console.vast.ai/api/v0/asks/{OFFER_ID}/" \
   -H "Content-Type: application/json" \
@@ -80,7 +78,25 @@ curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
     "image": "vastai/comfy:v0.10.0-cuda-12.9-py312",
     "disk": 80,
     "runtype": "jupyter_direct",
-    "onstart": "curl -sL https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh | bash"
+    "template_id": 336394,
+    "onstart": "entrypoint.sh",
+    "extra_env": {
+      "COMFYUI_ARGS": "--disable-auto-launch --port 18188 --enable-cors-header",
+      "COMFYUI_API_BASE": "http://localhost:18188",
+      "PROVISIONING_SCRIPT": "https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh",
+      "PORTAL_CONFIG": "localhost:1111:11111:/:Instance Portal|localhost:8188:18188:/:ComfyUI|localhost:8080:18080:/:Jupyter|localhost:8080:8080:/terminals/1:Jupyter Terminal",
+      "OPEN_BUTTON_PORT": "1111",
+      "JUPYTER_DIR": "/",
+      "DATA_DIRECTORY": "/workspace/",
+      "OPEN_BUTTON_TOKEN": "1",
+      "-p 1111:1111": "1",
+      "-p 8080:8080": "1",
+      "-p 8384:8384": "1",
+      "-p 8188:8188": "1",
+      "-p 8288:8288": "1",
+      "-p 9000:9000": "1",
+      "-p 9001:9001": "1"
+    }
   }'
 
 # Step 3: Wait ~4 minutes. Provisioning is automatic via onstart.
@@ -277,6 +293,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | DWPose node failure | NumPy version conflict — same fix as onnxruntime |
 | Ollama chat trap | Exit with `/bye` before terminal commands |
 | Instance "No such container" | Bare pytorch image not pre-cached — use comfy template instead |
+| portal.yaml never generates / services loop | API launch missing `template_id: 336394` + `extra_env` (PORTAL_CONFIG, ports). Web UI injects these automatically, API does NOT. |
 | ComfyUI MCP `python -m` | Wrong. Use `python server.py` directly |
 | Shell MCP mcp 1.26.0 | Need v0.02 of shell-mcp-server |
 
