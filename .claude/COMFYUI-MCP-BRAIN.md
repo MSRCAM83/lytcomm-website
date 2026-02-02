@@ -310,3 +310,50 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 
 *This is the ComfyUI + MCP project brain. Fetch at conversation start when doing AI/ComfyUI/Vast work. Update after every meaningful session.*
 
+
+
+---
+
+## 🔒 LOCKED COMPONENTS — DO NOT MODIFY
+
+**These components are PROVEN WORKING after extensive debugging. Changing ANY of them will break the MCP stack. Do NOT touch without Matt's explicit approval.**
+
+### 1. shell-mcp-server-v0.03.py
+- **LOCKED:** `stateless_http=True` in FastMCP constructor
+- **WHY:** Without this, Claude.ai cannot discover tools (session-id header issue)
+- **DO NOT:** Remove stateless_http, change port 9001, rename the file, or "upgrade" to a newer pattern
+
+### 2. vast-mcp-setup-v0.07.sh
+- **LOCKED:** Entire provisioning flow
+- **WHY:** Zero-touch automated setup that works on any Vast instance
+- **DO NOT:** Rewrite from scratch, change step order, or "simplify" — iterate as v0.08+ only
+
+### 3. Cloudflare Tunnel Config
+- **LOCKED:** Ingress routing structure
+- **WHY:** Routes sh.comfyui-mcp.uk → port 9001, mcp.comfyui-mcp.uk → port 9000
+- **DO NOT:** Change hostnames, ports, or tunnel ID
+
+### 4. Connector URLs in Claude.ai
+- **LOCKED:** `https://sh.comfyui-mcp.uk/mcp` (Shell MCP) and `https://mcp.comfyui-mcp.uk/mcp` (ComfyUI MCP)
+- **WHY:** Fresh subdomain `sh.` bypassed Claude.ai's cached failure. `shell.` is poisoned.
+- **DO NOT:** Suggest changing back to shell.comfyui-mcp.uk or removing /mcp suffix
+
+### 5. FastMCP Constructor Pattern
+- **LOCKED:** Both servers use `stateless_http=True` with `transport="streamable-http"`
+- **WHY:** Claude.ai doesn't propagate mcp-session-id headers between requests
+- **DO NOT:** Add session management, switch to SSE transport, or remove stateless flag
+
+### 6. Supervisord Service Names
+- **LOCKED:** `comfyui-mcp`, `shell-mcp`, `cloudflared` in supervisord
+- **WHY:** Scripts reference these names for restart/status checks
+- **DO NOT:** Rename services or switch to systemd/manual process management
+
+### If you need to change something locked:
+1. Ask Matt first
+2. Explain WHY the change is needed
+3. Version increment the file (v0.04, v0.08, etc.)
+4. Test BEFORE declaring success
+5. Update this brain with the change
+
+**These locks exist because it took 8+ hours of debugging across multiple sessions to get 34 tools loading in Claude.ai. Respect the locks.**
+
