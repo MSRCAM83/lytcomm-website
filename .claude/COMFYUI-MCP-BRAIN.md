@@ -1,30 +1,33 @@
 # 🧠 COMFYUI-MCP-BRAIN.md
 ## Project Brain — ComfyUI + Vast.ai + MCP Infrastructure
 ### Last Updated: 2026-02-02
-### Version: 2.0.7
+### Version: 2.1.0
 
 ---
 
 ## ⚡ CURRENT STATE (Short-Term — Updated Every Session)
 
-### Session: 2026-02-02 (Continued)
+### Session: 2026-02-02 (3-Stage Pipeline Build)
 
 ### What Was Accomplished This Session
-1. **CRITICAL BUG FIX — Vast.ai Search API:** All previous searches returned 0 results because boolean/integer values need operator syntax (`{"eq": true}` not just `true`, `{"eq": 1}` not just `1`). Fixed query now returns 60+ offers consistently.
-2. **Template override workaround proven:** `onstart` runtime export of PROVISIONING_SCRIPT overrides template's env var injection. 3/3 successful launches with this method.
-3. **End-to-end test #1 (instance 30846161):** Launch → SSH in 20s → all 3 MCPs live in 2min → 34 tools → image gen PASS
-4. **End-to-end test #2 (instance 30846475):** Same result. Launch → MCPs in 2min → image gen PASS
-5. **Dual-instance test (30846475 + 30846713):** Two instances ran simultaneously with same Cloudflare tunnel. Tunnel routes to whichever registered first. MCP stayed operational throughout. Useful for failover but not true load balancing.
-6. Failed Oregon H100 SXM instance (30846635) — slow image pull, killed and replaced with Iowa A100 SXM4 (30846713) which booted fast (0.999 reliability).
-7. Brain updated to v2.0.7 with all findings.
+1. **3-STAGE NSFW PHOTOREALISTIC PIPELINE — BUILT & TESTED ✅**
+   - Stage 1: Lustify V6 OLT (SDXL) → base generation, anatomy/composition
+   - Stage 2: Chroma1-HD (FLUX-based) → lighting, artistic coherence, fabric
+   - Stage 3: Z-Image Base BF16 → photorealistic skin textures, micro-detail
+   - Stage 4: 4x UltraSharp upscale → 4096×4096 final output
+   - Total time: ~15 seconds on PRO 6000 (96GB VRAM)
+2. **All models downloaded:** Lustify (6.9GB), Chroma1-HD (17.8GB), Z-Image BF16 (12.3GB), T5-XXL FP8 (5.2GB), Qwen 3 4B (8.0GB), ae.safetensors (335MB), 4x-UltraSharp (67MB) — ~51GB total
+3. **MCP CACHING BUG DISCOVERED:** ComfyUI MCP server caches workflow files at startup. Custom PARAM_ names (e.g. PARAM_FLOAT_S2_DENOISE) are NOT substituted by the MCP. Fix: hardcode values in JSON, or bypass MCP entirely and POST directly to `localhost:18188/prompt`.
+4. **Workflow saved to GitHub:** `.claude/3stage_pipeline.json`
+5. **Previous session work preserved:** All models and workflow survived on instance despite chat context being wiped.
+6. **Research completed:** Comprehensive comparison of SDXL vs FLUX vs Z-Image vs Chroma for NSFW photorealism. SDXL still best for anatomy, Z-Image best for skin textures, Chroma best for artistic coherence. 3-stage pipeline leverages all three.
 
 ### Last Known Instance
-- **Instance 30846475:** H100 PCIE, France, $1.16/hr — RUNNING, all 3 MCPs live (200)
-- **SSH:** ssh5.vast.ai:16474
-- **Public IP:** 51.159.177.74
+- **Instance:** PRO 6000 (96GB VRAM) — RUNNING, all MCPs live
 - **Image:** vastai/comfy:v0.10.0-cuda-12.9-py312
 - **Cloudflare tunnel:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d
-- **Previous instances (30838160, 30844128, 30845230, 30846134, 30846161, 30846635, 30846713):** KILLED
+- **Models loaded:** Lustify V6, Chroma1-HD, Z-Image BF16, T5-XXL FP8, Qwen 3 4B, ae.safetensors, 4x-UltraSharp
+- **Previous instances (30838160, 30844128, 30845230, 30846134, 30846161, 30846635, 30846713, 30846475):** KILLED
 
 ### Last Known MCP Status
 | Server | Local | Tunnel | Claude.ai |
@@ -35,7 +38,9 @@
 ### What Still Needs Doing
 - [x] ~~Verify Shell MCP tools actually load~~ — CONFIRMED: 17 Shell + 17 ComfyUI = 34 tools
 - [x] ~~Test full lifecycle: no instance → recovery command → both MCPs live~~ — 3 successful E2E tests
-- [ ] Model manifest system (download profiles: sdxl, wan22, flux)
+- [x] ~~3-Stage NSFW Pipeline~~ — Lustify→Chroma→Z-Image→4xUpscale — WORKING, 15s/image
+- [ ] Make MCP-friendly version of 3stage workflow (MCP caching bug workaround needed)
+- [ ] Character consistency system (LoRA training or IP-Adapter for same character across gens)
 - [ ] Output persistence (auto-sync generations to cloud storage)
 - [ ] Claude-initiated instance launcher ("spin me up a 4090") — search API now working!
 - [ ] Dual-instance load balancing (separate tunnels per instance)
@@ -200,20 +205,29 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 
 #### Checkpoints — `/workspace/ComfyUI/models/checkpoints/`
 - RealVisXL_V5.0_Lightning.safetensors (SDXL, 6 steps, fast)
+- lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors (SDXL, NSFW photorealism, 25 steps, CFG 3.5, dpmpp_2m_sde/karras)
 
-#### Diffusion Models (GGUF) — `/workspace/ComfyUI/models/diffusion_models/`
+#### Diffusion Models — `/workspace/ComfyUI/models/diffusion_models/`
+- Chroma1-HD.safetensors (17.8GB, FLUX-based, Apache 2.0, uncensored, T5-XXL text encoder)
+- z_image_bf16.safetensors (12.3GB, Alibaba Z-Image Base, S3-DiT arch, Qwen 3 4B text encoder)
 - SmoothMix Wan 2.2 I2V High Noise (GGUF)
 - SmoothMix Wan 2.2 I2V Low Noise (GGUF)
 - Wan 2.2 Remix NSFW High (v0.08a)
 - Wan 2.2 Remix NSFW Low (v0.08a)
 
 #### Text Encoders — `/workspace/ComfyUI/models/text_encoders/`
-- umt5_xxl_fp16.safetensors (full quality)
-- umt5_xxl_fp8_e4m3fn_scaled.safetensors (balanced)
-- umt5-xxl-encoder-Q8_0.gguf (GGUF)
+- t5xxl_fp8_e4m3fn_scaled.safetensors (5.2GB, for Chroma/FLUX models)
+- qwen_3_4b.safetensors (8.0GB, for Z-Image)
+- umt5_xxl_fp16.safetensors (full quality, for Wan 2.2)
+- umt5_xxl_fp8_e4m3fn_scaled.safetensors (balanced, for Wan 2.2)
+- umt5-xxl-encoder-Q8_0.gguf (GGUF, for Wan 2.2)
 
 #### VAE — `/workspace/ComfyUI/models/vae/`
+- ae.safetensors (335MB, shared FLUX/Chroma/Z-Image VAE)
 - Wan 2.1 FP32 VAE
+
+#### Upscale Models — `/workspace/ComfyUI/models/upscale_models/`
+- 4x-UltraSharp.pth (67MB, ESRGAN 4x upscaler)
 
 #### LoRAs — `/workspace/ComfyUI/models/loras/`
 - LightX2V 4-step high noise + low noise
@@ -265,6 +279,18 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | Steps | 6 |
 | Resolution | 1024x1024 |
 
+**3-Stage NSFW Pipeline (Lustify → Chroma → Z-Image → 4x Upscale):**
+| Stage | Model | Steps | CFG | Sampler | Denoise | Notes |
+|-------|-------|-------|-----|---------|---------|-------|
+| 1 (Base) | Lustify V6 OLT (SDXL) | 25 | 3.5 | dpmpp_2m_sde / karras | 1.0 | Full generation, 1024×1024 |
+| 2 (Refine) | Chroma1-HD | 20 | 1.0 | euler / normal | 0.32 | Lighting, coherence, fabric |
+| 3 (Polish) | Z-Image Base BF16 | 30 | 3.5 | res_multistep / normal | 0.22 | Skin pores, eye reflections |
+| 4 (Upscale) | 4x-UltraSharp | — | — | — | — | 4096×4096 final |
+- **Total VRAM:** ~60GB with all models loaded simultaneously
+- **Total time:** ~15s on PRO 6000 (96GB)
+- **Key rule:** Keep refinement denoise LOW (S2: 0.30-0.35, S3: 0.20-0.25) or composition drifts
+- **MCP bug:** Must bypass MCP for this workflow (POST to localhost:18188/prompt directly)
+
 **ReActor Face Swap:**
 | Setting | Value |
 |---------|-------|
@@ -312,6 +338,8 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | Shell MCP mcp 1.26.0 | Need v0.02 of shell-mcp-server |
 | Vast search returns 0 offers | ALL query values must use operator syntax: `{"eq": true}` not `true`, `{"gte": 24000}` not `24`. API silently returns empty results or `invalid_request` error otherwise. |
 | Instance image pull too slow | Kill and pick a higher-reliability host (0.999+). Some hosts don't have the comfy image cached. |
+| MCP workflow PARAM_ not substituted | ComfyUI MCP caches workflows at startup. Custom PARAM_ names (PARAM_FLOAT_S2_DENOISE etc) are NOT substituted. Fix: hardcode values in workflow JSON, OR bypass MCP and POST directly to `http://localhost:18188/prompt` with full workflow dict. |
+| 3stage pipeline only Stage 1 completes | MCP cached old workflow with unresolved PARAM_ strings. Either restart MCP server, or use direct API approach (see /tmp/run_3stage.py pattern). |
 
 ---
 
@@ -326,6 +354,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | start-mcps.sh | Mid-session MCP restart | v0.01 |
 | vast-model-download-v0.01.sh | Model download script | v0.01 |
 | PROJECT-INSTRUCTIONS-v0.02.md | Claude Project bootstrap | v0.02 |
+| 3stage_pipeline.json | 3-stage NSFW pipeline workflow (Lustify→Chroma→Z-Image→Upscale) | v1.0 |
 | disaster-recovery-v0.02.sh | Full rebuild from zero — segmented tokens, no env vars | v0.02 |
 | comfyui-claude-setup.sh | Friend edition — self-contained, no downloads, quick tunnels | v0.01 |
 
@@ -342,6 +371,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | 2026-02-01 | 2.0.1 | Updated CURRENT STATE as session handoff briefing. Recovery commands as reference (not auto-execute). Added instance status check. |
 | 2026-02-02 | 2.0.6 | Template override fix (onstart export), troubleshooting entries for PROVISIONING_SCRIPT override and extra_env without template_id |
 | 2026-02-02 | 2.0.7 | **CRITICAL:** Fixed Vast search API query syntax (all values need operator dict). 3 E2E tests passed. Dual-instance test. Updated search commands. |
+| 2026-02-02 | 2.1.0 | **3-STAGE NSFW PIPELINE:** Lustify V6 → Chroma1-HD → Z-Image Base → 4x UltraSharp. All models downloaded (~51GB). Workflow tested end-to-end (15s/image). MCP caching bug documented (PARAM_ substitution fails, use direct API). Added model inventory for all new checkpoints/diffusion/text_encoder/VAE/upscale models. |
 
 ---
 
