@@ -10,10 +10,26 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-## 🚀 CURRENT STATUS (Jan 30, 2026 - 12:25 PM CST)
+## 🚀 CURRENT STATUS (Feb 02, 2026 - 5:30 PM CST)
 
-### ✅ Live Version: v3.11
-Website deployed and working. All dashboards mobile-optimized with hamburger menu.
+### ✅ Live Version: v3.12
+Website deployed and working. Project Map System Phase 1 committed.
+
+### 🏗️ PROJECT MAP SYSTEM - PHASE 1 COMPLETE
+**New files added to repo (Feb 2, 2026):**
+- `src/config/mapConfig.js` v1.0.0 - Status colors, rate cards, photo reqs, permissions
+- `src/utils/idGenerator.js` v1.0.0 - Two-tier ID system (internal + contractor)
+- `src/utils/rateCardMatcher.js` v1.0.0 - Billing calculation engine (boring, pulling, splicing)
+- `src/services/workflowService.js` v1.0.0 - Phase transitions, QC gates, photo validation
+- `src/services/mapService.js` v1.0.0 - Google Sheets integration, segment data mgmt
+- `src/pages/JobImportPage.js` v1.0.0 - PDF work order upload + AI extraction UI
+- `src/pages/ProjectMapPage.js` v1.0.0 - Segment list view + map placeholder
+- `src/pages/AdminProjectDashboard.js` v1.0.0 - Project management overview
+- `src/App.js` updated with routes: #job-import, #project-map, #admin-projects
+
+**Bug fix:** UserProfile.js - PORTAL_URL → GATEWAY_URL (was undefined)
+
+**Next:** Phase 2 - Claude API integration for PDF extraction, Google Sheets database setup
 
 ### ✅ ARCHITECTURE SUMMARY
 
@@ -162,9 +178,10 @@ Website deployed and working. All dashboards mobile-optimized with hamburger men
 
 ```
 src/
-├── App.js (v5.3 - main router)
+├── App.js (v5.4 - main router, added project map routes)
 ├── config/
-│   └── constants.js
+│   ├── constants.js
+│   └── mapConfig.js (v1.0.0 - NEW)
 ├── components/
 │   ├── SignaturePad.js
 │   ├── SSNInput.js
@@ -175,7 +192,18 @@ src/
 │   ├── ServicesPage.js
 │   ├── ContactPage.js
 │   ├── PortalSelect.js
-│   └── InviteCodePage.js
+│   ├── InviteCodePage.js
+│   ├── JobImportPage.js (v1.0.0 - NEW)
+│   ├── ProjectMapPage.js (v1.0.0 - NEW)
+│   └── AdminProjectDashboard.js (v1.0.0 - NEW)
+├── services/
+│   ├── apiService.js
+│   ├── pdfService.js
+│   ├── mapService.js (v1.0.0 - NEW)
+│   └── workflowService.js (v1.0.0 - NEW)
+├── utils/
+│   ├── idGenerator.js (v1.0.0 - NEW)
+│   └── rateCardMatcher.js (v1.0.0 - NEW)
 └── portals/
     ├── PortalLogin.js (v3.0)
     ├── SetPassword.js
