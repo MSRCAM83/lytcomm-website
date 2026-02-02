@@ -1,44 +1,30 @@
 {
   "10": {
     "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Stage 1: Lustify V6 OLT (SDXL)"
-    },
+    "_meta": {"title": "Stage 1: Lustify V6 OLT (SDXL)"},
     "inputs": {
       "ckpt_name": "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors"
     }
   },
   "11": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S1 Positive"
-    },
+    "_meta": {"title": "S1 Positive"},
     "inputs": {
       "text": "PARAM_PROMPT",
-      "clip": [
-        "10",
-        1
-      ]
+      "clip": ["10", 1]
     }
   },
   "12": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S1 Negative"
-    },
+    "_meta": {"title": "S1 Negative"},
     "inputs": {
       "text": "PARAM_NEGATIVE_PROMPT",
-      "clip": [
-        "10",
-        1
-      ]
+      "clip": ["10", 1]
     }
   },
   "13": {
     "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "S1 Latent"
-    },
+    "_meta": {"title": "S1 Latent"},
     "inputs": {
       "width": "PARAM_INT_WIDTH",
       "height": "PARAM_INT_HEIGHT",
@@ -47,9 +33,7 @@
   },
   "14": {
     "class_type": "KSampler",
-    "_meta": {
-      "title": "Stage 1 KSampler (SDXL)"
-    },
+    "_meta": {"title": "Stage 1 KSampler (SDXL)"},
     "inputs": {
       "seed": "PARAM_INT_SEED",
       "steps": 25,
@@ -57,58 +41,31 @@
       "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
       "denoise": 1.0,
-      "model": [
-        "10",
-        0
-      ],
-      "positive": [
-        "11",
-        0
-      ],
-      "negative": [
-        "12",
-        0
-      ],
-      "latent_image": [
-        "13",
-        0
-      ]
+      "model": ["10", 0],
+      "positive": ["11", 0],
+      "negative": ["12", 0],
+      "latent_image": ["13", 0]
     }
   },
   "15": {
     "class_type": "VAEDecode",
-    "_meta": {
-      "title": "S1 Decode"
-    },
+    "_meta": {"title": "S1 Decode"},
     "inputs": {
-      "samples": [
-        "14",
-        0
-      ],
-      "vae": [
-        "10",
-        2
-      ]
+      "samples": ["14", 0],
+      "vae": ["10", 2]
     }
   },
   "16": {
     "class_type": "SaveImage",
-    "_meta": {
-      "title": "Stage 1 Output"
-    },
+    "_meta": {"title": "Stage 1 Output"},
     "inputs": {
       "filename_prefix": "Stage1_Lustify",
-      "images": [
-        "15",
-        0
-      ]
+      "images": ["15", 0]
     }
   },
   "20": {
     "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Stage 2: Chroma1-HD"
-    },
+    "_meta": {"title": "Stage 2: Chroma1-HD"},
     "inputs": {
       "unet_name": "Chroma1-HD.safetensors",
       "weight_dtype": "default"
@@ -116,9 +73,7 @@
   },
   "21": {
     "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "S2 T5-XXL (Chroma)"
-    },
+    "_meta": {"title": "S2 T5-XXL (Chroma)"},
     "inputs": {
       "clip_name": "t5xxl_fp8_e4m3fn_scaled.safetensors",
       "type": "chroma"
@@ -126,60 +81,38 @@
   },
   "22": {
     "class_type": "VAELoader",
-    "_meta": {
-      "title": "Shared FLUX VAE"
-    },
+    "_meta": {"title": "Shared FLUX VAE"},
     "inputs": {
       "vae_name": "ae.safetensors"
     }
   },
   "23": {
     "class_type": "VAEEncode",
-    "_meta": {
-      "title": "S2 Encode"
-    },
+    "_meta": {"title": "S2 Encode"},
     "inputs": {
-      "pixels": [
-        "15",
-        0
-      ],
-      "vae": [
-        "22",
-        0
-      ]
+      "pixels": ["15", 0],
+      "vae": ["22", 0]
     }
   },
   "24": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S2 Positive (Chroma)"
-    },
+    "_meta": {"title": "S2 Positive (Chroma)"},
     "inputs": {
       "text": "PARAM_PROMPT",
-      "clip": [
-        "21",
-        0
-      ]
+      "clip": ["21", 0]
     }
   },
   "25": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S2 Negative (empty)"
-    },
+    "_meta": {"title": "S2 Negative (empty)"},
     "inputs": {
       "text": "",
-      "clip": [
-        "21",
-        0
-      ]
+      "clip": ["21", 0]
     }
   },
   "26": {
     "class_type": "KSampler",
-    "_meta": {
-      "title": "Stage 2 KSampler (Chroma Refine)"
-    },
+    "_meta": {"title": "Stage 2 KSampler (Chroma Refine)"},
     "inputs": {
       "seed": "PARAM_INT_SEED",
       "steps": 20,
@@ -187,58 +120,31 @@
       "sampler_name": "euler",
       "scheduler": "normal",
       "denoise": "PARAM_FLOAT_S2_DENOISE",
-      "model": [
-        "20",
-        0
-      ],
-      "positive": [
-        "24",
-        0
-      ],
-      "negative": [
-        "25",
-        0
-      ],
-      "latent_image": [
-        "23",
-        0
-      ]
+      "model": ["20", 0],
+      "positive": ["24", 0],
+      "negative": ["25", 0],
+      "latent_image": ["23", 0]
     }
   },
   "27": {
     "class_type": "VAEDecode",
-    "_meta": {
-      "title": "S2 Decode"
-    },
+    "_meta": {"title": "S2 Decode"},
     "inputs": {
-      "samples": [
-        "26",
-        0
-      ],
-      "vae": [
-        "22",
-        0
-      ]
+      "samples": ["26", 0],
+      "vae": ["22", 0]
     }
   },
   "28": {
     "class_type": "SaveImage",
-    "_meta": {
-      "title": "Stage 2 Output"
-    },
+    "_meta": {"title": "Stage 2 Output"},
     "inputs": {
       "filename_prefix": "Stage2_Chroma",
-      "images": [
-        "27",
-        0
-      ]
+      "images": ["27", 0]
     }
   },
   "30": {
     "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Stage 3: Z-Image Base"
-    },
+    "_meta": {"title": "Stage 3: Z-Image Base"},
     "inputs": {
       "unet_name": "z_image_bf16.safetensors",
       "weight_dtype": "default"
@@ -246,9 +152,7 @@
   },
   "31": {
     "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "S3 Qwen 3 4B (Z-Image)"
-    },
+    "_meta": {"title": "S3 Qwen 3 4B (Z-Image)"},
     "inputs": {
       "clip_name": "qwen_3_4b.safetensors",
       "type": "qwen_image"
@@ -256,51 +160,31 @@
   },
   "32": {
     "class_type": "VAEEncode",
-    "_meta": {
-      "title": "S3 Encode"
-    },
+    "_meta": {"title": "S3 Encode"},
     "inputs": {
-      "pixels": [
-        "27",
-        0
-      ],
-      "vae": [
-        "22",
-        0
-      ]
+      "pixels": ["27", 0],
+      "vae": ["22", 0]
     }
   },
   "33": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S3 Positive (Z-Image)"
-    },
+    "_meta": {"title": "S3 Positive (Z-Image)"},
     "inputs": {
       "text": "PARAM_PROMPT",
-      "clip": [
-        "31",
-        0
-      ]
+      "clip": ["31", 0]
     }
   },
   "34": {
     "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "S3 Negative (Z-Image)"
-    },
+    "_meta": {"title": "S3 Negative (Z-Image)"},
     "inputs": {
       "text": "PARAM_NEGATIVE_PROMPT",
-      "clip": [
-        "31",
-        0
-      ]
+      "clip": ["31", 0]
     }
   },
   "35": {
     "class_type": "KSampler",
-    "_meta": {
-      "title": "Stage 3 KSampler (Z-Image Polish)"
-    },
+    "_meta": {"title": "Stage 3 KSampler (Z-Image Polish)"},
     "inputs": {
       "seed": "PARAM_INT_SEED",
       "steps": 30,
@@ -308,89 +192,49 @@
       "sampler_name": "res_multistep",
       "scheduler": "normal",
       "denoise": "PARAM_FLOAT_S3_DENOISE",
-      "model": [
-        "30",
-        0
-      ],
-      "positive": [
-        "33",
-        0
-      ],
-      "negative": [
-        "34",
-        0
-      ],
-      "latent_image": [
-        "32",
-        0
-      ]
+      "model": ["30", 0],
+      "positive": ["33", 0],
+      "negative": ["34", 0],
+      "latent_image": ["32", 0]
     }
   },
   "36": {
     "class_type": "VAEDecode",
-    "_meta": {
-      "title": "S3 Decode"
-    },
+    "_meta": {"title": "S3 Decode"},
     "inputs": {
-      "samples": [
-        "35",
-        0
-      ],
-      "vae": [
-        "22",
-        0
-      ]
+      "samples": ["35", 0],
+      "vae": ["22", 0]
     }
   },
   "37": {
     "class_type": "SaveImage",
-    "_meta": {
-      "title": "Stage 3 Final"
-    },
+    "_meta": {"title": "Stage 3 Final"},
     "inputs": {
       "filename_prefix": "Stage3_ZImage",
-      "images": [
-        "36",
-        0
-      ]
+      "images": ["36", 0]
     }
   },
   "40": {
     "class_type": "UpscaleModelLoader",
-    "_meta": {
-      "title": "4x UltraSharp"
-    },
+    "_meta": {"title": "4x UltraSharp"},
     "inputs": {
       "model_name": "4x-UltraSharp.pth"
     }
   },
   "41": {
     "class_type": "ImageUpscaleWithModel",
-    "_meta": {
-      "title": "4x Upscale"
-    },
+    "_meta": {"title": "4x Upscale"},
     "inputs": {
-      "upscale_model": [
-        "40",
-        0
-      ],
-      "image": [
-        "36",
-        0
-      ]
+      "upscale_model": ["40", 0],
+      "image": ["36", 0]
     }
   },
   "42": {
     "class_type": "SaveImage",
-    "_meta": {
-      "title": "FINAL 4x Upscaled"
-    },
+    "_meta": {"title": "FINAL 4x Upscaled"},
     "inputs": {
       "filename_prefix": "FINAL_3Stage",
-      "images": [
-        "41",
-        0
-      ]
+      "images": ["41", 0]
     }
   }
 }
