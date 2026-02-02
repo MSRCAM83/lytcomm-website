@@ -1,29 +1,30 @@
 # 🧠 COMFYUI-MCP-BRAIN.md
 ## Project Brain — ComfyUI + Vast.ai + MCP Infrastructure
-### Last Updated: 2026-02-01
-### Version: 2.0.6
+### Last Updated: 2026-02-02
+### Version: 2.0.7
 
 ---
 
 ## ⚡ CURRENT STATE (Short-Term — Updated Every Session)
 
-### Session: 2026-02-02 (Early AM)
+### Session: 2026-02-02 (Continued)
 
 ### What Was Accomplished This Session
-1. Shell MCP v0.03 deployed with `stateless_http=True` fix — 34 tools confirmed in Claude.ai
-2. Fresh subdomain `sh.comfyui-mcp.uk/mcp` bypassed Claude.ai MCP cache issue
-3. COMFYUI-MCP-BRAIN.md v2.0.4 published with LOCKED COMPONENTS section
-4. **CRITICAL FIX:** Discovered API launches need `template_id`, `extra_env` (PORTAL_CONFIG + ports), and `runtype: "jupyter_direct"` — without these, portal.yaml never generates and ALL services fail to start (SSH, ComfyUI, Jupyter, tunnel)
-5. Verified v0.07 provisioning script is clean (git history audit)
-6. Multiple instance launch failures diagnosed — all caused by missing template config in API call, NOT host issues
-7. Successful launch with full template config (instance 30844128) — SSH up in <10 seconds
+1. **CRITICAL BUG FIX — Vast.ai Search API:** All previous searches returned 0 results because boolean/integer values need operator syntax (`{"eq": true}` not just `true`, `{"eq": 1}` not just `1`). Fixed query now returns 60+ offers consistently.
+2. **Template override workaround proven:** `onstart` runtime export of PROVISIONING_SCRIPT overrides template's env var injection. 3/3 successful launches with this method.
+3. **End-to-end test #1 (instance 30846161):** Launch → SSH in 20s → all 3 MCPs live in 2min → 34 tools → image gen PASS
+4. **End-to-end test #2 (instance 30846475):** Same result. Launch → MCPs in 2min → image gen PASS
+5. **Dual-instance test (30846475 + 30846713):** Two instances ran simultaneously with same Cloudflare tunnel. Tunnel routes to whichever registered first. MCP stayed operational throughout. Useful for failover but not true load balancing.
+6. Failed Oregon H100 SXM instance (30846635) — slow image pull, killed and replaced with Iowa A100 SXM4 (30846713) which booted fast (0.999 reliability).
+7. Brain updated to v2.0.7 with all findings.
 
 ### Last Known Instance
-- **Instance 30846161:** H100 PCIE, France, $1.16/hr — RUNNING, all 3 MCPs live (200)
-- **SSH:** ssh7.vast.ai:16160
+- **Instance 30846475:** H100 PCIE, France, $1.16/hr — RUNNING, all 3 MCPs live (200)
+- **SSH:** ssh5.vast.ai:16474
+- **Public IP:** 51.159.177.74
 - **Image:** vastai/comfy:v0.10.0-cuda-12.9-py312
 - **Cloudflare tunnel:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d
-- **Previous instances (30838160, 30844128, 30845230, 30846134):** KILLED
+- **Previous instances (30838160, 30844128, 30845230, 30846134, 30846161, 30846635, 30846713):** KILLED
 
 ### Last Known MCP Status
 | Server | Local | Tunnel | Claude.ai |
@@ -32,11 +33,12 @@
 | Shell MCP | localhost:9001 ✅ | sh.comfyui-mcp.uk ✅ | Connected as "comfyui-mcp" |
 
 ### What Still Needs Doing
-- [ ] Verify Shell MCP tools actually load (need new conversation — tools load at chat start)
-- [ ] Test full lifecycle: no instance → recovery command → both MCPs live
+- [x] ~~Verify Shell MCP tools actually load~~ — CONFIRMED: 17 Shell + 17 ComfyUI = 34 tools
+- [x] ~~Test full lifecycle: no instance → recovery command → both MCPs live~~ — 3 successful E2E tests
 - [ ] Model manifest system (download profiles: sdxl, wan22, flux)
 - [ ] Output persistence (auto-sync generations to cloud storage)
-- [ ] Claude-initiated instance launcher ("spin me up a 4090")
+- [ ] Claude-initiated instance launcher ("spin me up a 4090") — search API now working!
+- [ ] Dual-instance load balancing (separate tunnels per instance)
 
 ### ⚠️ BEFORE DOING ANYTHING — CHECK INSTANCE STATUS
 The instance may be dead. First action every session:
@@ -63,10 +65,16 @@ These commands get back to full operational state. Wait for Matt's go-ahead befo
 
 ### If Instance Is Dead — Create New One
 ```bash
-# Step 1: Search for GPU (budget $1/hr, 24GB+ VRAM, 500Mbps+ download)
+# Step 1: Search for GPU (budget $1.50/hr, 24GB+ VRAM, 200Mbps+ download)
+# ⚠️ CRITICAL: ALL values must use operator syntax: {"eq": true} NOT true, {"gte": 24000} NOT 24
+# Without operator syntax, API returns {"error":"invalid_request","msg":"oplist for key X is not a valid dict"}
 VAST_TOKEN="339786fe805ebc1c56f2b44bcec4b82aa0bf9f52247af363ff4711783b96e926"
-curl -s -H "Authorization: Bearer $VAST_TOKEN" \
-  "https://console.vast.ai/api/v0/bundles?q=%7B%22rentable%22%3A%7B%22eq%22%3Atrue%7D%2C%22dph_total%22%3A%7B%22lte%22%3A1.0%7D%2C%22gpu_ram%22%3A%7B%22gte%22%3A24%7D%2C%22inet_down%22%3A%7B%22gte%22%3A500%7D%2C%22reliability2%22%3A%7B%22gte%22%3A0.95%7D%2C%22num_gpus%22%3A%7B%22eq%22%3A1%7D%2C%22order%22%3A%5B%5B%22dph_total%22%2C%22asc%22%5D%5D%7D&limit=5"
+# Use python to build the query properly:
+python3 -c "
+import urllib.parse, json
+q = {'rentable':{'eq':True},'gpu_ram':{'gte':24000},'dph_total':{'lte':1.50},'reliability':{'gte':0.95},'inet_down':{'gte':200},'order':[['dph_total','asc']],'type':'on-demand'}
+print(urllib.parse.quote(json.dumps(q)))
+" | xargs -I{} curl -sL "https://console.vast.ai/api/v0/bundles/?q={}&api_key=$VAST_TOKEN"
 
 # Step 2: Create instance (replace {OFFER_ID} with best result from step 1)
 # ⚠️ CRITICAL: Must include template_id + extra_env or portal.yaml never generates
@@ -302,6 +310,8 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | extra_env ignored without template_id | Without template_id, Vast API drops all extra_env. Template is required for port mappings and env vars. |
 | ComfyUI MCP `python -m` | Wrong. Use `python server.py` directly |
 | Shell MCP mcp 1.26.0 | Need v0.02 of shell-mcp-server |
+| Vast search returns 0 offers | ALL query values must use operator syntax: `{"eq": true}` not `true`, `{"gte": 24000}` not `24`. API silently returns empty results or `invalid_request` error otherwise. |
+| Instance image pull too slow | Kill and pick a higher-reliability host (0.999+). Some hosts don't have the comfy image cached. |
 
 ---
 
@@ -328,6 +338,8 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | 2026-02-01 | 1.2.0 | Dual MCP achieved, Shell MCP v0.01, setup v0.05 |
 | 2026-02-01 | 2.0.0 | **RENAMED** BRAIN.md → COMFYUI-MCP-BRAIN.md. Restructured with Current State section. Added v0.07 provisioning (supervisord, template detection, DNS rebinding sed patch, tunnel_manager kill). Full troubleshooting reference. File inventory. |
 | 2026-02-01 | 2.0.1 | Updated CURRENT STATE as session handoff briefing. Recovery commands as reference (not auto-execute). Added instance status check. |
+| 2026-02-02 | 2.0.6 | Template override fix (onstart export), troubleshooting entries for PROVISIONING_SCRIPT override and extra_env without template_id |
+| 2026-02-02 | 2.0.7 | **CRITICAL:** Fixed Vast search API query syntax (all values need operator dict). 3 E2E tests passed. Dual-instance test. Updated search commands. |
 
 ---
 
