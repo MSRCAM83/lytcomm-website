@@ -326,6 +326,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | start-mcps.sh | Mid-session MCP restart | v0.01 |
 | vast-model-download-v0.01.sh | Model download script | v0.01 |
 | PROJECT-INSTRUCTIONS-v0.02.md | Claude Project bootstrap | v0.02 |
+| disaster-recovery-v0.01.sh | Full rebuild from zero — one script | v0.01 |
 
 ---
 
