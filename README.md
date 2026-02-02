@@ -1,5 +1,23 @@
 # LYT Communications Website
 
+---
+
+## 🤖 ComfyUI + Claude MCP Stack
+
+**Generate AI images directly from Claude.ai conversations using cloud GPUs.**
+
+One script sets up everything — cloud GPU, ComfyUI, MCP servers, secure tunnels.
+
+```bash
+# For anyone — interactive setup, no experience needed
+chmod +x .claude/comfyui-claude-setup.sh
+./.claude/comfyui-claude-setup.sh
+```
+
+👉 **[Full documentation and all scripts →](.claude/README.md)**
+
+---
+
 Professional website with public pages and employee portal for LYT Communications fiber optic construction company.
 
 ## Quick Deploy to Vercel (Easiest - 5 minutes)
