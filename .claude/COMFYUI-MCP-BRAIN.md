@@ -327,6 +327,7 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | vast-model-download-v0.01.sh | Model download script | v0.01 |
 | PROJECT-INSTRUCTIONS-v0.02.md | Claude Project bootstrap | v0.02 |
 | disaster-recovery-v0.02.sh | Full rebuild from zero — segmented tokens, no env vars | v0.02 |
+| comfyui-claude-setup.sh | Friend edition — self-contained, no downloads, quick tunnels | v0.01 |
 
 ---
 
