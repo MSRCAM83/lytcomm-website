@@ -279,6 +279,8 @@ tunnel: ${TUNNEL_ID}
 credentials-file: /root/.cloudflared/${TUNNEL_ID}.json
 
 ingress:
+  - hostname: sh.comfyui-mcp.uk
+    service: http://localhost:${SHELL_MCP_PORT}
   - hostname: shell.comfyui-mcp.uk
     service: http://localhost:${SHELL_MCP_PORT}
   - hostname: mcp.comfyui-mcp.uk
@@ -287,6 +289,10 @@ ingress:
 CFGEOF
 
 ok "Tunnel credentials + multi-host config written"
+
+cloudflared tunnel route dns ${TUNNEL_NAME} sh.comfyui-mcp.uk 2>/dev/null && \
+    ok "DNS route added: sh.comfyui-mcp.uk" || \
+    info "DNS route already exists (OK)"
 
 cloudflared tunnel route dns ${TUNNEL_NAME} shell.comfyui-mcp.uk 2>/dev/null && \
     ok "DNS route added: shell.comfyui-mcp.uk" || \
