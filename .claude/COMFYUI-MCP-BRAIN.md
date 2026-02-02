@@ -1,7 +1,7 @@
 # 🧠 COMFYUI-MCP-BRAIN.md
 ## Project Brain — ComfyUI + Vast.ai + MCP Infrastructure
 ### Last Updated: 2026-02-01
-### Version: 2.0.5
+### Version: 2.0.6
 
 ---
 
@@ -18,11 +18,12 @@
 6. Multiple instance launch failures diagnosed — all caused by missing template config in API call, NOT host issues
 7. Successful launch with full template config (instance 30844128) — SSH up in <10 seconds
 
-### Last Known Instances
-- **Instance 30838160:** A100 SXM4 80GB, Massachusetts, $0.83/hr — RUNNING, both MCPs operational
-- **Instance 30844128:** H100 PCIE, France, $1.14/hr — RUNNING, fresh launch for verification test
+### Last Known Instance
+- **Instance 30846161:** H100 PCIE, France, $1.16/hr — RUNNING, all 3 MCPs live (200)
+- **SSH:** ssh7.vast.ai:16160
 - **Image:** vastai/comfy:v0.10.0-cuda-12.9-py312
-- **Cloudflare tunnel:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d (on instance 30838160)
+- **Cloudflare tunnel:** 73cb30f7-2d3a-4a2c-aefb-bcee8ddee39d
+- **Previous instances (30838160, 30844128, 30845230, 30846134):** KILLED
 
 ### Last Known MCP Status
 | Server | Local | Tunnel | Claude.ai |
@@ -69,6 +70,9 @@ curl -s -H "Authorization: Bearer $VAST_TOKEN" \
 
 # Step 2: Create instance (replace {OFFER_ID} with best result from step 1)
 # ⚠️ CRITICAL: Must include template_id + extra_env or portal.yaml never generates
+# ⚠️ TEMPLATE OVERRIDE: template_id 336394 OVERRIDES the PROVISIONING_SCRIPT env var with Vast's default.
+#    Fix: Use onstart to export PROVISIONING_SCRIPT BEFORE calling entrypoint.sh (see onstart below).
+#    The env var in extra_env will be ignored; only the onstart export takes effect.
 # and ALL services (SSH, ComfyUI, Jupyter) will fail to start in a loop.
 curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
   "https://console.vast.ai/api/v0/asks/{OFFER_ID}/" \
@@ -79,7 +83,7 @@ curl -s -X PUT -H "Authorization: Bearer $VAST_TOKEN" \
     "disk": 80,
     "runtype": "jupyter_direct",
     "template_id": 336394,
-    "onstart": "entrypoint.sh",
+    "onstart": "bash -c 'export PROVISIONING_SCRIPT=https://raw.githubusercontent.com/MSRCAM83/lytcomm-website/main/.claude/vast-mcp-setup-v0.07.sh && entrypoint.sh'",
     "extra_env": {
       "COMFYUI_ARGS": "--disable-auto-launch --port 18188 --enable-cors-header",
       "COMFYUI_API_BASE": "http://localhost:18188",
@@ -294,6 +298,8 @@ run_command, read_file, write_file, append_file, list_directory, file_info, dele
 | Ollama chat trap | Exit with `/bye` before terminal commands |
 | Instance "No such container" | Bare pytorch image not pre-cached — use comfy template instead |
 | portal.yaml never generates / services loop | API launch missing `template_id: 336394` + `extra_env` (PORTAL_CONFIG, ports). Web UI injects these automatically, API does NOT. |
+| PROVISIONING_SCRIPT ignored / default runs | template_id 336394 overrides PROVISIONING_SCRIPT env var. Fix: use `onstart: "bash -c 'export PROVISIONING_SCRIPT=<url> && entrypoint.sh'"` |
+| extra_env ignored without template_id | Without template_id, Vast API drops all extra_env. Template is required for port mappings and env vars. |
 | ComfyUI MCP `python -m` | Wrong. Use `python server.py` directly |
 | Shell MCP mcp 1.26.0 | Need v0.02 of shell-mcp-server |
 
