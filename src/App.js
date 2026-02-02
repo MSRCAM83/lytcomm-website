@@ -43,6 +43,11 @@ import ActivityLog from './portals/ActivityLog';
 // Phase 8 - User Self-Service
 import UserProfile from './portals/UserProfile';
 
+// Phase 9 - Project Map System
+import JobImportPage from './pages/JobImportPage';
+import ProjectMapPage from './pages/ProjectMapPage';
+import AdminProjectDashboard from './pages/AdminProjectDashboard';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -148,6 +153,9 @@ function App() {
     'forgot-password',
     'api-test',
     'nda-sign',
+    'job-import',
+    'project-map',
+    'admin-projects',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -210,6 +218,12 @@ function App() {
         return <ApiTestPage darkMode={darkMode} setCurrentPage={setCurrentPage} />;
       case 'nda-sign':
         return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
+      case 'job-import':
+        return <JobImportPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+      case 'project-map':
+        return <ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+      case 'admin-projects':
+        return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
