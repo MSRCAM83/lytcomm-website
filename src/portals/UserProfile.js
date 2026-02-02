@@ -203,7 +203,7 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const text = await fetchWithRedirect(PORTAL_URL, {
+      const text = await fetchWithRedirect(GATEWAY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -242,7 +242,7 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
     
     setSaving(true);
     try {
-      const text = await fetchWithRedirect(PORTAL_URL, {
+      const text = await fetchWithRedirect(GATEWAY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
