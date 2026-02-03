@@ -1,17 +1,31 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 1.1.0
+ * Version: 2.0.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
- * and construction map PDFs via Claude API to extract structured
- * project data (segments, handholes, splice points, billing).
+ * and construction map PDFs via Claude Vision API.
+ * 
+ * v2.0.0: Now accepts base64 page images for scanned/image PDFs.
+ *         Falls back to text if images not provided.
  * 
  * POST /api/pdf-import
- * Body: { work_order_text, map_text, rate_card_id }
+ * Body: { 
+ *   work_order_text, work_order_images[], 
+ *   map_text, map_images[],
+ *   rate_card_id 
+ * }
  * 
  * Environment variable required: ANTHROPIC_API_KEY
  */
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
 
 export default async function handler(req, res) {
   // CORS
@@ -26,13 +40,63 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { work_order_text, map_text, rate_card_id, customer, market, build } = req.body;
+    const { 
+      work_order_text, work_order_images,
+      map_text, map_images,
+      rate_card_id 
+    } = req.body;
 
-    if (!work_order_text && !map_text) {
-      return res.status(400).json({ error: 'At least work_order_text or map_text required' });
+    const hasText = (work_order_text && work_order_text.length > 30) || (map_text && map_text.length > 30);
+    const hasImages = (work_order_images && work_order_images.length > 0) || (map_images && map_images.length > 0);
+
+    if (!hasText && !hasImages) {
+      return res.status(400).json({ error: 'No extractable content. Upload a PDF with text or images.' });
     }
 
-    const extractionPrompt = buildExtractionPrompt(work_order_text, map_text, rate_card_id);
+    // Build message content array (text + images)
+    const contentBlocks = [];
+
+    // Add the extraction instructions as first text block
+    contentBlocks.push({
+      type: 'text',
+      text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasImages),
+    });
+
+    // Add work order images
+    if (work_order_images && work_order_images.length > 0) {
+      contentBlocks.push({
+        type: 'text',
+        text: `\n--- WORK ORDER PDF PAGES (${work_order_images.length} pages) ---\nExamine each page image below carefully for project details, PO numbers, unit codes, quantities, rates, dates.`,
+      });
+      for (let i = 0; i < work_order_images.length; i++) {
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/png',
+            data: work_order_images[i],
+          },
+        });
+      }
+    }
+
+    // Add construction map images
+    if (map_images && map_images.length > 0) {
+      contentBlocks.push({
+        type: 'text',
+        text: `\n--- CONSTRUCTION MAP PDF PAGES (${map_images.length} pages) ---\nExamine each map page carefully. Look for:\n- Handhole labels (A, A01, A02, B, B01, etc.)\n- Footage numbers along fiber routes between handholes\n- Street names\n- Handhole sizes (15x20x12, 17x30x18, 30x48x24)\n- Splice/terminal markers (TYCO-D, 1x4, 1x8 symbols)\n- Section boundaries`,
+      });
+      for (let i = 0; i < map_images.length; i++) {
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/png',
+            data: map_images[i],
+          },
+        });
+      }
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -44,27 +108,28 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8192,
-        system: 'You are a fiber optic construction data extraction specialist. Extract structured JSON data from work orders and construction maps. Always return valid JSON. Never include markdown code fences or commentary outside the JSON.',
-        messages: [{ role: 'user', content: extractionPrompt }],
+        system: 'You are a fiber optic construction data extraction specialist. You can read construction maps, engineering drawings, and work orders. Extract structured JSON data accurately. Always return valid JSON. Never include markdown code fences or commentary outside the JSON.',
+        messages: [{ role: 'user', content: contentBlocks }],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
       console.error('Claude API error:', response.status, errText);
-      return res.status(502).json({ error: 'AI extraction failed', status: response.status });
+      return res.status(502).json({ error: 'AI extraction failed', status: response.status, details: errText.substring(0, 500) });
     }
 
     const data = await response.json();
     const rawText = data.content?.[0]?.text || '';
 
-    // Parse JSON from response (strip code fences if present)
+    // Parse JSON from response
     let extracted;
     try {
       const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       extracted = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('JSON parse error:', parseErr.message);
+      console.error('Raw text (first 500 chars):', rawText.substring(0, 500));
       return res.status(200).json({
         warning: 'Could not parse AI response as JSON',
         raw_response: rawText,
@@ -81,11 +146,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('PDF import error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 }
 
-function buildExtractionPrompt(workOrderText, mapText, rateCardId) {
+function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasImages) {
   let prompt = `Extract structured project data from the following fiber optic construction documents. Return ONLY valid JSON with no other text.
 
 RATE CARD: ${rateCardId || 'vexus-la-tx-2026'}
@@ -124,11 +189,15 @@ SECTION NAMING:
 
 `;
 
-  if (workOrderText) {
+  if (hasImages) {
+    prompt += `\nIMPORTANT: I am providing page images from the PDFs below. Please examine them carefully to extract all data visually. Construction maps are engineering drawings - look for handhole labels, footage numbers between nodes, street names, and splice markers.\n`;
+  }
+
+  if (workOrderText && workOrderText.length > 30) {
     prompt += `\nWORK ORDER TEXT:\n${workOrderText}\n`;
   }
 
-  if (mapText) {
+  if (mapText && mapText.length > 30) {
     prompt += `\nCONSTRUCTION MAP TEXT:\n${mapText}\n`;
   }
 
