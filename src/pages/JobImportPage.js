@@ -1,7 +1,7 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 1.0.0
- * Created: 2026-02-02
+ * Version: 2.0.0
+ * Updated: 2026-02-03
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
@@ -85,47 +85,136 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setImportResult(null);
 
     try {
-      // For Phase 1, we'll simulate the AI extraction
-      // Phase 2 will connect this to the actual Claude API endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Read PDF file as text (base64 for API)
+      const readFileAsText = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+
+      const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Try text extraction first, fallback to sending filename info
+      let workOrderText = '';
+      let mapText = '';
       
-      // Demo result structure matching the build plan schema
+      try {
+        workOrderText = await readFileAsText(workOrderFile);
+        // If the "text" is mostly binary garbage, note it
+        const printableRatio = (workOrderText.match(/[\x20-\x7E\n\r\t]/g) || []).length / workOrderText.length;
+        if (printableRatio < 0.5) {
+          workOrderText = `[Binary PDF - filename: ${workOrderFile.name}, size: ${workOrderFile.size} bytes. PDF text extraction needed on server side.]`;
+        }
+      } catch {
+        workOrderText = `[Could not read file: ${workOrderFile.name}]`;
+      }
+
+      if (mapFile) {
+        try {
+          mapText = await readFileAsText(mapFile);
+          const printableRatio = (mapText.match(/[\x20-\x7E\n\r\t]/g) || []).length / mapText.length;
+          if (printableRatio < 0.5) {
+            mapText = `[Binary PDF - filename: ${mapFile.name}, size: ${mapFile.size} bytes. PDF text extraction needed on server side.]`;
+          }
+        } catch {
+          mapText = `[Could not read file: ${mapFile.name}]`;
+        }
+      }
+
+      // Call the AI extraction API
+      const response = await fetch('/api/pdf-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_order_text: workOrderText,
+          map_text: mapText || undefined,
+          rate_card_id: rateCardId,
+          customer: 'VXS',
+          market: 'SLPH01',
+          build: '006',
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.warning) {
+        // AI returned non-JSON, show raw response for debugging
+        setError(`AI extraction returned unexpected format. Raw response available in console.`);
+        console.warn('Raw AI response:', data.raw_response);
+        setProcessing(false);
+        return;
+      }
+
+      if (!data.success || !data.extracted) {
+        throw new Error('No extraction data returned');
+      }
+
+      const ext = data.extracted;
+      
+      // Build the import result in the expected format
+      const projectId = ext.project?.project_id || `VXS-SLPH01-006`;
+      
       const result = {
         project: {
-          project_id: 'VXS-SLPH01-006',
-          customer: 'Vexus Fiber',
-          project_name: 'Sulphur LA City Build',
-          po_number: '3160880',
-          total_value: 421712.30,
-          start_date: '2026-02-05',
-          completion_date: '2029-01-09',
+          project_id: projectId,
+          customer: ext.project?.customer || 'Vexus Fiber',
+          project_name: ext.project?.project_name || '',
+          po_number: ext.project?.po_number || '',
+          total_value: ext.grand_total || ext.project?.total_value || 0,
+          start_date: ext.project?.start_date || '',
+          completion_date: ext.project?.completion_date || '',
           status: 'Active',
           rate_card_id: rateCardId,
         },
-        segments: [
-          { segment_id: 'VXS-SLPH01-006-A-A01', contractor_id: 'A→A01', section: 'A', from_handhole: 'A (17x30x18)', to_handhole: 'A01 (15x20x12)', footage: 148, street: 'W Parish Rd', boring_status: 'Not Started' },
-          { segment_id: 'VXS-SLPH01-006-A-A02', contractor_id: 'A01→A02', section: 'A', from_handhole: 'A01 (15x20x12)', to_handhole: 'A02 (15x20x12)', footage: 132, street: 'W Parish Rd', boring_status: 'Not Started' },
-          { segment_id: 'VXS-SLPH01-006-A-A03', contractor_id: 'A02→A03', section: 'A', from_handhole: 'A02 (15x20x12)', to_handhole: 'A03 (15x20x12)', footage: 156, street: 'Beglis Pkwy', boring_status: 'Not Started' },
-          { segment_id: 'VXS-SLPH01-006-B-B01', contractor_id: 'B→B01', section: 'B', from_handhole: 'B (17x30x18)', to_handhole: 'B01 (15x20x12)', footage: 210, street: 'S Cities Service Hwy', boring_status: 'Not Started' },
-          { segment_id: 'VXS-SLPH01-006-B-B02', contractor_id: 'B01→B02', section: 'B', from_handhole: 'B01 (15x20x12)', to_handhole: 'B02 (15x20x12)', footage: 185, street: 'S Cities Service Hwy', boring_status: 'Not Started' },
-        ],
-        splice_points: [
-          { splice_id: 'VXS-SLPH01-006-SPL-A01', location: 'A01', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', fiber_count: 2, status: 'Not Started' },
-          { splice_id: 'VXS-SLPH01-006-SPL-A02', location: 'A02', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', fiber_count: 2, status: 'Not Started' },
-          { splice_id: 'VXS-SLPH01-006-SPL-A03', location: 'A03', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', fiber_count: 2, status: 'Not Started' },
-          { splice_id: 'VXS-SLPH01-006-SPL-B01', location: 'B01', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', fiber_count: 2, status: 'Not Started' },
-        ],
+        segments: (ext.segments || []).map((seg, i) => ({
+          segment_id: `${projectId}-${seg.section || 'X'}-${(seg.to_handhole || `S${i}`).replace(/[^A-Za-z0-9]/g, '')}`,
+          contractor_id: seg.contractor_id || `${seg.from_handhole}→${seg.to_handhole}`,
+          section: seg.section || '',
+          from_handhole: seg.from_handhole ? `${seg.from_handhole} (${seg.from_hh_size || ''})` : '',
+          to_handhole: seg.to_handhole ? `${seg.to_handhole} (${seg.to_hh_size || ''})` : '',
+          footage: seg.footage || 0,
+          street: seg.street || '',
+          boring_status: 'Not Started',
+          work_items: seg.work_items || [],
+          total_value: seg.total_value || 0,
+        })),
+        splice_points: (ext.splice_points || []).map(sp => ({
+          splice_id: `${projectId}-SPL-${(sp.contractor_id || '').replace(/[^A-Za-z0-9]/g, '')}`,
+          contractor_id: sp.contractor_id || '',
+          location: sp.location || '',
+          handhole_type: sp.handhole_type || '',
+          splice_type: sp.splice_type || '',
+          position_type: sp.position_type || '',
+          fiber_count: sp.fiber_count || 2,
+          tray_count: sp.tray_count || 1,
+          status: 'Not Started',
+          work_items: sp.work_items || [],
+          total_value: sp.total_value || 0,
+        })),
         stats: {
-          totalSegments: 5,
-          totalFootage: 831,
-          totalSplicePoints: 4,
-          estimatedValue: 421712.30,
+          totalSegments: ext.total_segments || (ext.segments || []).length,
+          totalFootage: ext.total_footage || (ext.segments || []).reduce((sum, s) => sum + (s.footage || 0), 0),
+          totalSplicePoints: ext.total_splice_points || (ext.splice_points || []).length,
+          estimatedValue: ext.grand_total || ext.project?.total_value || 0,
         },
+        _raw: ext, // Keep raw data for debugging
       };
 
       setImportResult(result);
     } catch (err) {
       setError(`Import failed: ${err.message}`);
+      console.error('Import error:', err);
     } finally {
       setProcessing(false);
     }
@@ -135,14 +224,55 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     if (!importResult) return;
     
     setProcessing(true);
+    setError(null);
     try {
-      // Phase 2: Push to Google Sheets via Gateway
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { importProject } = await import('../services/mapService');
       
-      alert('Project imported successfully! Redirecting to project dashboard...');
-      if (setCurrentPage) setCurrentPage('admin-dashboard');
+      const projectId = importResult.project.project_id;
+      
+      // Prepare segments for DB (strip display formatting, pass raw data)
+      const segmentsForDb = importResult.segments.map(seg => ({
+        contractor_id: seg.contractor_id,
+        section: seg.section,
+        from_handhole: seg.from_handhole,
+        to_handhole: seg.to_handhole,
+        footage: seg.footage,
+        street: seg.street,
+      }));
+
+      // Prepare splice points for DB
+      const splicesForDb = importResult.splice_points.map(sp => ({
+        contractor_id: sp.contractor_id,
+        location: sp.location,
+        handhole_type: sp.handhole_type,
+        splice_type: sp.splice_type,
+        position_type: sp.position_type,
+        fiber_count: sp.fiber_count,
+        tray_count: sp.tray_count || 1,
+      }));
+
+      const result = await importProject(
+        importResult.project,
+        segmentsForDb,
+        splicesForDb,
+        projectId
+      );
+
+      if (result.success) {
+        const msg = `Project imported successfully!\n\n` +
+          `✅ Project: ${projectId}\n` +
+          `✅ Segments: ${result.counts.segments}\n` +
+          `✅ Splice Points: ${result.counts.splicePoints}\n\n` +
+          `Redirecting to project map...`;
+        alert(msg);
+        if (setCurrentPage) setCurrentPage('project-map');
+      } else {
+        const errMsg = result.errors ? result.errors.join('\n') : 'Unknown error';
+        setError(`Partial import - some items failed:\n${errMsg}\n\nWritten: ${result.counts.segments} segments, ${result.counts.splicePoints} splices`);
+      }
     } catch (err) {
       setError(`Save failed: ${err.message}`);
+      console.error('Confirm import error:', err);
     } finally {
       setProcessing(false);
     }
@@ -591,7 +721,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       <div style={{ position: 'fixed', bottom: '4px', right: '8px', fontSize: '0.6rem', color: 'transparent', userSelect: 'none' }}
         onDoubleClick={(e) => { e.target.style.color = textMuted; }}
       >
-        JobImportPage v1.0.0
+        JobImportPage v2.0.0
       </div>
     </div>
   );
