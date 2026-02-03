@@ -1,7 +1,6 @@
 // ForgotPassword.js v2.1 - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Sun, Moon, AlertCircle, CheckCircle } from 'lucide-react';
-import { colors } from '../config/constants';
 
 // Portal Backend URL
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
@@ -84,6 +83,7 @@ function ForgotPassword({ setCurrentPage, darkMode, setDarkMode }) {
         }
       } else {
         try {
+// eslint-disable-next-line no-unused-vars
           result = JSON.parse(text);
         } catch (e) {
           setSuccess(true);
