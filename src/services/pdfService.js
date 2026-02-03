@@ -548,6 +548,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
     const lytBlue = rgb(0, 0.467, 0.714);
     const darkGray = rgb(0.2, 0.2, 0.2);
     const medGray = rgb(0.4, 0.4, 0.4);
+// eslint-disable-next-line no-unused-vars
     const lightGray = rgb(0.85, 0.85, 0.85);
     const borderGray = rgb(0.7, 0.7, 0.7);
     
@@ -567,6 +568,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
     };
     
     // Draw bordered box helper
+// eslint-disable-next-line no-unused-vars
     const drawBox = (boxY, boxHeight, fillColor = null) => {
       if (fillColor) {
         page.drawRectangle({
@@ -613,6 +615,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
         
         checkNewPage(sectionHeight + 10);
         
+// eslint-disable-next-line no-unused-vars
         const sectionStartY = y;
         
         // Section title bar
@@ -922,6 +925,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
   }
 }
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default {
   fillW4,
   fillW9,
