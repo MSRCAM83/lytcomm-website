@@ -1,11 +1,12 @@
 /**
  * LYT Communications - Invoice Generator
- * Version: 1.0.0
+ * Version: 2.0.0
  * Created: 2026-02-03
+ * Updated: 2026-02-03
  * 
  * Auto-generates invoices from QC-approved segments + rate cards.
- * Calculates line items based on footage, splice type, and Vexus rate card.
- * Supports per-contractor and per-section grouping.
+ * Features: invoice numbering, CSV export, date range filter,
+ * invoice history, professional print layout, copy-to-clipboard.
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,13 +14,15 @@ import {
   FileText, DollarSign, Download, Printer, CheckCircle,
   AlertTriangle, ChevronDown, ChevronUp, Filter, Calendar,
   // eslint-disable-next-line no-unused-vars
-  Building2, Loader, RefreshCw, ArrowLeft
+  Building2, Loader, RefreshCw, ArrowLeft, Copy, Hash, Clock, Trash2, Eye
 } from 'lucide-react';
 import { loadFullProject, loadRateCards } from '../services/mapService';
 
 // ===== RATE CARD DEFINITIONS (Vexus LA/TX 2026 fallback) =====
 const DEFAULT_RATES = {
   UG1:  { desc: 'Directional bore 1-4 ducts (1.25" ID)', uom: 'LF', price: 8.00 },
+  UG23: { desc: 'Directional bore 5 ducts (1.25" ID)', uom: 'LF', price: 9.50 },
+  UG24: { desc: 'Directional bore 6 ducts (1.25" ID)', uom: 'LF', price: 10.50 },
   UG4:  { desc: 'Pull up to 144ct armored/micro cable', uom: 'LF', price: 0.55 },
   UG28: { desc: 'Place 288-432ct armored fiber in duct', uom: 'LF', price: 1.00 },
   FS1:  { desc: 'Fusion splice 1 fiber', uom: 'EA', price: 16.50 },
@@ -28,7 +31,10 @@ const DEFAULT_RATES = {
   FS4:  { desc: 'ReEnter/Install Enclosure (end-of-line)', uom: 'EA', price: 137.50 },
   UG10: { desc: '30x48x30 fiberglass handhole', uom: 'EA', price: 310.00 },
   UG11: { desc: '24x36x24 fiberglass handhole', uom: 'EA', price: 110.00 },
+  UG12: { desc: 'Utility Box', uom: 'EA', price: 20.00 },
+  UG13: { desc: 'Ground rod 5/8" x 8\'', uom: 'EA', price: 40.00 },
   UG17: { desc: '17x30x18 HDPE handhole', uom: 'EA', price: 60.00 },
+  UG18: { desc: '24x36x18 HDPE handhole', uom: 'EA', price: 125.00 },
   UG19: { desc: '30x48x18 HDPE handhole', uom: 'EA', price: 250.00 },
   UG20: { desc: 'Terminal Box', uom: 'EA', price: 40.00 },
   UG27: { desc: '30x48x24 HDPE handhole', uom: 'EA', price: 210.00 },
@@ -86,16 +92,40 @@ function calculateSegmentItems(segment) {
   return items;
 }
 
+// Generate invoice number
+function generateInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const saved = JSON.parse(localStorage.getItem('lyt_invoice_counter') || '{}');
+  const counter = (saved[year] || 0) + 1;
+  saved[year] = counter;
+  localStorage.setItem('lyt_invoice_counter', JSON.stringify(saved));
+  return `LYT-INV-${year}-${String(counter).padStart(4, '0')}`;
+}
+
+// Format date for display
+function fmtDate(d) {
+  if (!d) return 'N/A';
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
 function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, project }) {
   const currentUser = user || loggedInUser;
   const [segments, setSegments] = useState([]);
   const [splicePoints, setSplicePoints] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [rates, setRates] = useState(DEFAULT_RATES);
   const [loading, setLoading] = useState(true);
   const [filterSection, setFilterSection] = useState('all');
   const [filterContractor, setFilterContractor] = useState('all');
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
   const [expanded, setExpanded] = useState({});
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [copyMsg, setCopyMsg] = useState('');
 
   const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'admin';
   const cardBg = darkMode ? '#112240' : '#f8fafc';
@@ -116,7 +146,6 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
         setSegments(data.segments || []);
         setSplicePoints(data.splicePoints || []);
         
-        // Try to load rate cards from DB
         const rateData = await loadRateCards('vexus-la-tx-2026');
         if (rateData && rateData.length > 0) {
           const rateMap = {};
@@ -131,6 +160,11 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
       setLoading(false);
     }
     load();
+    // Load invoice history
+    try {
+      const saved = JSON.parse(localStorage.getItem('lyt_invoice_history') || '[]');
+      setHistory(saved);
+    } catch (e) { /* ignore */ }
   }, [project]);
 
   // Filter segments
@@ -141,14 +175,28 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
     }
     if (filterSection !== 'all') segs = segs.filter(s => s.section === filterSection);
     if (filterContractor !== 'all') segs = segs.filter(s => s.boring_assigned_to === filterContractor || s.pulling_assigned_to === filterContractor);
+    // Date range filter (based on QC approval date)
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      segs = segs.filter(s => {
+        const d = new Date(s.boring_qc_approved_date || s.pulling_qc_approved_date || s.boring_completed || '2000-01-01');
+        return d >= from;
+      });
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + 'T23:59:59');
+      segs = segs.filter(s => {
+        const d = new Date(s.boring_qc_approved_date || s.pulling_qc_approved_date || s.boring_completed || '2099-12-31');
+        return d <= to;
+      });
+    }
     return segs;
-  }, [segments, showOnlyApproved, filterSection, filterContractor]);
+  }, [segments, showOnlyApproved, filterSection, filterContractor, dateFrom, dateTo]);
 
   // Calculate all line items
   const invoiceData = useMemo(() => {
     const lineItems = [];
     
-    // Segment items (boring + pulling)
     filteredSegments.forEach(seg => {
       const items = calculateSegmentItems(seg);
       items.forEach(item => {
@@ -156,7 +204,6 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
       });
     });
     
-    // Splice items
     const filteredSplices = showOnlyApproved
       ? splicePoints.filter(sp => sp.status === 'QC Approved')
       : splicePoints;
@@ -169,7 +216,6 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
       });
     });
     
-    // Group by code
     const grouped = {};
     lineItems.forEach(item => {
       const key = item.code;
@@ -185,7 +231,6 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
     return { lineItems, summary, grandTotal };
   }, [filteredSegments, splicePoints, showOnlyApproved, filterSection]);
 
-  // Get unique sections + contractors for filters
   const sections = useMemo(() => [...new Set(segments.map(s => s.section).filter(Boolean))].sort(), [segments]);
   const contractors = useMemo(() => [...new Set(segments.flatMap(s => [s.boring_assigned_to, s.pulling_assigned_to]).filter(Boolean))], [segments]);
 
@@ -193,17 +238,177 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
     setExpanded(prev => ({ ...prev, [code]: !prev[code] }));
   }, []);
 
-  // Print / export
+  // ===== EXPORT: CSV Download =====
+  const handleExportCSV = () => {
+    const rows = [['Code', 'Description', 'UOM', 'Qty', 'Rate', 'Total']];
+    invoiceData.summary.forEach(g => {
+      rows.push([g.code, `"${g.desc}"`, g.uom, g.totalQty, g.rate.toFixed(2), g.totalValue.toFixed(2)]);
+    });
+    rows.push([]);
+    rows.push(['', '', '', '', 'GRAND TOTAL', invoiceData.grandTotal.toFixed(2)]);
+    
+    const csvContent = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice_${project?.project_name?.replace(/\s+/g, '_') || 'LYT'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ===== COPY TABLE TO CLIPBOARD =====
+  const handleCopyTable = async () => {
+    const lines = ['Code\tDescription\tUOM\tQty\tRate\tTotal'];
+    invoiceData.summary.forEach(g => {
+      lines.push(`${g.code}\t${g.desc}\t${g.uom}\t${g.totalQty}\t$${g.rate.toFixed(2)}\t$${g.totalValue.toFixed(2)}`);
+    });
+    lines.push(`\t\t\t\tGRAND TOTAL\t$${invoiceData.grandTotal.toFixed(2)}`);
+    
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopyMsg('Copied to clipboard!');
+      setTimeout(() => setCopyMsg(''), 2000);
+    } catch (e) {
+      setCopyMsg('Copy failed');
+      setTimeout(() => setCopyMsg(''), 2000);
+    }
+  };
+
+  // ===== GENERATE INVOICE NUMBER & SAVE =====
+  const handleGenerateInvoice = () => {
+    const num = generateInvoiceNumber();
+    setInvoiceNumber(num);
+    
+    // Save to history
+    const record = {
+      invoiceNumber: num,
+      date: new Date().toISOString(),
+      project: project?.project_name || 'Sulphur LA City Build',
+      customer: project?.customer || 'Vexus Fiber',
+      poNumber: project?.po_number || '3160880',
+      total: invoiceData.grandTotal,
+      lineItemCount: invoiceData.summary.length,
+      segmentCount: filteredSegments.length,
+      section: filterSection,
+      contractor: filterContractor,
+    };
+    
+    const updatedHistory = [record, ...history].slice(0, 50);
+    setHistory(updatedHistory);
+    try {
+      localStorage.setItem('lyt_invoice_history', JSON.stringify(updatedHistory));
+    } catch (e) { /* ignore */ }
+  };
+
+  const handleDeleteHistory = (idx) => {
+    const updated = history.filter((_, i) => i !== idx);
+    setHistory(updated);
+    localStorage.setItem('lyt_invoice_history', JSON.stringify(updated));
+  };
+
+  // ===== PRINT =====
   const handlePrint = () => {
-    const printContent = document.getElementById('invoice-printable');
-    if (!printContent) return;
+    if (!invoiceNumber) handleGenerateInvoice();
+    const invNum = invoiceNumber || 'DRAFT';
+    const now = new Date();
+    
     const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>Invoice - ${project?.project_name || 'LYT'}</title>
-      <style>body{font-family:Arial,sans-serif;padding:40px;color:#333}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ddd;padding:8px 12px;text-align:left}th{background:#f5f5f5;font-weight:600}.total{font-weight:700;font-size:1.1em}.right{text-align:right}h1{margin:0 0 4px}h3{color:#555;margin:0 0 20px}.logo{font-size:1.5em;font-weight:800;color:#0077B6}</style></head><body>`);
-    w.document.write(printContent.innerHTML);
-    w.document.write('</body></html>');
+    w.document.write(`<html><head><title>Invoice ${invNum}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .right { text-align: right; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .logo { font-size: 1.8em; font-weight: 800; }
+        .logo span:first-child { color: #0a3a7d; }
+        .logo span:nth-child(2) { color: #2ec7c0; }
+        .invoice-title { font-size: 2em; font-weight: 800; color: #0077B6; margin: 0; }
+        .meta { font-size: 0.9em; line-height: 1.8; }
+        .meta strong { display: inline-block; width: 100px; }
+        .divider { border-top: 2px solid #0077B6; margin: 20px 0; }
+        .total-row td { font-weight: 700; font-size: 1.1em; background: #f8fafc; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.8em; color: #999; }
+        .terms { margin-top: 30px; font-size: 0.85em; color: #666; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head><body>`);
+
+    w.document.write(`
+      <div class="header">
+        <div>
+          <div class="logo"><span>ly</span><span>t</span> <span style="font-size:0.5em;color:#666;font-weight:400;">Communications</span></div>
+          <div style="font-size:0.75em;color:#999;margin-top:2px;">BUILDING DIGITAL FUTURES</div>
+          <div style="margin-top:12px;font-size:0.85em;color:#555;">
+            12130 State Highway 3<br>
+            Webster, TX 77598<br>
+            (832) 850-3887<br>
+            info@lytcomm.com
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="invoice-title">INVOICE</div>
+          <div class="meta" style="margin-top:12px;">
+            <strong>Invoice #:</strong> ${invNum}<br>
+            <strong>Date:</strong> ${now.toLocaleDateString()}<br>
+            <strong>PO #:</strong> ${project?.po_number || '3160880'}<br>
+            <strong>Terms:</strong> Net 30
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;">
+        <div class="meta">
+          <strong>Bill To:</strong><br>
+          ${project?.customer || 'Vexus Fiber'}<br>
+          ${project?.project_name || 'Sulphur LA City Build'}
+        </div>
+        <div class="meta" style="text-align:right;">
+          <strong>Project:</strong> ${project?.project_id || 'VXS-SLPH01-006'}<br>
+          <strong>Segments:</strong> ${filteredSegments.length} (${segments.filter(s => s.boring_status === 'QC Approved').length} QC Approved)
+          ${filterSection !== 'all' ? `<br><strong>Section:</strong> ${filterSection}` : ''}
+          ${filterContractor !== 'all' ? `<br><strong>Contractor:</strong> ${filterContractor}` : ''}
+        </div>
+      </div>
+    `);
+
+    w.document.write(`<table>
+      <thead><tr>
+        <th>Code</th><th>Description</th><th>UOM</th>
+        <th class="right">Qty</th><th class="right">Rate</th><th class="right">Total</th>
+      </tr></thead><tbody>`);
+    
+    invoiceData.summary.forEach(g => {
+      w.document.write(`<tr>
+        <td><strong>${g.code}</strong></td><td>${g.desc}</td><td style="text-align:center;">${g.uom}</td>
+        <td class="right">${g.totalQty.toLocaleString()}</td>
+        <td class="right">$${g.rate.toFixed(2)}</td>
+        <td class="right">$${g.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      </tr>`);
+    });
+
+    w.document.write(`</tbody><tfoot>
+      <tr class="total-row">
+        <td colspan="5" class="right" style="font-size:1.1em;">GRAND TOTAL</td>
+        <td class="right" style="font-size:1.1em;color:#28a745;">$${invoiceData.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      </tr></tfoot></table>`);
+
+    w.document.write(`
+      <div class="terms">
+        <strong>Terms & Conditions:</strong><br>
+        Payment due within 30 days of invoice date. Late payments subject to 1.5% monthly interest.
+        All work performed per signed Master Subcontractor Agreement. Unit prices per approved rate card.
+      </div>
+      <div class="footer">
+        Generated by LYT Communications Project Management System<br>
+        Invoice ${invNum} • ${now.toISOString()}
+      </div>
+    </body></html>`);
+
     w.document.close();
-    w.print();
+    setTimeout(() => w.print(), 300);
   };
 
   if (loading) {
@@ -232,31 +437,82 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
             <FileText size={24} color={accent} />
             <div>
               <div style={{ fontSize: '1.2rem', fontWeight: 700, color: text }}>Invoice Generator</div>
-              <div style={{ fontSize: '0.85rem', color: textMuted }}>{project?.project_name || 'Sulphur LA City Build'} • PO {project?.po_number || '3160880'}</div>
+              <div style={{ fontSize: '0.85rem', color: textMuted }}>
+                {project?.project_name || 'Sulphur LA City Build'} • PO {project?.po_number || '3160880'}
+                {invoiceNumber && <span style={{ marginLeft: 8, color: accent, fontWeight: 600 }}>#{invoiceNumber}</span>}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!invoiceNumber ? (
+              <button onClick={handleGenerateInvoice} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: accent, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600 }}>
+                <Hash size={16} /> Generate Invoice #
+              </button>
+            ) : (
+              <div style={{ padding: '8px 14px', borderRadius: 8, background: `${successGreen}20`, color: successGreen, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle size={14} /> {invoiceNumber}
+              </div>
+            )}
+            <button onClick={handleCopyTable} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${borderColor}`, background: 'transparent', color: text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+              <Copy size={16} /> {copyMsg || 'Copy'}
+            </button>
+            <button onClick={handleExportCSV} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${borderColor}`, background: 'transparent', color: text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+              <Download size={16} /> CSV
+            </button>
             <button onClick={handlePrint} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${borderColor}`, background: 'transparent', color: text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
               <Printer size={16} /> Print
             </button>
-            <button onClick={() => window.location.reload()} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${borderColor}`, background: 'transparent', color: text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
-              <RefreshCw size={16} /> Refresh
+            <button onClick={() => setShowHistory(!showHistory)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${showHistory ? accent : borderColor}`, background: showHistory ? `${accent}15` : 'transparent', color: showHistory ? accent : text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+              <Clock size={16} /> History
             </button>
           </div>
         </div>
       </div>
 
+      {/* Invoice History Panel */}
+      {showHistory && (
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${borderColor}`, background: darkMode ? '#0a1628' : '#f1f5f9' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: text, marginBottom: 12 }}>Recent Invoices ({history.length})</div>
+          {history.length === 0 ? (
+            <div style={{ color: textMuted, fontSize: '0.85rem' }}>No invoices generated yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+              {history.map((inv, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: cardBg, borderRadius: 8, border: `1px solid ${borderColor}`, fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontWeight: 700, color: accent }}>{inv.invoiceNumber}</span>
+                    <span style={{ color: textMuted }}>{fmtDate(inv.date)}</span>
+                    <span style={{ color: text }}>{inv.project}</span>
+                    {inv.section !== 'all' && <span style={{ color: textMuted }}>Section {inv.section}</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontWeight: 700, color: successGreen }}>${inv.total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                    <button onClick={() => handleDeleteHistory(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 4 }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stats Bar */}
       <div style={{ padding: '16px 24px', display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: `1px solid ${borderColor}` }}>
-        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 140 }}>
+        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 130 }}>
           <div style={{ fontSize: '0.75rem', color: textMuted, marginBottom: 4 }}>QC Approved</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: successGreen }}>{qcApprovedCount}<span style={{ fontSize: '0.8rem', fontWeight: 400, color: textMuted }}>/{totalSegments}</span></div>
         </div>
-        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 140 }}>
+        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 130 }}>
           <div style={{ fontSize: '0.75rem', color: textMuted, marginBottom: 4 }}>Line Items</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: accent }}>{invoiceData.summary.length}</div>
         </div>
-        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 140 }}>
+        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 130 }}>
+          <div style={{ fontSize: '0.75rem', color: textMuted, marginBottom: 4 }}>Filtered Segments</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: text }}>{filteredSegments.length}</div>
+        </div>
+        <div style={{ background: cardBg, borderRadius: 10, padding: '12px 20px', border: `1px solid ${borderColor}`, flex: 1, minWidth: 160 }}>
           <div style={{ fontSize: '0.75rem', color: textMuted, marginBottom: 4 }}>Invoice Total</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: successGreen }}>${invoiceData.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
@@ -277,6 +533,15 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
           <input type="checkbox" checked={showOnlyApproved} onChange={e => setShowOnlyApproved(e.target.checked)} />
           QC Approved Only
         </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          <Calendar size={14} color={textMuted} />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: cardBg, color: text, fontSize: '0.82rem' }} />
+          <span style={{ color: textMuted, fontSize: '0.85rem' }}>to</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: cardBg, color: text, fontSize: '0.82rem' }} />
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Clear</button>
+          )}
+        </div>
       </div>
 
       {/* Invoice Table */}
@@ -285,7 +550,7 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
           <div style={{ textAlign: 'center', padding: 40, color: textMuted }}>
             <AlertTriangle size={32} color={textMuted} style={{ marginBottom: 12 }} />
             <div style={{ fontSize: '1rem', fontWeight: 600 }}>No billable items found</div>
-            <div style={{ fontSize: '0.85rem', marginTop: 6 }}>Segments must be QC Approved to appear on invoices.</div>
+            <div style={{ fontSize: '0.85rem', marginTop: 6 }}>Segments must be QC Approved to appear on invoices. Try adjusting filters or date range.</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -318,7 +583,7 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
                     {expanded[group.code] && group.details.map((detail, idx) => (
                       <tr key={`${group.code}-${idx}`} style={{ borderBottom: `1px solid ${borderColor}`, background: darkMode ? '#0a1628' : '#fafbfc' }}>
                         <td style={{ padding: '6px 12px 6px 28px', fontSize: '0.8rem', color: textMuted }}></td>
-                        <td style={{ padding: '6px 12px', fontSize: '0.8rem', color: textMuted }}>{detail.source}</td>
+                        <td style={{ padding: '6px 12px', fontSize: '0.8rem', color: textMuted }}>{detail.source} {detail.section ? `(Sec ${detail.section})` : ''}</td>
                         <td style={{ padding: '6px 12px', textAlign: 'center', fontSize: '0.8rem', color: textMuted }}>{detail.uom || group.uom}</td>
                         <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: '0.8rem', color: textMuted }}>{detail.qty.toLocaleString()}</td>
                         <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: '0.8rem', color: textMuted }}>${detail.rate.toFixed(2)}</td>
@@ -341,37 +606,8 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
         )}
       </div>
 
-      {/* Hidden printable invoice */}
-      <div id="invoice-printable" style={{ display: 'none' }}>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: '1.5em', fontWeight: 800, color: '#0077B6' }}>lyt Communications</div>
-          <div style={{ fontSize: '0.9em', color: '#666' }}>BUILDING DIGITAL FUTURES</div>
-        </div>
-        <h1 style={{ margin: '0 0 4px' }}>INVOICE</h1>
-        <h3 style={{ color: '#555', margin: '0 0 20px' }}>{project?.project_name || 'Sulphur LA City Build'} • PO {project?.po_number || '3160880'}</h3>
-        <div style={{ marginBottom: 16, fontSize: '0.9em' }}>
-          <div><strong>Customer:</strong> {project?.customer || 'Vexus Fiber'}</div>
-          <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
-          <div><strong>Segments:</strong> {filteredSegments.length} ({qcApprovedCount} QC Approved)</div>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', background: '#f5f5f5' }}>Code</th><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left', background: '#f5f5f5' }}>Description</th><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', background: '#f5f5f5' }}>UOM</th><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', background: '#f5f5f5' }}>Qty</th><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', background: '#f5f5f5' }}>Rate</th><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', background: '#f5f5f5' }}>Total</th></tr>
-          </thead>
-          <tbody>
-            {invoiceData.summary.map(g => (
-              <tr key={g.code}><td style={{ border: '1px solid #ddd', padding: '8px' }}>{g.code}</td><td style={{ border: '1px solid #ddd', padding: '8px' }}>{g.desc}</td><td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{g.uom}</td><td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>{g.totalQty.toLocaleString()}</td><td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>${g.rate.toFixed(2)}</td><td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>${g.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr><td colSpan={5} style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right', fontWeight: 700, fontSize: '1.1em' }}>GRAND TOTAL</td><td style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right', fontWeight: 700, fontSize: '1.1em' }}>${invoiceData.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
-          </tfoot>
-        </table>
-        <div style={{ marginTop: 30, fontSize: '0.8em', color: '#999' }}>Generated by LYT Communications Project Management System • {new Date().toISOString()}</div>
-      </div>
-
       {/* Version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>InvoiceGenerator v1.0.0</div>
+      <div onClick={(e) => { if (e.detail === 3) alert('InvoiceGenerator v2.0.0'); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none', cursor: 'default' }}>InvoiceGenerator v2.0.0</div>
     </div>
   );
 }
