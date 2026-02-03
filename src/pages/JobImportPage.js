@@ -1,10 +1,12 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 3.0.0
+ * Version: 3.1.0
  * Updated: 2026-02-03
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
+ * v3.1.0: Dynamic worker URL - auto-matches installed pdfjs-dist version
+ *         Fixes "API version X does not match Worker version Y" error
  * v3.0.0: Renders PDF pages to images (canvas → base64) and sends
  *         to Claude Vision API so scanned/image-based PDFs work.
  *         Also extracts text as fallback for text-based PDFs.
@@ -14,8 +16,9 @@ import React, { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp, Image, Eye } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker - pinned CDN version
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
+// Configure pdf.js worker - dynamically match installed version to avoid mismatch errors
+const PDFJS_VERSION = pdfjsLib.version || '4.8.69';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
 // Max pages to render as images (keep payload under Vercel 4.5MB limit)
 const MAX_PAGES_WORKORDER = 5;
