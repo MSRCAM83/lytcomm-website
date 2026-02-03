@@ -1,7 +1,7 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 1.0.0
- * Created: 2026-02-02
+ * Version: 1.1.0
+ * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude API to extract structured
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: 'You are a fiber optic construction data extraction specialist. Extract structured JSON data from work orders and construction maps. Always return valid JSON. Never include markdown code fences or commentary outside the JSON.',
         messages: [{ role: 'user', content: extractionPrompt }],
       }),
