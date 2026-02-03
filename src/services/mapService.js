@@ -1,107 +1,128 @@
 /**
  * LYT Communications - Map Data Service
- * Version: 2.0.0
+ * Version: 3.0.0
  * Updated: 2026-02-03
  * 
  * Data bridge between React frontend and Google Sheets database.
- * Fetches project/segment/splice data via Gateway API.
- * Falls back to built-in demo data when DB not yet configured.
+ * Reads/writes project data via Gateway API to separate spreadsheets.
+ * Falls back to built-in demo data on network failure.
  * 
- * Read path:  Gateway sheetsRead -> parse rows -> structured objects
- * Write path: Gateway sheetsWrite/sheetsAppend -> Google Sheets
+ * Database: 8 Google Sheets (one per table)
+ * Gateway: GAS proxy for all Sheets operations
  */
 
 import { STATUS_COLORS } from '../config/mapConfig';
 
 // ===== CONFIGURATION =====
-const PROJECT_DB_SHEET_ID = process.env.REACT_APP_PROJECT_DB_SHEET_ID || '';
-const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec';
+const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 
-const SHEETS = {
-  PROJECTS: 'Projects',
-  SEGMENTS: 'Segments',
-  SPLICE_POINTS: 'Splice Points',
-  ASSIGNMENTS: 'Assignments',
-  RATE_CARDS: 'Rate Cards',
-  USERS: 'PM Users',
-  WORK_LOG: 'Work Log',
-  ISSUES: 'Issues',
+// Database spreadsheet IDs (one per table)
+const DB = {
+  PROJECTS:     '1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70',
+  SEGMENTS:     '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg',
+  SPLICE_POINTS:'1lFMlmlyTgbtGkxB0zhJNoa7M2RFH5bd25VPLh_xdCFU',
+  ASSIGNMENTS:  '1g2Ml8PFsN0HZA_chLqje2OTnYAZXDPVMZ1trRmKN-qY',
+  RATE_CARDS:   '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
+  USERS:        '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
+  WORK_LOG:     '1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8',
+  ISSUES:       '1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g',
 };
 
-// ===== DEMO DATA =====
+// ===== DEMO FALLBACK DATA =====
 const DEMO_PROJECT = {
-  project_id: 'VXS-SLPH01-006',
-  customer: 'Vexus Fiber',
-  project_name: 'Sulphur LA City Build',
-  po_number: '3160880',
-  total_value: 421712.30,
-  start_date: '2026-02-05',
-  completion_date: '2029-01-09',
-  status: 'Active',
+  project_id: 'VXS-SLPH01-006', customer: 'Vexus Fiber',
+  project_name: 'Sulphur LA City Build', po_number: '3160880',
+  total_value: 421712.30, start_date: '2026-02-05',
+  completion_date: '2029-01-09', status: 'Active',
 };
 
 const DEMO_SEGMENTS = [
-  { segment_id: 'VXS-SLPH01-006-A-A01', contractor_id: 'A\u2192A01', section: 'A', from_handhole: 'A (17x30x18)', to_handhole: 'A01 (15x20x12)', footage: 148, street: 'W Parish Rd', gps_start_lat: 30.2367, gps_start_lng: -93.3776, gps_end_lat: 30.2372, gps_end_lng: -93.3768, boring_status: 'QC Approved', pulling_status: 'Complete', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A02', contractor_id: 'A01\u2192A02', section: 'A', from_handhole: 'A01 (15x20x12)', to_handhole: 'A02 (15x20x12)', footage: 132, street: 'W Parish Rd', gps_start_lat: 30.2372, gps_start_lng: -93.3768, gps_end_lat: 30.2378, gps_end_lng: -93.3760, boring_status: 'QC Approved', pulling_status: 'In Progress', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A03', contractor_id: 'A02\u2192A03', section: 'A', from_handhole: 'A02 (15x20x12)', to_handhole: 'A03 (15x20x12)', footage: 156, street: 'Beglis Pkwy', gps_start_lat: 30.2378, gps_start_lng: -93.3760, gps_end_lat: 30.2385, gps_end_lng: -93.3752, boring_status: 'Complete', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A04', contractor_id: 'A03\u2192A04', section: 'A', from_handhole: 'A03 (15x20x12)', to_handhole: 'A04 (15x20x12)', footage: 198, street: 'Beglis Pkwy', gps_start_lat: 30.2385, gps_start_lng: -93.3752, gps_end_lat: 30.2392, gps_end_lng: -93.3743, boring_status: 'In Progress', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A05', contractor_id: 'A04\u2192A05', section: 'A', from_handhole: 'A04 (15x20x12)', to_handhole: 'A05 (15x20x12)', footage: 175, street: 'Elm St', gps_start_lat: 30.2392, gps_start_lng: -93.3743, gps_end_lat: 30.2398, gps_end_lng: -93.3735, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-B-B01', contractor_id: 'B\u2192B01', section: 'B', from_handhole: 'B (17x30x18)', to_handhole: 'B01 (15x20x12)', footage: 210, street: 'S Cities Service Hwy', gps_start_lat: 30.2350, gps_start_lng: -93.3810, gps_end_lat: 30.2358, gps_end_lng: -93.3800, boring_status: 'QC Approved', pulling_status: 'QC Approved', splicing_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1', splicing_assigned_to: 'LYT Splice Crew' },
-  { segment_id: 'VXS-SLPH01-006-B-B02', contractor_id: 'B01\u2192B02', section: 'B', from_handhole: 'B01 (15x20x12)', to_handhole: 'B02 (15x20x12)', footage: 185, street: 'S Cities Service Hwy', gps_start_lat: 30.2358, gps_start_lng: -93.3800, gps_end_lat: 30.2365, gps_end_lng: -93.3790, boring_status: 'QC Approved', pulling_status: 'In Progress', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-B-B03', contractor_id: 'B02\u2192B03', section: 'B', from_handhole: 'B02 (15x20x12)', to_handhole: 'B03 (15x20x12)', footage: 162, street: 'Oak Ave', gps_start_lat: 30.2365, gps_start_lng: -93.3790, gps_end_lat: 30.2370, gps_end_lng: -93.3782, boring_status: 'Issue', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-C-C01', contractor_id: 'C\u2192C01', section: 'C', from_handhole: 'C (30x48x24)', to_handhole: 'C01 (15x20x12)', footage: 220, street: 'N Main St', gps_start_lat: 30.2340, gps_start_lng: -93.3820, gps_end_lat: 30.2348, gps_end_lng: -93.3810, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-C-C02', contractor_id: 'C01\u2192C02', section: 'C', from_handhole: 'C01 (15x20x12)', to_handhole: 'C02 (15x20x12)', footage: 195, street: 'N Main St', gps_start_lat: 30.2348, gps_start_lng: -93.3810, gps_end_lat: 30.2355, gps_end_lng: -93.3800, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
+  { segment_id: 'VXS-SLPH01-006-A-A01', contractor_id: 'A\u2192A01', section: 'A', from_handhole: 'A (17x30x18)', to_handhole: 'A01 (15x20x12)', footage: 148, street: 'W Parish Rd', gps_start_lat: 30.2366, gps_start_lng: -93.3774, gps_end_lat: 30.2370, gps_end_lng: -93.3780, boring_status: 'QC Approved', pulling_status: 'Complete', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
+  { segment_id: 'VXS-SLPH01-006-A-A02', contractor_id: 'A01\u2192A02', section: 'A', from_handhole: 'A01 (15x20x12)', to_handhole: 'A02 (15x20x12)', footage: 172, street: 'W Parish Rd', gps_start_lat: 30.2370, gps_start_lng: -93.3780, gps_end_lat: 30.2375, gps_end_lng: -93.3788, boring_status: 'QC Approved', pulling_status: 'Complete', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
+  { segment_id: 'VXS-SLPH01-006-A-A03', contractor_id: 'A02\u2192A03', section: 'A', from_handhole: 'A02 (15x20x12)', to_handhole: 'A03 (15x20x12)', footage: 165, street: 'W Parish Rd', gps_start_lat: 30.2375, gps_start_lng: -93.3788, gps_end_lat: 30.2380, gps_end_lng: -93.3796, boring_status: 'Complete', pulling_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
+  { segment_id: 'VXS-SLPH01-006-A-A04', contractor_id: 'A03\u2192A04', section: 'A', from_handhole: 'A03 (15x20x12)', to_handhole: 'A04 (15x20x12)', footage: 198, street: 'N Huntington St', gps_start_lat: 30.2380, gps_start_lng: -93.3796, gps_end_lat: 30.2387, gps_end_lng: -93.3802, boring_status: 'In Progress', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
+  { segment_id: 'VXS-SLPH01-006-A-A05', contractor_id: 'A04\u2192A05', section: 'A', from_handhole: 'A04 (15x20x12)', to_handhole: 'A05 (15x20x12)', footage: 210, street: 'N Huntington St', gps_start_lat: 30.2387, gps_start_lng: -93.3802, gps_end_lat: 30.2394, gps_end_lng: -93.3808, boring_status: 'Not Started', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
+  { segment_id: 'VXS-SLPH01-006-B-B01', contractor_id: 'B\u2192B01', section: 'B', from_handhole: 'B (30x48x24)', to_handhole: 'B01 (17x30x18)', footage: 320, street: 'S Cities Service Hwy', gps_start_lat: 30.2350, gps_start_lng: -93.3760, gps_end_lat: 30.2340, gps_end_lng: -93.3745, boring_status: 'QC Approved', pulling_status: 'QC Approved', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2' },
+  { segment_id: 'VXS-SLPH01-006-B-B02', contractor_id: 'B01\u2192B02', section: 'B', from_handhole: 'B01 (17x30x18)', to_handhole: 'B02 (15x20x12)', footage: 285, street: 'S Cities Service Hwy', gps_start_lat: 30.2340, gps_start_lng: -93.3745, gps_end_lat: 30.2332, gps_end_lng: -93.3732, boring_status: 'QC Approved', pulling_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2' },
+  { segment_id: 'VXS-SLPH01-006-B-B03', contractor_id: 'B02\u2192B03', section: 'B', from_handhole: 'B02 (15x20x12)', to_handhole: 'B03 (15x20x12)', footage: 156, street: 'E Napoleon St', gps_start_lat: 30.2332, gps_start_lng: -93.3732, gps_end_lat: 30.2328, gps_end_lng: -93.3720, boring_status: 'Complete', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
+  { segment_id: 'VXS-SLPH01-006-C-C01', contractor_id: 'C\u2192C01', section: 'C', from_handhole: 'C (17x30x18)', to_handhole: 'C01 (15x20x12)', footage: 245, street: 'Maplewood Dr', gps_start_lat: 30.2400, gps_start_lng: -93.3750, gps_end_lat: 30.2410, gps_end_lng: -93.3762, boring_status: 'Issue', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', boring_notes: 'Hit rock at 80 LF - rerouting' },
+  { segment_id: 'VXS-SLPH01-006-C-C02', contractor_id: 'C01\u2192C02', section: 'C', from_handhole: 'C01 (15x20x12)', to_handhole: 'C02 (15x20x12)', footage: 190, street: 'Maplewood Dr', gps_start_lat: 30.2410, gps_start_lng: -93.3762, gps_end_lat: 30.2418, gps_end_lng: -93.3772, boring_status: 'Not Started', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
+  { segment_id: 'VXS-SLPH01-006-D-D01', contractor_id: 'D\u2192D01', section: 'D', from_handhole: 'D (17x30x18)', to_handhole: 'D01 (15x20x12)', footage: 178, street: 'E Burton St', gps_start_lat: 30.2345, gps_start_lng: -93.3800, gps_end_lat: 30.2352, gps_end_lng: -93.3812, boring_status: 'Not Started', pulling_status: 'Not Started' },
+  { segment_id: 'VXS-SLPH01-006-D-D02', contractor_id: 'D01\u2192D02', section: 'D', from_handhole: 'D01 (15x20x12)', to_handhole: 'D02 (15x20x12)', footage: 225, street: 'E Burton St', gps_start_lat: 30.2352, gps_start_lng: -93.3812, gps_end_lat: 30.2360, gps_end_lng: -93.3824, boring_status: 'Not Started', pulling_status: 'Not Started' },
 ];
 
 const DEMO_SPLICE_POINTS = [
-  { splice_id: 'VXS-SLPH01-006-SPL-A01', project_id: 'VXS-SLPH01-006', contractor_id: 'A01', location: 'Handhole A01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2372, gps_lng: -93.3768 },
-  { splice_id: 'VXS-SLPH01-006-SPL-A03', project_id: 'VXS-SLPH01-006', contractor_id: 'A03', location: 'Handhole A03 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2385, gps_lng: -93.3752 },
-  { splice_id: 'VXS-SLPH01-006-SPL-B01', project_id: 'VXS-SLPH01-006', contractor_id: 'B01', location: 'Handhole B01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x8', position_type: 'mid-span', status: 'In Progress', gps_lat: 30.2358, gps_lng: -93.3800 },
-  { splice_id: 'VXS-SLPH01-006-SPL-C', project_id: 'VXS-SLPH01-006', contractor_id: 'C', location: 'Handhole C (30x48x24)', handhole_type: '30x48x24 LHH', splice_type: 'F1', position_type: 'end-of-line', fiber_count: 432, tray_count: 8, status: 'Not Started', gps_lat: 30.2340, gps_lng: -93.3820 },
+  { splice_id: 'VXS-SLPH01-006-SPL-A01', project_id: 'VXS-SLPH01-006', contractor_id: 'A01', location: 'Handhole A01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2370, gps_lng: -93.3780 },
+  { splice_id: 'VXS-SLPH01-006-SPL-A02', project_id: 'VXS-SLPH01-006', contractor_id: 'A02', location: 'Handhole A02 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2375, gps_lng: -93.3788 },
+  { splice_id: 'VXS-SLPH01-006-SPL-A05', project_id: 'VXS-SLPH01-006', contractor_id: 'A05', location: 'Handhole A05 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2394, gps_lng: -93.3808 },
+  { splice_id: 'VXS-SLPH01-006-SPL-B', project_id: 'VXS-SLPH01-006', contractor_id: 'B', location: 'Handhole B (30x48x24)', handhole_type: '30x48x24 LHH', splice_type: 'F1', position_type: 'mid-span', fiber_count: 432, tray_count: 8, status: 'Not Started', gps_lat: 30.2350, gps_lng: -93.3760 },
+  { splice_id: 'VXS-SLPH01-006-SPL-B01', project_id: 'VXS-SLPH01-006', contractor_id: 'B01', location: 'Handhole B01 (17x30x18)', handhole_type: '17x30x18 B', splice_type: '1x8', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2340, gps_lng: -93.3745 },
+  { splice_id: 'VXS-SLPH01-006-SPL-C01', project_id: 'VXS-SLPH01-006', contractor_id: 'C01', location: 'Handhole C01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2410, gps_lng: -93.3762 },
+  { splice_id: 'VXS-SLPH01-006-SPL-D01', project_id: 'VXS-SLPH01-006', contractor_id: 'D01', location: 'Handhole D01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2352, gps_lng: -93.3812 },
 ];
 
 // ===== GATEWAY HELPERS =====
 
-async function gatewayCall(payload) {
+let _dbOnline = null; // Cache: null=unknown, true/false
+
+async function gatewayCall(action, params) {
   try {
     const response = await fetch(GATEWAY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ secret: GATEWAY_SECRET, ...payload }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: GATEWAY_SECRET, action, params }),
     });
-    return await response.json();
+    const text = await response.text();
+    // GAS returns redirect HTML - follow it
+    if (text.includes('<HTML>')) {
+      const match = text.match(/HREF="([^"]+)"/);
+      if (match) {
+        const redirectUrl = match[1].replace(/&amp;/g, '&');
+        const finalResp = await fetch(redirectUrl);
+        const finalText = await finalResp.text();
+        return JSON.parse(finalText);
+      }
+    }
+    return JSON.parse(text);
   } catch (err) {
     console.error('[mapService] Gateway call failed:', err);
     return { success: false, error: err.message };
   }
 }
 
-export async function readSheet(sheetId, sheetName, range) {
-  const data = await gatewayCall({ action: 'sheetsRead', sheetId: sheetId || PROJECT_DB_SHEET_ID, sheetName, range });
-  return data.success ? (data.data || []) : [];
+async function readSheet(spreadsheetId, range) {
+  const result = await gatewayCall('sheetsRead', { spreadsheetId, range });
+  if (result.success && result.data && result.data.data) {
+    return result.data.data;
+  }
+  return [];
 }
 
-export async function writeSheet(sheetId, sheetName, range, values) {
-  const data = await gatewayCall({ action: 'sheetsWrite', sheetId: sheetId || PROJECT_DB_SHEET_ID, sheetName, range, values });
-  return data.success || false;
+async function writeSheet(spreadsheetId, range, values) {
+  const result = await gatewayCall('sheetsWrite', { spreadsheetId, range, values });
+  return result.success || false;
 }
 
-export async function appendRow(sheetId, sheetName, row) {
-  const data = await gatewayCall({ action: 'sheetsAppend', sheetId: sheetId || PROJECT_DB_SHEET_ID, sheetName, values: [row] });
-  return data.success || false;
+async function appendRow(spreadsheetId, values) {
+  const result = await gatewayCall('sheetsAppend', { spreadsheetId, values });
+  return result.success || false;
 }
 
 // ===== ROW PARSING =====
 
 function rowsToObjects(rows) {
   if (!rows || rows.length < 2) return [];
-  const headers = rows[0];
-  return rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i] : ''; });
-    return obj;
-  });
+  const headers = rows[0].map(h => (h || '').toString().trim());
+  return rows.slice(1)
+    .filter(row => row.some(cell => cell !== '' && cell !== null && cell !== undefined))
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        if (h) obj[h] = row[i] !== undefined && row[i] !== null ? row[i] : '';
+      });
+      return obj;
+    });
 }
 
 // ===== SEGMENT NORMALIZATION =====
@@ -121,19 +142,40 @@ function normalizeSegments(segments) {
   }));
 }
 
-// ===== HIGH-LEVEL DATA LOADING =====
+// ===== DATABASE CONNECTIVITY CHECK =====
 
-export function isDemoMode() {
-  return !PROJECT_DB_SHEET_ID;
+export async function checkDbConnection() {
+  if (_dbOnline !== null) return _dbOnline;
+  try {
+    const rows = await readSheet(DB.PROJECTS, 'A1:A2');
+    _dbOnline = rows.length >= 1 && rows[0][0] === 'project_id';
+    console.log(`[mapService] DB ${_dbOnline ? 'ONLINE' : 'OFFLINE'} - ${_dbOnline ? 'live data' : 'demo fallback'}`);
+    return _dbOnline;
+  } catch (e) {
+    _dbOnline = false;
+    console.log('[mapService] DB OFFLINE - demo fallback');
+    return false;
+  }
 }
 
+export function isDemoMode() {
+  return _dbOnline === false;
+}
+
+export function resetDbCache() {
+  _dbOnline = null;
+}
+
+// ===== HIGH-LEVEL DATA LOADING =====
+
 export async function loadProjects(projectId) {
-  if (!PROJECT_DB_SHEET_ID) {
+  const online = await checkDbConnection();
+  if (!online) {
     const projects = [DEMO_PROJECT];
     return projectId ? projects.filter(p => p.project_id === projectId) : projects;
   }
   try {
-    const rows = await readSheet(PROJECT_DB_SHEET_ID, SHEETS.PROJECTS, 'A1:Z1000');
+    const rows = await readSheet(DB.PROJECTS, 'A1:M1000');
     const parsed = rowsToObjects(rows);
     return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
   } catch (err) {
@@ -143,11 +185,10 @@ export async function loadProjects(projectId) {
 }
 
 export async function loadSegments(projectId) {
-  if (!PROJECT_DB_SHEET_ID) {
-    return normalizeSegments(DEMO_SEGMENTS);
-  }
+  const online = await checkDbConnection();
+  if (!online) return normalizeSegments(DEMO_SEGMENTS);
   try {
-    const rows = await readSheet(PROJECT_DB_SHEET_ID, SHEETS.SEGMENTS, 'A1:AZ5000');
+    const rows = await readSheet(DB.SEGMENTS, 'A1:AD5000');
     const parsed = rowsToObjects(rows);
     const filtered = projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
     return normalizeSegments(filtered);
@@ -158,11 +199,10 @@ export async function loadSegments(projectId) {
 }
 
 export async function loadSplicePoints(projectId) {
-  if (!PROJECT_DB_SHEET_ID) {
-    return DEMO_SPLICE_POINTS;
-  }
+  const online = await checkDbConnection();
+  if (!online) return DEMO_SPLICE_POINTS;
   try {
-    const rows = await readSheet(PROJECT_DB_SHEET_ID, SHEETS.SPLICE_POINTS, 'A1:Z5000');
+    const rows = await readSheet(DB.SPLICE_POINTS, 'A1:V5000');
     const parsed = rowsToObjects(rows);
     return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
   } catch (err) {
@@ -171,24 +211,66 @@ export async function loadSplicePoints(projectId) {
   }
 }
 
+export async function loadAssignments(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return [];
+  try {
+    const rows = await readSheet(DB.ASSIGNMENTS, 'A1:K1000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadAssignments failed:', err);
+    return [];
+  }
+}
+
+export async function loadRateCards(rateCardId) {
+  const online = await checkDbConnection();
+  if (!online) return [];
+  try {
+    const rows = await readSheet(DB.RATE_CARDS, 'A1:H1000');
+    const parsed = rowsToObjects(rows);
+    return rateCardId ? parsed.filter(r => r.rate_card_id === rateCardId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadRateCards failed:', err);
+    return [];
+  }
+}
+
+export async function loadIssues(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return [];
+  try {
+    const rows = await readSheet(DB.ISSUES, 'A1:K1000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadIssues failed:', err);
+    return [];
+  }
+}
+
 /**
  * Load all data for a project in one call.
- * Returns { project, segments, splicePoints, isDemo }
+ * Returns { project, segments, splicePoints, assignments, isDemo }
  */
 export async function loadFullProject(projectId) {
-  const isDemo = isDemoMode();
-  if (isDemo) {
-    console.log('[mapService] Demo mode - using built-in data');
-  }
-  const [projects, segments, splicePoints] = await Promise.all([
+  const online = await checkDbConnection();
+  const isDemo = !online;
+  if (isDemo) console.log('[mapService] Demo mode - using built-in data');
+  else console.log('[mapService] LIVE mode - loading from Google Sheets');
+
+  const [projects, segments, splicePoints, assignments] = await Promise.all([
     loadProjects(projectId),
     loadSegments(projectId),
     loadSplicePoints(projectId),
+    loadAssignments(projectId),
   ]);
   return {
     project: projects[0] || DEMO_PROJECT,
     segments,
     splicePoints,
+    assignments,
     isDemo,
   };
 }
@@ -196,34 +278,105 @@ export async function loadFullProject(projectId) {
 // ===== DATA WRITING =====
 
 export async function updateSegmentField(segmentId, field, value) {
-  if (!PROJECT_DB_SHEET_ID) {
+  const online = await checkDbConnection();
+  if (!online) {
     console.log(`[mapService] Demo: ${segmentId}.${field} = ${value}`);
     return true;
   }
   try {
-    const rows = await readSheet(PROJECT_DB_SHEET_ID, SHEETS.SEGMENTS, 'A1:AZ5000');
-    const headers = rows[0] || [];
+    const rows = await readSheet(DB.SEGMENTS, 'A1:AD5000');
+    if (!rows || rows.length < 2) return false;
+    const headers = rows[0];
     const colIndex = headers.indexOf(field);
-    const rowIndex = rows.slice(1).findIndex(r => r[0] === segmentId || r[headers.indexOf('segment_id')] === segmentId);
-    if (colIndex === -1 || rowIndex === -1) return false;
-    const colLetter = colIndex < 26 ? String.fromCharCode(65 + colIndex) : 'A' + String.fromCharCode(65 + colIndex - 26);
-    return await writeSheet(PROJECT_DB_SHEET_ID, SHEETS.SEGMENTS, `${colLetter}${rowIndex + 2}`, [[value]]);
+    const segIdCol = headers.indexOf('segment_id');
+    const rowIndex = rows.slice(1).findIndex(r => r[segIdCol] === segmentId);
+    if (colIndex === -1 || rowIndex === -1) {
+      console.error(`[mapService] Field "${field}" or segment "${segmentId}" not found`);
+      return false;
+    }
+    const colLetter = colIndex < 26
+      ? String.fromCharCode(65 + colIndex)
+      : String.fromCharCode(64 + Math.floor(colIndex / 26)) + String.fromCharCode(65 + (colIndex % 26));
+    const cellRange = `${colLetter}${rowIndex + 2}`;
+    console.log(`[mapService] Writing ${segmentId}.${field} = "${value}" to cell ${cellRange}`);
+    return await writeSheet(DB.SEGMENTS, cellRange, [[value]]);
   } catch (err) {
     console.error('[mapService] updateSegmentField failed:', err);
     return false;
   }
 }
 
-export async function logAction(projectId, segmentId, userEmail, action, details, lat, lng) {
-  if (!PROJECT_DB_SHEET_ID) {
+export async function updateSpliceField(spliceId, field, value) {
+  const online = await checkDbConnection();
+  if (!online) {
+    console.log(`[mapService] Demo: ${spliceId}.${field} = ${value}`);
+    return true;
+  }
+  try {
+    const rows = await readSheet(DB.SPLICE_POINTS, 'A1:V5000');
+    if (!rows || rows.length < 2) return false;
+    const headers = rows[0];
+    const colIndex = headers.indexOf(field);
+    const idCol = headers.indexOf('splice_id');
+    const rowIndex = rows.slice(1).findIndex(r => r[idCol] === spliceId);
+    if (colIndex === -1 || rowIndex === -1) return false;
+    const colLetter = colIndex < 26
+      ? String.fromCharCode(65 + colIndex)
+      : String.fromCharCode(64 + Math.floor(colIndex / 26)) + String.fromCharCode(65 + (colIndex % 26));
+    return await writeSheet(DB.SPLICE_POINTS, `${colLetter}${rowIndex + 2}`, [[value]]);
+  } catch (err) {
+    console.error('[mapService] updateSpliceField failed:', err);
+    return false;
+  }
+}
+
+export async function logAction(projectId, segmentId, userEmail, action, details, gpsCoords) {
+  const online = await checkDbConnection();
+  if (!online) {
     console.log(`[mapService] Demo log: ${action} on ${segmentId}`);
     return true;
   }
-  return await appendRow(PROJECT_DB_SHEET_ID, SHEETS.WORK_LOG, [
-    '', new Date().toISOString(), projectId, segmentId, userEmail, action,
+  const logId = `LOG-${Date.now()}`;
+  return await appendRow(DB.WORK_LOG, [[
+    logId,
+    new Date().toISOString(),
+    projectId || '',
+    segmentId || '',
+    userEmail || '',
+    action || '',
     typeof details === 'object' ? JSON.stringify(details) : (details || ''),
-    lat || '', lng || '',
-  ]);
+    gpsCoords || '',
+  ]]);
+}
+
+export async function createIssue(projectId, segmentId, reportedBy, issueType, description) {
+  const online = await checkDbConnection();
+  if (!online) return false;
+  const issueId = `ISS-${Date.now()}`;
+  return await appendRow(DB.ISSUES, [[
+    issueId, projectId || '', segmentId || '', reportedBy || '',
+    new Date().toISOString(), issueType || 'Other', description || '',
+    '', '', '', 'Open',
+  ]]);
+}
+
+export async function resolveIssue(issueId, resolvedBy, resolution) {
+  const online = await checkDbConnection();
+  if (!online) return false;
+  try {
+    const rows = await readSheet(DB.ISSUES, 'A1:K1000');
+    if (!rows || rows.length < 2) return false;
+    const headers = rows[0];
+    const idCol = headers.indexOf('issue_id');
+    const rowIndex = rows.slice(1).findIndex(r => r[idCol] === issueId);
+    if (rowIndex === -1) return false;
+    const actualRow = rowIndex + 2;
+    await writeSheet(DB.ISSUES, `H${actualRow}:K${actualRow}`, [[resolution, resolvedBy, new Date().toISOString(), 'Resolved']]);
+    return true;
+  } catch (err) {
+    console.error('[mapService] resolveIssue failed:', err);
+    return false;
+  }
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -252,10 +405,12 @@ export function groupBySection(segments) {
 }
 
 export function getContractorSegments(segments, company) {
+  if (!company) return [];
+  const lc = company.toLowerCase();
   return segments.filter(s =>
-    s.boring_assigned_to === company ||
-    s.pulling_assigned_to === company ||
-    s.splicing_assigned_to === company
+    (s.boring_assigned_to || '').toLowerCase().includes(lc) ||
+    (s.pulling_assigned_to || '').toLowerCase().includes(lc) ||
+    (s.splicing_assigned_to || '').toLowerCase().includes(lc)
   );
 }
 
@@ -269,7 +424,13 @@ export function sanitizeForContractor(segment) {
 }
 
 export function getProjectStats(segments) {
-  const stats = { totalSegments: segments.length, totalFootage: 0, boringComplete: 0, boringInProgress: 0, pullingComplete: 0, pullingInProgress: 0, splicingComplete: 0, splicingInProgress: 0, issues: 0 };
+  const stats = {
+    totalSegments: segments.length, totalFootage: 0,
+    boringComplete: 0, boringInProgress: 0,
+    pullingComplete: 0, pullingInProgress: 0,
+    splicingComplete: 0, splicingInProgress: 0,
+    issues: 0,
+  };
   segments.forEach(seg => {
     stats.totalFootage += parseFloat(seg.footage) || 0;
     if (seg.boring_status === 'QC Approved' || seg.boring_status === 'Complete') stats.boringComplete++;
@@ -283,6 +444,6 @@ export function getProjectStats(segments) {
   return stats;
 }
 
-export { SHEETS, PROJECT_DB_SHEET_ID };
+export { DB };
 
-// v2.0.0
+// v3.0.0
