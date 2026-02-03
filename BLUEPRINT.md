@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 2, 2026 - 5:30 PM CST
+### Last Updated: February 2, 2026 - 5:25 PM CST
 
 ---
 
@@ -10,10 +10,10 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-## 🚀 CURRENT STATUS (Feb 02, 2026 - 5:30 PM CST)
+## 🚀 CURRENT STATUS (Feb 02, 2026 - 5:25 PM CST)
 
 ### ✅ Live Version: v3.12
-Website deployed and working. Project Map System Phase 2 in progress.
+Website deployed and working. Project Map System Phase 9 build in progress - API endpoints, workflow components, and chat built.
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -893,3 +893,73 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 - Triple-click version on all pages
 - Approve/Reject actually updates status
 - All sheet tabs exist with proper headers
+
+
+---
+
+## Session Update - February 2, 2026 (Evening) - PROJECT MAP SYSTEM BUILD
+
+### 🎯 PHASE 9 - PROJECT MAP SYSTEM (IN PROGRESS)
+
+#### Build Plan
+- Complete build plan created: `LYT_PROJECT_MAP_SYSTEM_BUILD_PLAN_v1.0.md`
+- 16-day implementation timeline across 6 phases
+- Database schema for 8 Google Sheets designed
+- All billing rates, photo requirements, workflow rules documented
+
+#### Files Already In Repo (from earlier session):
+| File | Version | Status |
+|------|---------|--------|
+| src/config/mapConfig.js | v1.0.0 | ✅ Status colors, icons, rate cards, photo reqs |
+| src/services/mapService.js | v1.0.0 | ✅ Gateway integration for Sheets reads/writes |
+| src/services/apiService.js | v1.0.0 | ✅ Claude API integration service |
+| src/services/workflowService.js | v1.0.0 | ✅ Phase management logic |
+| src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
+| src/utils/idGenerator.js | v1.0.0 | ✅ Two-tier ID system |
+| src/utils/rateCardMatcher.js | v1.0.0 | ✅ Billing calculations |
+| src/pages/JobImportPage.js | v1.0.0 | ✅ PDF upload UI (600 lines, demo data) |
+| src/pages/ProjectMapPage.js | v2.0.0 | ✅ Interactive map (927 lines, demo data) |
+| src/pages/AdminProjectDashboard.js | v1.0.0 | ✅ Admin project overview (274 lines) |
+
+#### Files Pushed This Session:
+| File | Version | Status |
+|------|---------|--------|
+| api/claude-chat.js | v1.0.0 | ✅ Vercel serverless - Field Assist chat endpoint |
+| api/pdf-import.js | v1.0.0 | ✅ Vercel serverless - PDF extraction endpoint |
+| src/components/Workflow/BoringTracker.js | v1.0.0 | ✅ Boring phase workflow tracker |
+| src/components/Workflow/SplicingTracker.js | v1.0.0 | ✅ Splice workflow with photo validation |
+| src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito Claude chat (floating bubble) |
+
+#### Database Setup Script Created:
+- `LYT_ProjectMap_DB_Setup_v1.0.gs` (Google Apps Script)
+- Creates new Google Sheet with all 8 tabs + headers + sample data
+- User needs to run in Apps Script editor (any reserved script ID)
+- Returns Spreadsheet ID to configure in mapConfig.js
+
+#### App.js Routes (already configured):
+- `#job-import` → JobImportPage
+- `#project-map` → ProjectMapPage  
+- `#admin-projects` → AdminProjectDashboard
+
+#### API Endpoints (Vercel serverless):
+- `POST /api/claude-chat` → Field Assist chat (needs ANTHROPIC_API_KEY env var)
+- `POST /api/pdf-import` → PDF extraction (needs ANTHROPIC_API_KEY env var)
+
+#### ⚠️ REQUIRED SETUP STEPS:
+1. Run `LYT_ProjectMap_DB_Setup_v1.0.gs` in Apps Script → get Spreadsheet ID
+2. Add Spreadsheet ID to `src/config/mapConfig.js` as PROJECT_MAP_SHEET_ID
+3. Add `ANTHROPIC_API_KEY` to Vercel environment variables
+4. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to Vercel environment variables
+5. Connect components to live data (replace DEMO_SEGMENTS in ProjectMapPage)
+
+#### 🔲 STILL NEEDED:
+- [ ] PullingTracker.js (fiber pull workflow component)
+- [ ] PhotoUploader.js (shared photo capture component)
+- [ ] QCApproval.js (admin QC review interface)
+- [ ] Connect JobImportPage to /api/pdf-import endpoint
+- [ ] Connect ProjectMapPage to live Google Sheets data
+- [ ] Connect FieldAssist to /api/claude-chat endpoint
+- [ ] Add FieldAssist chat bubble to all dashboard pages
+- [ ] Admin dashboard links to project map system pages
+- [ ] Google Maps API key provisioning
+- [ ] OTDR upload component for feeder splices
