@@ -1,7 +1,8 @@
-// ContractorDashboard.js v2.2 - Mobile Responsive with Collapsible Sidebar
+// ContractorDashboard.js v2.3 - Project Map Integration + Live Segment Stats
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
-import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User, Loader, Menu, X } from 'lucide-react';
+import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User, Loader, Menu, X, Map } from 'lucide-react';
+import { loadFullProject, getContractorSegments } from '../services/mapService';
 import { colors, LYT_INFO, URLS } from '../config/constants';
 
 // API URLs
@@ -69,6 +70,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
   const [loading, setLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ show: false, success: false, message: '' });
   const [showVersion, setShowVersion] = useState(false);
+
+  // Project Map segment data
+  const [mySegments, setMySegments] = useState([]);
+  const [segmentsLoading, setSegmentsLoading] = useState(true);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
@@ -216,6 +221,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     { id: 'dashboard', label: 'Dashboard', icon: Briefcase },
     { id: 'profile', label: 'My Profile', icon: User, external: 'profile' },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
+    { id: 'project-map', label: 'Project Map', icon: Map, external: 'project-map' },
     { id: 'potholes', label: 'Pothole Docs', icon: Shovel, external: 'potholes' },
     { id: 'production', label: 'Daily Production', icon: Activity },
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
@@ -250,6 +256,37 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     fetchProjects();
   }, []);
 
+  // Load assigned segments for this contractor
+  useEffect(() => {
+    const loadMySegments = async () => {
+      try {
+        setSegmentsLoading(true);
+        const data = await loadFullProject('VXS-SLPH01-006');
+        if (data && data.segments) {
+          const companyName = loggedInUser?.company || loggedInUser?.name || '';
+          const filtered = getContractorSegments(data.segments, companyName);
+          // If no match by company, show all (demo mode)
+          setMySegments(filtered.length > 0 ? filtered : data.segments);
+        }
+      } catch (err) {
+        console.error('[ContractorDashboard] Segment load error:', err);
+      } finally {
+        setSegmentsLoading(false);
+      }
+    };
+    loadMySegments();
+  }, [loggedInUser]);
+
+  // Segment stats
+  const segStats = {
+    total: mySegments.length,
+    completed: mySegments.filter(s => s.boring_status === 'QC Approved' || s.boring_status === 'Complete').length,
+    inProgress: mySegments.filter(s => s.boring_status === 'In Progress').length,
+    notStarted: mySegments.filter(s => s.boring_status === 'Not Started').length,
+    issues: mySegments.filter(s => s.boring_status === 'Issue').length,
+    totalFootage: mySegments.reduce((sum, s) => sum + (parseFloat(s.footage) || 0), 0),
+  };
+
   const renderDashboard = () => (
     <div>
       <div style={{ marginBottom: '32px' }}>
@@ -262,9 +299,9 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'This Month', value: '$0', subtext: 'Pending invoices', icon: DollarSign, color: accentPrimary },
-          { label: 'Active Jobs', value: '0', subtext: 'Assigned to you', icon: Briefcase, color: accentSecondary },
-          { label: 'Compliance', value: '100%', subtext: 'Documents current', icon: Shield, color: accentSecondary },
+          { label: 'Active Segments', value: segmentsLoading ? '...' : String(segStats.total), subtext: `${segStats.totalFootage.toLocaleString()} LF total footage`, icon: MapPin, color: accentPrimary },
+          { label: 'Completed', value: segmentsLoading ? '...' : String(segStats.completed), subtext: `${segStats.inProgress} in progress`, icon: CheckCircle, color: accentSecondary },
+          { label: 'Issues', value: segmentsLoading ? '...' : String(segStats.issues), subtext: segStats.issues > 0 ? 'Needs attention' : 'All clear', icon: segStats.issues > 0 ? AlertTriangle : Shield, color: segStats.issues > 0 ? accentError : accentSecondary },
         ].map((stat, idx) => (
           <div key={idx} style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
@@ -280,16 +317,16 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {[
+          { label: 'View Project Map', icon: Map, color: '#2196F3', external: 'project-map' },
           { label: 'Log Production', icon: Activity, color: accentPrimary, tab: 'production' },
           { label: 'Equipment Check', icon: Truck, color: accentSecondary, tab: 'equipment' },
-          { label: 'Submit Invoice', icon: DollarSign, color: '#f59e0b', tab: 'invoices' },
           { label: 'Report Incident', icon: ShieldAlert, color: accentError, tab: 'incidents' },
         ].map((action, idx) => (
           <button
             key={idx}
-            onClick={() => setActiveTab(action.tab)}
+            onClick={() => action.external ? setCurrentPage(action.external) : setActiveTab(action.tab)}
             style={{
               backgroundColor: cardBg,
               borderRadius: '12px',
@@ -308,6 +345,43 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             </div>
           </button>
         ))}
+      </div>
+
+      {/* My Assigned Segments */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: textColor, margin: 0 }}>Assigned Segments</h3>
+          <button onClick={() => setCurrentPage('project-map')} style={{ background: 'none', border: 'none', color: accentPrimary, cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            View Map <ChevronRight size={14} />
+          </button>
+        </div>
+        {segmentsLoading ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: mutedColor }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /> Loading segments...</div>
+        ) : mySegments.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: mutedColor }}>No segments assigned yet</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {mySegments.slice(0, 5).map((seg, idx) => {
+              const statusColors = { 'QC Approved': '#4CAF50', 'Complete': '#4CAF50', 'In Progress': '#FFB800', 'Not Started': '#9E9E9E', 'Issue': '#FF9800' };
+              const sColor = statusColors[seg.boring_status] || '#9E9E9E';
+              return (
+                <div key={idx} onClick={() => setCurrentPage('project-map')} style={{ backgroundColor: cardBg, borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${sColor}` }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: sColor, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: textColor }}>{seg.contractor_id || `${seg.from_handhole} → ${seg.to_handhole}`}</div>
+                    <div style={{ fontSize: '0.75rem', color: mutedColor }}>{seg.street || 'Unknown'} • {seg.footage || '?'} LF</div>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '500', padding: '3px 8px', borderRadius: '6px', backgroundColor: `${sColor}20`, color: sColor }}>{seg.boring_status || 'Unknown'}</div>
+                </div>
+              );
+            })}
+            {mySegments.length > 5 && (
+              <button onClick={() => setCurrentPage('project-map')} style={{ background: 'none', border: `1px dashed ${mutedColor}40`, borderRadius: '10px', padding: '12px', color: mutedColor, cursor: 'pointer', fontSize: '0.85rem' }}>
+                +{mySegments.length - 5} more segments — View all on map
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -604,7 +678,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
 
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px', zIndex: 9999 }}>
-          ContractorDashboard v2.2
+          ContractorDashboard v2.3
         </div>
       )}
     </div>
