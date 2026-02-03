@@ -812,7 +812,7 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
 }
 
 // ===== MAIN COMPONENT =====
-function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
+function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId }) {
   const [viewMode, setViewMode] = useState('map');
   const [filterSection, setFilterSection] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -843,7 +843,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     async function fetchData(silent = false) {
       if (!silent) setLoading(true);
       try {
-        const data = await loadFullProject('VXS-SLPH01-006');
+        const data = await loadFullProject(projectId || 'VXS-SLPH01-006');
         if (!cancelled) {
           setAllSegments(data.segments);
           setProjectInfo(data.project);
