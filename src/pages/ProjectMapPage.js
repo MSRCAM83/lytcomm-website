@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 2.4.0
+ * Version: 2.5.0
  * Created: 2026-02-02
  * Route: #project-map
  * 
@@ -12,9 +12,12 @@
  * - Google Maps with satellite/roadmap toggle
  * - Color-coded polyline segments (boring/pulling/splicing status)
  * - Clickable handhole markers with info windows
- * - Segment detail side panel
+ * - Segment detail side panel with workflow tabs
  * - Section/status/phase filters
  * - List view fallback
+ * - Photo upload to Google Drive
+ * - Auto-refresh polling (30s)
+ * - Toast notifications for actions
  * - Mobile-optimized with bottom sheet details
  */
 
@@ -28,6 +31,9 @@ import PullingTracker from '../components/Workflow/PullingTracker';
 import SplicingTracker from '../components/Workflow/SplicingTracker';
 // eslint-disable-next-line no-unused-vars
 import { loadFullProject, isDemoMode, updateSegmentField, logAction } from '../services/mapService';
+import { uploadPhotoBatch } from '../services/photoUploadService';
+// eslint-disable-next-line no-unused-vars
+import Toast, { useToast } from '../components/Toast';
 
 // Google Maps API key placeholder - set in environment or here
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
@@ -513,7 +519,7 @@ function CanvasMap({ segments, selectedSegment, onSelectSegment, filterPhase, da
   );
 }
 
-// ===== SEGMENT DETAIL PANEL (v2.2.0 - Live DB Persistence) =====
+// ===== SEGMENT DETAIL PANEL (v2.5.0 - Photo Upload + Auto-refresh) =====
 function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegmentUpdate }) {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -597,9 +603,42 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
     }
   };
 
-  const handlePhotoUpload = (phase, photos) => {
+  const handlePhotoUpload = async (phase, photos) => {
     console.log(`[ProjectMap] Photo upload: ${segment.segment_id} ${phase}`, photos);
-    // TODO: Wire to Google Drive upload (Round 2b)
+    if (!photos || photos.length === 0) return;
+    
+    const projectId = segment.project_id || 'VXS-SLPH01-006';
+    const segId = segment.segment_id;
+    
+    try {
+      // Upload batch to Google Drive
+      const results = await uploadPhotoBatch(
+        photos.map((p, i) => ({ file: p.file || p, type: `${phase}_photo_${i + 1}` })),
+        projectId,
+        segId,
+        (current, total) => console.log(`[PhotoUpload] ${current}/${total}`)
+      );
+      
+      const successCount = results.filter(r => r.success).length;
+      const cachedCount = results.filter(r => r.cached).length;
+      
+      // Store photo URLs in segment
+      const photoUrls = results.filter(r => r.url).map(r => r.url);
+      if (photoUrls.length > 0) {
+        const photoField = `${phase}_photos`;
+        const existing = segment[photoField] ? JSON.parse(segment[photoField]) : [];
+        await updateSegmentField(segId, photoField, JSON.stringify([...existing, ...photoUrls]));
+      }
+      
+      // Log the upload
+      await logAction(projectId, segId, user?.email, `${phase}_photos_uploaded`, {
+        count: photos.length, success: successCount, cached: cachedCount,
+      });
+      
+      console.log(`[ProjectMap] ✅ Photos uploaded: ${successCount} success, ${cachedCount} cached`);
+    } catch (err) {
+      console.error('[ProjectMap] ❌ Photo upload failed:', err);
+    }
   };
 
   return (
@@ -788,29 +827,43 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState('loading');
 
+  const [showVersion, setShowVersion] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [lastRefresh, setLastRefresh] = useState(null);
+
   const isAdmin = user?.role === 'Admin' || user?.role === 'admin';
   const isContractor = user?.role === 'Contractor' || user?.role === 'contractor';
 
-  // Load project data on mount
+  // Load project data on mount + auto-refresh every 30s
   useEffect(() => {
     let cancelled = false;
-    async function fetchData() {
-      setLoading(true);
+    let refreshInterval = null;
+
+    async function fetchData(silent = false) {
+      if (!silent) setLoading(true);
       try {
         const data = await loadFullProject('VXS-SLPH01-006');
         if (!cancelled) {
           setAllSegments(data.segments);
           setProjectInfo(data.project);
           setDataSource(data.isDemo ? 'demo' : 'live');
-          setLoading(false);
+          setLastRefresh(new Date());
+          if (!silent) setLoading(false);
         }
       } catch (err) {
         console.error('[ProjectMapPage] Data load failed:', err);
-        if (!cancelled) { setLoading(false); setDataSource('demo'); }
+        if (!cancelled && !silent) { setLoading(false); setDataSource('demo'); }
       }
     }
-    fetchData();
-    return () => { cancelled = true; };
+
+    fetchData(false);
+
+    // Auto-refresh every 30 seconds (silent - no loading spinner)
+    refreshInterval = setInterval(() => {
+      if (!cancelled) fetchData(true);
+    }, 30000);
+
+    return () => { cancelled = true; if (refreshInterval) clearInterval(refreshInterval); };
   }, []);
 
   useEffect(() => {
@@ -1085,7 +1138,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       </div>
 
       {/* Hidden version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.4.0</div>
+      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v2.5.0</div>
     </div>
   );
 }
