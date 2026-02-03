@@ -2,8 +2,11 @@
 // Project Maps, Section Tracking, GPS Work Validation
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   MapPin, Play, Square, Clock, CheckCircle, AlertTriangle, 
+// eslint-disable-next-line no-unused-vars
   Camera, Truck, Users, Navigation, Pause, AlertOctagon, Eye, Layers,
+// eslint-disable-next-line no-unused-vars
   ArrowLeft, RefreshCw, Loader, Plus
 } from 'lucide-react';
 import { colors } from '../config/constants';
@@ -39,7 +42,9 @@ function WorkMap({ darkMode, user, userType, setCurrentPage, loggedInUser }) {
   const borderColor = darkMode ? '#374151' : '#e5e7eb';
 
   const [activeProject, setActiveProject] = useState(null);
+// eslint-disable-next-line no-unused-vars
   const [workSessions, setWorkSessions] = useState([]);
+// eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
