@@ -2,8 +2,11 @@
 // Auto Daily Work Sheet Generator (Metronet Format)
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   FileSpreadsheet, Download, Calendar, MapPin, Clock, User, Truck,
+// eslint-disable-next-line no-unused-vars
   Plus, Trash2, ChevronDown, CheckCircle, AlertCircle, RefreshCw,
+// eslint-disable-next-line no-unused-vars
   Building, Phone, Settings, Eye, Filter, Search, ArrowLeft, Loader
 } from 'lucide-react';
 import { colors } from '../config/constants';
@@ -43,6 +46,7 @@ const DailyWorkSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
   const [loading, setLoading] = useState(false);
   const [showVersion, setShowVersion] = useState(false);
   const [message, setMessage] = useState(null);
+// eslint-disable-next-line no-unused-vars
   const [savedSheets, setSavedSheets] = useState([]);
 
   const [lineItems, setLineItems] = useState([
