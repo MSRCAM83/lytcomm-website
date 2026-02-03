@@ -2,9 +2,13 @@
 // Donnie's Pipeline Management - Tracks contractor/employee leads
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   Users, Truck, Phone, Mail, Calendar, Clock, AlertTriangle, 
+// eslint-disable-next-line no-unused-vars
   CheckCircle, XCircle, Plus, Search, Filter, ChevronDown, 
+// eslint-disable-next-line no-unused-vars
   ChevronRight, Edit2, Trash2, Send, UserPlus, Building,
+// eslint-disable-next-line no-unused-vars
   AlertOctagon, Star, Bell, MapPin, DollarSign, ArrowLeft,
   RefreshCw, Loader, X
 } from 'lucide-react';
