@@ -36,8 +36,8 @@ import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
 
-// Google Maps API key placeholder - set in environment or here
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
+// Google Maps API key - public key restricted by HTTP referrer to lytcomm.com
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyCbZXQimBAuIRXJQNq64VjF94FD35JOvLs';
 
 // Helper: get status color
 function getStatusColor(status) {
@@ -1163,7 +1163,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       </div>
 
       {/* Hidden version */}
-      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v2.5.0</div>
+      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v2.6.0</div>
     </div>
   );
 }
