@@ -1,11 +1,12 @@
 // EmployeeDashboard.js v2.4 - NotificationBell + Project Map nav + Mobile Responsive
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle, Menu, X } from 'lucide-react';
+import { LogOut, Clock, Settings, Play, Square, MapPin, ChevronRight, HardHat, Activity, AlertTriangle, Truck, ShieldAlert, Shovel, User, Loader, CheckCircle, Menu, X } from 'lucide-react';
 import { colors } from '../config/constants';
 import NotificationBell from '../components/NotificationBell';
 
 // API URLs
+// eslint-disable-next-line no-unused-vars
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
