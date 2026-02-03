@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 2.2.0
+ * Version: 2.3.0
  * Created: 2026-02-02
  * Route: #project-map
  * 
@@ -749,6 +749,9 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState('loading');
 
+  const isAdmin = user?.role === 'Admin' || user?.role === 'admin';
+  const isContractor = user?.role === 'Contractor' || user?.role === 'contractor';
+
   // Load project data on mount
   useEffect(() => {
     let cancelled = false;
@@ -835,13 +838,16 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         background: darkMode ? '#112240' : '#f8fafc', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => setCurrentPage('admin-projects')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, display: 'flex' }}>
+          <button onClick={() => setCurrentPage(isAdmin ? 'admin-projects' : (user?.role === 'Contractor' || user?.role === 'contractor') ? 'contractor-dashboard' : 'employee-dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, display: 'flex' }}>
             <ArrowLeft size={20} />
           </button>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{projectInfo?.project_name || 'Loading...'}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {projectInfo?.project_name || 'Loading...'}
+              {isContractor && <span style={{ padding: '1px 6px', borderRadius: 4, background: '#667eea', color: '#fff', fontSize: 10, fontWeight: 600 }}>CONTRACTOR VIEW</span>}
+            </div>
             <div style={{ fontSize: 12, color: textMuted }}>
-              {projectInfo?.project_id || '---'} • PO: {projectInfo?.po_number || '---'}
+              {projectInfo?.project_id || '---'}{!isContractor && ` • PO: ${projectInfo?.po_number || '---'}`}
               {dataSource === 'demo' && <span style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, background: '#ff6b35', color: '#fff', fontSize: 10, fontWeight: 600 }}>DEMO</span>}
             </div>
           </div>
@@ -1014,7 +1020,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             width: 360, borderLeft: `1px solid ${borderColor}`,
             flexShrink: 0, overflow: 'hidden',
           }}>
-            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={user?.role === 'Admin' || user?.role === 'admin'} user={user} />
+            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} />
           </div>
         )}
 
@@ -1033,14 +1039,14 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <div style={{ width: 40, height: 4, borderRadius: 2, background: borderColor }} />
             </div>
             <div style={{ overflow: 'auto', maxHeight: 'calc(60vh - 20px)' }}>
-              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={user?.role === 'Admin' || user?.role === 'admin'} user={user} />
+              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} />
             </div>
           </div>
         )}}
       </div>
 
       {/* Hidden version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.2.0</div>
+      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.3.0</div>
     </div>
   );
 }
