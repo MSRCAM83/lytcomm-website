@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Camera, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronUp, Upload, MapPin, Ruler, Send, X, AlertTriangle } from 'lucide-react';
+import { Camera, CheckCircle, ChevronDown, ChevronUp, Upload, MapPin, Ruler, Send, X, AlertTriangle } from 'lucide-react';
 
 const BORING_STATUSES = ['Not Started', 'Potholing', 'Pothole Approved', 'In Progress', 'Complete', 'QC Approved', 'Issue'];
 
@@ -27,9 +27,11 @@ function BoringTracker({ segment, darkMode, user, onStatusUpdate, onPhotoUpload 
   const [notes, setNotes] = useState('');
   const [actualFootage, setActualFootage] = useState(segment?.boring_actual_footage || '');
   const [photos, setPhotos] = useState([]);
+// eslint-disable-next-line no-unused-vars
   const [uploading, setUploading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(null);
 
+// eslint-disable-next-line no-unused-vars
   const bg = darkMode ? '#112240' : '#f8fafc';
   const cardBg = darkMode ? '#1a2f4e' : '#ffffff';
   const borderColor = darkMode ? '#1e3a5f' : '#e2e8f0';
@@ -280,7 +282,7 @@ function BoringTracker({ segment, darkMode, user, onStatusUpdate, onPhotoUpload 
                     <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
                       <img
                         src={photo.preview}
-                        alt={`Bore photo ${i + 1}`}
+                        alt={`Bore completion ${i + 1}`}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
                       />
                       <button
@@ -396,7 +398,7 @@ function BoringTracker({ segment, darkMode, user, onStatusUpdate, onPhotoUpload 
               gap: '8px',
               padding: '12px',
               borderRadius: '8px',
-              backgroundColor: '#2196F3' + '15',
+              backgroundColor: '#2196F315',
               color: '#2196F3',
               fontSize: '0.85rem',
             }}>
