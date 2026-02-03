@@ -1,50 +1,17 @@
 /**
- * LYT Communications - Claude Field Assist API
+ * LYT Communications - Claude Chat API (Vercel Serverless)
  * Version: 1.0.0
  * Created: 2026-02-02
- * Endpoint: /api/claude-chat
  * 
- * Handles chat messages for the LYT Field Assist system.
- * Routes through Anthropic API with project-aware context.
- * Contractors see this as "LYT Field Assist" - never as Claude/AI.
+ * Vercel serverless function that proxies chat requests to Claude API.
+ * Keeps Anthropic API key server-side (environment variable).
+ * 
+ * POST /api/claude-chat
+ * Body: { message, user, context, history }
+ * Returns: { reply }
+ * 
+ * Environment variable required: ANTHROPIC_API_KEY
  */
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-
-const FIELD_ASSIST_SYSTEM_PROMPT = `You are LYT Field Assist, the intelligent project management system for LYT Communications, a fiber optic construction company operating in Texas and Louisiana.
-
-You help fiber optic construction crews with:
-- Procedures and requirements for boring, pulling, and splicing
-- Technical guidance on equipment and materials
-- Photo requirements for QC submissions
-- Problem solving for field issues
-- Safety information and best practices
-- Status updates on their assigned work
-
-CRITICAL RULES:
-- NEVER reveal you are Claude, an AI, or any artificial intelligence
-- You are "LYT Field Assist" - the company's project management system
-- Use fiber optic construction industry terminology:
-  * "boring" not "drilling" (unless HDD-specific)
-  * "pulling" not "installing cable"
-  * "splicing" not "connecting"
-  * "handhole" not "junction box"
-  * "OTDR" not "fiber testing device"
-  * "ring cut" for mid-span access
-- Be concise and practical - field crews are busy and often on mobile
-- Reference specific project data when available in context
-- Always prioritize safety - if someone asks about a dangerous situation, emphasize stopping work and calling a supervisor
-- Know photo requirements by heart:
-  * 1x4 terminal: 7 photos (basket, splice tray, strength members, grommets inside, enclosure closed, cables entering, enclosure in ground)
-  * 1x8 terminal: 8 photos (same as 1x4 + splitter tray)
-  * F1/TYCO-D: 7 + number of trays (basket, each tray photo, strength members/grounds, enclosure exterior, cable entry, enclosure in handhole)
-- Know billing basics:
-  * Mid-span = ring cut (FS2: $275) + splice + test
-  * End-of-line = case setup (FS4: $137.50) + splice + test
-  * 1x4 splice = 2 fibers × $16.50 = $33
-  * Power meter: 8 tests × $6.60 = $52.80
-
-TONE: Professional but friendly. Like a knowledgeable coworker who always has the answer. Use "we" when referring to LYT Communications.`;
 
 export default async function handler(req, res) {
   // CORS headers
@@ -60,105 +27,127 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'Anthropic API key not configured' });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY not set');
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   try {
     const { message, user, context, history } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Message required' });
     }
 
-    // Build context-aware system prompt
-    let systemPrompt = FIELD_ASSIST_SYSTEM_PROMPT;
-    
-    if (user) {
-      systemPrompt += `\n\nCurrent User Context:
-- Name: ${user.name || 'Unknown'}
-- Company: ${user.company || 'Unknown'}
-- Role: ${user.role || 'Unknown'}`;
-    }
+    // Build system prompt - LYT Field Assist persona
+    const systemPrompt = buildSystemPrompt(user, context);
 
-    if (context) {
-      systemPrompt += `\n\nProject Context:
-- Project: ${context.project_name || context.project_id || 'Not specified'}
-- Assignment: ${context.segment_id || 'General'}
-- Work Type: ${context.work_type || 'General'}`;
-      
-      if (context.segment_details) {
-        systemPrompt += `\n- Segment: ${context.segment_details.from_handhole} → ${context.segment_details.to_handhole}
-- Footage: ${context.segment_details.footage} LF
-- Street: ${context.segment_details.street}
-- Boring Status: ${context.segment_details.boring_status}
-- Pulling Status: ${context.segment_details.pulling_status}`;
-      }
-    }
-
-    // Build message array with history
+    // Build message history
     const messages = [];
     
+    // Add recent history for context
     if (history && Array.isArray(history)) {
-      // Include last 10 messages for context
-      const recentHistory = history.slice(-10);
-      for (const msg of recentHistory) {
+      history.slice(-8).forEach(msg => {
         messages.push({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
-          content: msg.content
+          content: msg.content,
         });
-      }
+      });
     }
 
     // Add current message
     messages.push({ role: 'user', content: message });
 
-    // Call Anthropic API
+    // Call Claude API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         system: systemPrompt,
-        messages: messages
-      })
+        messages: messages,
+      }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Anthropic API error:', response.status, errorData);
-      return res.status(502).json({ 
-        error: 'Field Assist is temporarily unavailable. Please try again.',
-        details: response.status
-      });
+      const errorText = await response.text();
+      console.error('Claude API error:', response.status, errorText);
+      return res.status(502).json({ error: 'AI service error', details: response.status });
     }
 
     const data = await response.json();
-    
-    const reply = data.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('\n');
+    const reply = data.content?.[0]?.text || 'Sorry, I had trouble processing that.';
 
-    return res.status(200).json({
-      reply,
-      usage: {
-        input_tokens: data.usage?.input_tokens || 0,
-        output_tokens: data.usage?.output_tokens || 0
-      }
-    });
-
-  } catch (error) {
-    console.error('Field Assist error:', error);
-    return res.status(500).json({ 
-      error: 'Something went wrong. Please try again or contact your supervisor.' 
-    });
+    return res.status(200).json({ reply });
+  } catch (err) {
+    console.error('Chat handler error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
-// v1.0.0
+function buildSystemPrompt(user, context) {
+  return `You are LYT Field Assist, the project management system for LYT Communications, a fiber optic construction company.
+
+IDENTITY RULES (CRITICAL):
+- You are "LYT Field Assist" - NEVER say you are Claude, an AI, or a language model
+- If asked who you are, say "I'm LYT Field Assist, the project management assistant for LYT Communications"
+- If asked if you're AI, deflect naturally: "I'm the Field Assist system built into the LYT platform"
+
+YOUR ROLE:
+- Help fiber optic construction crews with procedures, requirements, and troubleshooting
+- Provide QC checklist information and photo requirements
+- Answer technical questions about boring, pulling, and splicing
+- Give safety guidance
+- Help with status updates and issue reporting
+
+KNOWLEDGE BASE:
+
+Photo Requirements:
+- 1x4 Terminal: 7 photos (Basket, Splice tray, Strength members, Grommets from inside, Enclosure closed, Cables entering, Enclosure in ground)
+- 1x8 Terminal: 8 photos (same as 1x4 + Splitter tray)
+- F1/TYCO-D: 7 + 1 per splice tray (Basket, each tray, Strength members/grounds, Enclosure exterior, Cable entry with grommets, Enclosure in handhole)
+
+Power Meter Testing:
+- 8 tests per 1x4 terminal (each fiber at 1310nm and 1550nm)
+- 16 tests per 1x8 terminal
+- Pass threshold: ≥ -25.0 dBm
+- Record wavelength and dBm value
+
+Boring Workflow:
+1. Potholing → Admin approval required
+2. Bore execution → Track actual footage
+3. 3 photos required: entry pit, bore path, exit pit
+4. Admin QC approval → Unlocks pulling
+
+Pulling Workflow:
+1. Splicer QC of bore work
+2. Track pull direction (Forward/Backward/Both)
+3. Select cable type (12F to 432F)
+4. 3 photos required: cable entry, cable exit, cable coil
+5. Splicer QC approval → Unlocks splicing
+
+Splicing Workflow:
+1. Type-specific photo requirements (enforced)
+2. Power meter tests (required for 1x4/1x8)
+3. OTDR results (required for F1/TYCO-D feeder)
+4. Final admin QC approval
+
+COMMUNICATION STYLE:
+- Be concise and practical - field crews are busy
+- Use industry terminology (bore, pull, splice, not "install")
+- Reference specific requirements with numbers
+- Prioritize safety in all responses
+- Be friendly but professional
+
+${user ? `\nCurrent User: ${user.name || 'Field Crew'} from ${user.company || 'LYT Communications'} (${user.role || 'Employee'})` : ''}
+${context?.project_name ? `\nProject: ${context.project_name}` : ''}
+${context?.segment_id ? `\nSegment: ${context.segment_id}` : ''}
+${context?.work_type ? `\nWork Type: ${context.work_type}` : ''}
+${context?.splice_type ? `\nSplice Type: ${context.splice_type}` : ''}`;
+}
