@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 3, 2026 - 2:15 AM CST
+### Last Updated: February 3, 2026 - 8:15 PM CST
 
 ---
 
@@ -16,6 +16,8 @@
 Website deployed and working. Project Map System Phase 9: Foundation, Map, Workflow components, Chat, API, and Data Bridge all built and pushed.
 
 ### 🔧 LATEST CHANGES (Feb 03, 2026)
+- **ContractorDashboard.js v2.3** - Added Project Map nav item, live segment stats from mapService (Active Segments, Completed, Issues), assigned segments list with color-coded status badges, "View Project Map" quick action button
+- **ProjectMapPage.js v2.3.0** - Contractor view mode: CONTRACTOR VIEW badge, hides PO number for non-admins, back button routes to correct dashboard based on role (admin→admin-projects, contractor→contractor-dashboard)
 - **mapService.js v2.0.0** - Full data bridge: Gateway integration, demo fallback, segment normalization, updateSegmentField, logAction, getProjectStats. Demo data built-in for when DB not yet configured.
 - **ProjectMapPage.js v2.2.0** - FIXED: Removed undefined DEMO_SEGMENTS/DEMO_PROJECT references (was causing page crash). Now uses async loadFullProject() on mount with loading spinner. Shows "DEMO" badge when in demo mode. All filters/stats use dynamic allSegments state.
 
