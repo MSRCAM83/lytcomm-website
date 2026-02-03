@@ -1,5 +1,5 @@
-// notificationService.js v1.0.0 - Notification & Alert Service for LYT Communications
-// Handles: expiring cert/COI alerts, push notifications, email triggers via Gateway
+// notificationService.js v1.1.0 - Notification & Alert Service for LYT Communications
+// Handles: expiring cert/COI alerts, push notifications, email triggers via Gateway, daily compliance digest
 
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbwiq8NzgdUQ6Hu44NHN3ASdAYTd68uK6wGRK_CpJroSoiMuv66aRmPAzDxmtXexl6MK/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
@@ -363,4 +363,146 @@ function wrapEmailTemplate(title, body) {
   `;
 }
 
-// v1.0.0
+// ========== DAILY COMPLIANCE DIGEST ==========
+
+const ADMIN_EMAILS = ['matt@lytcomm.com', 'mason@lytcomm.com', 'donnie@lytcomm.com'];
+
+/**
+ * Generate and send a daily compliance digest email to all admins.
+ * Scans all contractors and employees for expiring/expired items.
+ * Call this from a scheduled trigger (e.g., Google Apps Script cron or Vercel cron).
+ */
+export async function sendDailyComplianceDigest() {
+  try {
+    const now = new Date();
+    const alerts = { critical: [], urgent: [], warning: [] };
+
+    // Fetch all contractor submissions
+    const contractorResp = await fetch(GATEWAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        sheetId: '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc',
+        range: 'Contractor Submissions!A:Z',
+      }),
+    });
+
+    // Fetch all employee submissions
+    const employeeResp = await fetch(GATEWAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        secret: GATEWAY_SECRET,
+        action: 'sheetsRead',
+        sheetId: '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc',
+        range: 'Employee Submissions!A:Z',
+      }),
+    });
+
+    const datasets = [];
+    if (contractorResp.ok) {
+      const d = await contractorResp.json();
+      if (d.data && d.data.length > 1) datasets.push({ type: 'Contractor', data: d.data });
+    }
+    if (employeeResp.ok) {
+      const d = await employeeResp.json();
+      if (d.data && d.data.length > 1) datasets.push({ type: 'Employee', data: d.data });
+    }
+
+    const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const expirationFields = [
+      { headerMatch: 'coi_expiration', label: 'COI' },
+      { headerMatch: 'license_expiration', label: 'Business License' },
+      { headerMatch: 'vehicle_insurance_exp', label: 'Vehicle Insurance' },
+      { headerMatch: 'cert_expiration', label: 'Certification' },
+      { headerMatch: 'osha_expiration', label: 'OSHA Cert' },
+      { headerMatch: 'flagger_cert_exp', label: 'Flagger Cert' },
+    ];
+
+    for (const dataset of datasets) {
+      const headers = dataset.data[0];
+      const rows = dataset.data.slice(1);
+      const nameIdx = headers.findIndex(h => h && (h.toString().toLowerCase().includes('company_name') || h.toString().toLowerCase().includes('full_name') || h.toString().toLowerCase().includes('name')));
+      const emailIdx = headers.findIndex(h => h && h.toString().toLowerCase().includes('email'));
+
+      for (const row of rows) {
+        const name = (row[nameIdx] || row[emailIdx] || 'Unknown').toString();
+        for (const field of expirationFields) {
+          const idx = headers.findIndex(h => h && h.toString().toLowerCase().includes(field.headerMatch));
+          if (idx === -1 || !row[idx]) continue;
+          const expDate = new Date(row[idx]);
+          if (isNaN(expDate.getTime())) continue;
+          const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+
+          if (expDate < now) {
+            alerts.critical.push({ name, type: dataset.type, item: field.label, expired: expDate.toLocaleDateString(), daysLeft });
+          } else if (expDate < sevenDays) {
+            alerts.urgent.push({ name, type: dataset.type, item: field.label, expires: expDate.toLocaleDateString(), daysLeft });
+          } else if (expDate < thirtyDays) {
+            alerts.warning.push({ name, type: dataset.type, item: field.label, expires: expDate.toLocaleDateString(), daysLeft });
+          }
+        }
+      }
+    }
+
+    const totalAlerts = alerts.critical.length + alerts.urgent.length + alerts.warning.length;
+    if (totalAlerts === 0) return { sent: false, reason: 'No compliance alerts today' };
+
+    // Build email body
+    let body = `<p>Daily compliance scan found <strong>${totalAlerts} alert(s)</strong> as of ${now.toLocaleDateString()}:</p>`;
+
+    if (alerts.critical.length > 0) {
+      body += `<h3 style="color:#FF4444;margin-bottom:8px;">🚨 EXPIRED (${alerts.critical.length})</h3><table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+      body += '<tr style="background:#fee;"><th style="text-align:left;padding:6px;border:1px solid #ddd;">Name</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Type</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Item</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Expired</th></tr>';
+      for (const a of alerts.critical) {
+        body += `<tr><td style="padding:6px;border:1px solid #ddd;">${a.name}</td><td style="padding:6px;border:1px solid #ddd;">${a.type}</td><td style="padding:6px;border:1px solid #ddd;">${a.item}</td><td style="padding:6px;border:1px solid #ddd;color:#FF4444;font-weight:bold;">${a.expired} (${Math.abs(a.daysLeft)}d ago)</td></tr>`;
+      }
+      body += '</table>';
+    }
+
+    if (alerts.urgent.length > 0) {
+      body += `<h3 style="color:#FF9800;margin-bottom:8px;">⚠️ Expiring Within 7 Days (${alerts.urgent.length})</h3><table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+      body += '<tr style="background:#fff8e1;"><th style="text-align:left;padding:6px;border:1px solid #ddd;">Name</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Type</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Item</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Expires</th></tr>';
+      for (const a of alerts.urgent) {
+        body += `<tr><td style="padding:6px;border:1px solid #ddd;">${a.name}</td><td style="padding:6px;border:1px solid #ddd;">${a.type}</td><td style="padding:6px;border:1px solid #ddd;">${a.item}</td><td style="padding:6px;border:1px solid #ddd;color:#FF9800;font-weight:bold;">${a.expires} (${a.daysLeft}d)</td></tr>`;
+      }
+      body += '</table>';
+    }
+
+    if (alerts.warning.length > 0) {
+      body += `<h3 style="color:#2196F3;margin-bottom:8px;">📋 Expiring Within 30 Days (${alerts.warning.length})</h3><table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+      body += '<tr style="background:#e3f2fd;"><th style="text-align:left;padding:6px;border:1px solid #ddd;">Name</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Type</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Item</th><th style="text-align:left;padding:6px;border:1px solid #ddd;">Expires</th></tr>';
+      for (const a of alerts.warning) {
+        body += `<tr><td style="padding:6px;border:1px solid #ddd;">${a.name}</td><td style="padding:6px;border:1px solid #ddd;">${a.type}</td><td style="padding:6px;border:1px solid #ddd;">${a.item}</td><td style="padding:6px;border:1px solid #ddd;">${a.expires} (${a.daysLeft}d)</td></tr>`;
+      }
+      body += '</table>';
+    }
+
+    body += '<p style="font-size:13px;color:#666;">Log in to <a href="https://lytcomm.com/#admin-dashboard">lytcomm.com</a> for full details.</p>';
+
+    const subject = `LYT Daily Compliance Digest: ${alerts.critical.length} expired, ${alerts.urgent.length} urgent, ${alerts.warning.length} upcoming`;
+    const html = wrapEmailTemplate('Daily Compliance Digest', body);
+
+    // Send to all admins
+    let sentCount = 0;
+    for (const admin of ADMIN_EMAILS) {
+      try {
+        await sendEmailNotification(admin, subject, html);
+        sentCount++;
+      } catch (e) {
+        console.error(`Failed to send digest to ${admin}:`, e);
+      }
+    }
+
+    return { sent: true, sentTo: sentCount, totalAlerts, critical: alerts.critical.length, urgent: alerts.urgent.length, warning: alerts.warning.length };
+  } catch (err) {
+    console.error('sendDailyComplianceDigest error:', err);
+    return { sent: false, error: err.message };
+  }
+}
+
+// v1.1.0
