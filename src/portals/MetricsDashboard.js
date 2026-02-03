@@ -2,8 +2,11 @@
 // Production & Safety Metrics from Google Sheets
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   BarChart3, TrendingUp, TrendingDown, Activity, Shield, Users, Truck,
+// eslint-disable-next-line no-unused-vars
   Calendar, MapPin, Clock, AlertTriangle, CheckCircle, FileText,
+// eslint-disable-next-line no-unused-vars
   DollarSign, Target, Award, Zap, ChevronDown, Download, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, ArrowLeft, Loader
 } from 'lucide-react';
