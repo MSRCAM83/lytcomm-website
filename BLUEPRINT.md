@@ -1037,3 +1037,10 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 - [ ] Upload real Sulphur LA construction map PDF for testing
 - [ ] Restrict Google Maps API key to lytcomm.com in Google Cloud Console
 - [x] ~~Phase 8: User Self-Service~~ ✅ DONE - UserProfile v3.0.0 (persistent notif prefs, emergency contact, session/logout, password validation)
+
+### v3.17.1 - Build Fix (Feb 3, 2026)
+- FIXED: Removed react-leaflet (requires React 19, project uses React 18) - was causing ERESOLVE build failure
+- FIXED: Deleted stale package-lock.json with react-leaflet entries
+- FIXED: pdf.js worker URL pinned to CDN-available v4.8.69 (was returning 404)
+- Leaflet (raw) kept for ProjectMapPage - no React peer dep conflict
+- pdfjs-dist v4.8.69 for PDF text extraction in JobImportPage
