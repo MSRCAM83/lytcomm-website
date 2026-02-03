@@ -48,11 +48,16 @@ import JobImportPage from './pages/JobImportPage';
 import ProjectMapPage from './pages/ProjectMapPage';
 import AdminProjectDashboard from './pages/AdminProjectDashboard';
 
+// Phase 9 - Field Assist Chat
+import FieldAssist from './components/Chat/FieldAssist';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(false);
 
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
@@ -229,11 +234,77 @@ function App() {
     }
   };
 
+  // Pages that should show the Field Assist chat button
+  const chatEnabledPages = [
+    'employee-dashboard', 'contractor-dashboard', 'admin-dashboard',
+    'work-map', 'potholes', 'project-map', 'admin-projects', 'job-import',
+    'daily-worksheet', 'invoices', 'metrics',
+  ];
+  const showFieldAssist = loggedInUser && chatEnabledPages.includes(currentPage);
+
   // For portal pages, render without header/footer
   if (isPortalPage) {
     return (
       <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
         {renderPage()}
+
+        {/* Floating Field Assist - Chat Bubble */}
+        {showFieldAssist && !chatOpen && (
+          <button
+            onClick={() => { setChatOpen(true); setChatMinimized(false); }}
+            style={{
+              position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+              width: 56, height: 56, borderRadius: '50%',
+              background: darkMode
+                ? 'linear-gradient(135deg, #667eea, #c850c0)'
+                : 'linear-gradient(135deg, #0077B6, #00b4d8)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              animation: 'pulse-glow 2s ease-in-out infinite',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            title="LYT Field Assist"
+          >
+            <span style={{ fontSize: 24, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>💬</span>
+          </button>
+        )}
+
+        {/* Floating Field Assist - Chat Panel */}
+        {showFieldAssist && chatOpen && (
+          <div style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+            width: chatMinimized ? 280 : Math.min(400, typeof window !== 'undefined' ? window.innerWidth - 32 : 400),
+            height: chatMinimized ? 52 : Math.min(560, typeof window !== 'undefined' ? window.innerHeight - 48 : 560),
+            borderRadius: 16,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.35)',
+            overflow: 'hidden',
+            transition: 'width 0.3s ease, height 0.3s ease',
+          }}>
+            <FieldAssist
+              darkMode={darkMode}
+              user={loggedInUser}
+              projectContext={{
+                project_name: 'Sulphur LA City Build',
+                project_id: 'VXS-SLPH01-006',
+                page: currentPage,
+              }}
+              minimized={chatMinimized}
+              onToggleMinimize={() => setChatMinimized(prev => !prev)}
+              onClose={() => { setChatOpen(false); setChatMinimized(false); }}
+            />
+          </div>
+        )}
+
+        {/* Chat bubble pulse animation */}
+        <style>{`
+          @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 4px 30px rgba(200,80,192,0.4); }
+          }
+        `}</style>
       </div>
     );
   }
