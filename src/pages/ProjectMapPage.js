@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 2.1.0
+ * Version: 2.2.0
  * Created: 2026-02-02
  * Route: #project-map
  * 
@@ -26,6 +26,7 @@ import { STATUS_COLORS, PHOTO_REQUIREMENTS } from '../config/mapConfig';
 import BoringTracker from '../components/Workflow/BoringTracker';
 import PullingTracker from '../components/Workflow/PullingTracker';
 import SplicingTracker from '../components/Workflow/SplicingTracker';
+// eslint-disable-next-line no-unused-vars
 import { loadFullProject, isDemoMode, updateSegmentField, logAction } from '../services/mapService';
 
 // Google Maps API key placeholder - set in environment or here
@@ -742,6 +743,34 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Dynamic data state
+  const [allSegments, setAllSegments] = useState([]);
+  const [projectInfo, setProjectInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dataSource, setDataSource] = useState('loading');
+
+  // Load project data on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const data = await loadFullProject('VXS-SLPH01-006');
+        if (!cancelled) {
+          setAllSegments(data.segments);
+          setProjectInfo(data.project);
+          setDataSource(data.isDemo ? 'demo' : 'live');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('[ProjectMapPage] Data load failed:', err);
+        if (!cancelled) { setLoading(false); setDataSource('demo'); }
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -757,7 +786,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
   // Filter segments
   const filteredSegments = useMemo(() => {
-    return DEMO_SEGMENTS.filter(seg => {
+    return allSegments.filter(seg => {
       if (filterSection !== 'all' && seg.section !== filterSection) return false;
       if (filterStatus !== 'all') {
         const status = filterPhase === 'boring' ? seg.boring_status : filterPhase === 'pulling' ? seg.pulling_status : seg.splicing_status;
@@ -765,32 +794,40 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       }
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        return seg.contractor_id.toLowerCase().includes(search) || seg.street.toLowerCase().includes(search) || seg.segment_id.toLowerCase().includes(search);
+        return (seg.contractor_id || '').toLowerCase().includes(search) || (seg.street || '').toLowerCase().includes(search) || (seg.segment_id || '').toLowerCase().includes(search);
       }
       return true;
     });
-  }, [filterSection, filterStatus, filterPhase, searchTerm]);
+  }, [allSegments, filterSection, filterStatus, filterPhase, searchTerm]);
 
   // Stats
   const stats = useMemo(() => {
-    const totalFootage = DEMO_SEGMENTS.reduce((sum, s) => sum + s.footage, 0);
+    const totalFootage = allSegments.reduce((sum, s) => sum + (parseFloat(s.footage) || 0), 0);
     const phaseKey = filterPhase === 'boring' ? 'boring_status' : filterPhase === 'pulling' ? 'pulling_status' : 'splicing_status';
-    const approved = DEMO_SEGMENTS.filter(s => s[phaseKey] === 'QC Approved').length;
-    const complete = DEMO_SEGMENTS.filter(s => s[phaseKey] === 'Complete').length;
-    const inProgress = DEMO_SEGMENTS.filter(s => s[phaseKey] === 'In Progress').length;
-    const issues = DEMO_SEGMENTS.filter(s => s[phaseKey] === 'Issue').length;
-    const notStarted = DEMO_SEGMENTS.filter(s => s[phaseKey] === 'Not Started').length;
-    return { totalFootage, approved, complete, inProgress, issues, notStarted, total: DEMO_SEGMENTS.length };
-  }, [filterPhase]);
+    const approved = allSegments.filter(s => s[phaseKey] === 'QC Approved').length;
+    const complete = allSegments.filter(s => s[phaseKey] === 'Complete').length;
+    const inProgress = allSegments.filter(s => s[phaseKey] === 'In Progress').length;
+    const issues = allSegments.filter(s => s[phaseKey] === 'Issue').length;
+    const notStarted = allSegments.filter(s => s[phaseKey] === 'Not Started').length;
+    return { totalFootage, approved, complete, inProgress, issues, notStarted, total: allSegments.length };
+  }, [allSegments, filterPhase]);
 
   const handleSelectSegment = useCallback((seg) => {
     setSelectedSegment(prev => prev && prev.segment_id === seg.segment_id ? null : seg);
   }, []);
 
-  const sections = [...new Set(DEMO_SEGMENTS.map(s => s.section))].sort();
+  const sections = [...new Set(allSegments.map(s => s.section))].sort();
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: text, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: bg, color: text, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* Loading Overlay */}
+      {loading && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: darkMode ? 'rgba(13,27,42,0.92)' : 'rgba(255,255,255,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, border: `3px solid ${borderColor}`, borderTopColor: accent, borderRadius: '50%', animation: 'mapSpin 0.8s linear infinite' }} />
+          <div style={{ color: textMuted, fontSize: 13 }}>Loading project data...</div>
+          <style>{`@keyframes mapSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
       {/* Top Bar */}
       <div style={{
         padding: '12px 20px', borderBottom: `1px solid ${borderColor}`,
@@ -802,8 +839,11 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{DEMO_PROJECT.project_name}</div>
-            <div style={{ fontSize: 12, color: textMuted }}>{DEMO_PROJECT.project_id} • PO: {DEMO_PROJECT.po_number}</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{projectInfo?.project_name || 'Loading...'}</div>
+            <div style={{ fontSize: 12, color: textMuted }}>
+              {projectInfo?.project_id || '---'} • PO: {projectInfo?.po_number || '---'}
+              {dataSource === 'demo' && <span style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, background: '#ff6b35', color: '#fff', fontSize: 10, fontWeight: 600 }}>DEMO</span>}
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1000,7 +1040,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       </div>
 
       {/* Hidden version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.1.0</div>
+      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.2.0</div>
     </div>
   );
 }
