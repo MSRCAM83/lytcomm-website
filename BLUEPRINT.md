@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 3, 2026 - 8:15 PM CST
+### Last Updated: February 3, 2026 - 4:15 PM CST
 
 ---
 
@@ -12,28 +12,14 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.14
-Website deployed and working. Project Map System Phase 10 IN PROGRESS: Notifications, crew tracking, contractor-filtered views, daily production reports built and pushed.
+### ✅ Live Version: v3.15
+Website deployed and working. PDF Import Pipeline LIVE: Real AI extraction via Claude API + automated database writes to Google Sheets.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 1:25 AM CST)
-- **Google Maps API Key LIVE** - Hardcoded in ProjectMapPage v2.6.0 + exported from mapConfig v1.1.0
-- **Claude API Serverless Function v1.0.0** - `/api/claude-chat.js` for LYT Field Assist. ANTHROPIC_API_KEY set in Vercel env vars.
-- **CrewTracker v1.1.0** - GPS positions now report to Google Sheets Work Log (throttled: every 5th update).
-- **notificationService v1.1.0** - Added `sendDailyComplianceDigest()`. Daily 7AM CST email to all admins.
-- **cron-digest.js v1.0.0** - Vercel serverless cron for compliance digest.
-- **vercel.json** - Added cron schedule for daily digest.
-- **UserProfile v3.0.0** - PHASE 8 COMPLETE: Persistent notif prefs, emergency contact, session/logout, password validation.
-- **InvoiceGenerator v2.0.0** - Major upgrade: Invoice numbering (LYT-INV-YYYY-NNNN), CSV export, date range filter, invoice history (localStorage), professional print layout with LYT branding/address/terms, copy-to-clipboard, expanded rate card (UG12/13/18/23/24). Filtered segment count stat added.
-- **NotificationService v1.0.0** - NEW: Expiration alerts for certs/COI/licenses, email notifications via Gateway, push notification support, in-app notification storage, admin alert emails
-- **NotificationBell v1.0.0** - NEW: Dropdown notification bell component with unread badge, severity colors, mark-as-read, auto-checks compliance expirations on login
-- **CrewTracker v1.0.0** - NEW: GPS crew position overlay for project map, real-time tracking toggle, nearest segment detection, movement/stationary indicators, high accuracy mode, battery-conscious
-- **DailyProductionReport v1.0.0** - NEW: Auto-generated daily production reports from project map data, date picker, contractor/section filters, billing totals from rate cards, print-friendly layout
-- **ProjectMapPage v2.5.0** - CONTRACTOR FILTERING: Contractors now only see segments assigned to their company. Stats/sections/filters all scoped to visible segments. CrewTracker wired into map view.
-- **AdminDashboard v3.7** - NotificationBell added to header, Daily Report link in sidebar
-- **EmployeeDashboard v2.4** - NotificationBell added to mobile header
-- **ContractorDashboard v2.4** - NotificationBell added to mobile header
-- **App.js v5.5** - Added daily-report route, DailyProductionReport import
-- **package.json v3.14.0** - Version bump
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 4:15 PM CST)
+- **JobImportPage v2.0.0** - REAL PDF IMPORT: Reads uploaded PDF text, sends to /api/pdf-import Claude endpoint, displays AI-extracted data for review, writes confirmed data to all 3 database sheets (Projects, Segments, Splice Points) via Gateway API
+- **mapService v3.1.0** - NEW: `importProject()` batch-write function - writes project + segments + splice points to Google Sheets in one operation with error handling per row
+- **pdf-import v1.1.0** - Increased max_tokens to 8192 for complex multi-section extractions
+- **package.json v3.15.0** - Version bump
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -991,7 +977,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | File | Version | Status |
 |------|---------|--------|
 | src/config/mapConfig.js | v1.0.0 | ✅ Status colors, icons, rate cards, photo reqs |
-| src/services/mapService.js | v3.0.0 | ✅ Live DB: 8 Google Sheets, Gateway CRUD, redirect handling |
+| src/services/mapService.js | v3.1.0 | ✅ Live DB: 8 Google Sheets, Gateway CRUD, redirect handling, importProject batch-write |
 | src/services/apiService.js | v1.0.0 | ✅ Claude API integration service |
 | src/services/workflowService.js | v1.0.0 | ✅ Phase management logic |
 | src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
@@ -1003,7 +989,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 #### Files In Repo - Pages:
 | File | Version | Status |
 |------|---------|--------|
-| src/pages/JobImportPage.js | v1.0.0 | ✅ PDF upload UI (600 lines, demo data) |
+| src/pages/JobImportPage.js | v2.0.0 | ✅ PDF upload UI + real AI extraction + Gateway DB writes |
 | src/pages/ProjectMapPage.js | v2.4.0 | ✅ Interactive map + live workflow persistence to DB |
 | src/pages/AdminProjectDashboard.js | v1.0.0 | ✅ Admin project overview (274 lines) |
 
@@ -1022,7 +1008,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito chat (floating bubble + offline fallback) |
 | src/components/Chat/ChatBubble.js | v1.0.0 | ✅ Message display with timestamps, typing indicator |
 | api/claude-chat.js | v1.0.0 | ✅ Vercel serverless Claude proxy endpoint |
-| api/pdf-import.js | v1.0.0 | PDF extraction via Claude - work order & map data parsing | ✅ Live |
+| api/pdf-import.js | v1.1.0 | ✅ PDF extraction via Claude - work order & map data parsing, 8192 token limit |
 
 #### App.js Routes (configured):
 - `#job-import` → JobImportPage
