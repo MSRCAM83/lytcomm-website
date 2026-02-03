@@ -1,7 +1,7 @@
 // InviteCodePage.js v2.0 - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Building2, Lock, CheckCircle, Shield, Sun, Moon } from 'lucide-react';
-import { colors, INVITE_CODE, NDA_INVITE_CODE, LYT_INFO } from '../config/constants';
+import { INVITE_CODE, NDA_INVITE_CODE, LYT_INFO } from '../config/constants';
 
 function InviteCodePage({ setCurrentPage, darkMode, setDarkMode }) {
   const [code, setCode] = useState('');
