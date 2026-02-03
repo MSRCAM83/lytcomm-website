@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 2.3.0
+ * Version: 2.4.0
  * Created: 2026-02-02
  * Route: #project-map
  * 
@@ -513,8 +513,8 @@ function CanvasMap({ segments, selectedSegment, onSelectSegment, filterPhase, da
   );
 }
 
-// ===== SEGMENT DETAIL PANEL (v2.1.0 - Tabbed Workflow) =====
-function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user }) {
+// ===== SEGMENT DETAIL PANEL (v2.2.0 - Live DB Persistence) =====
+function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegmentUpdate }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!segment) return null;
@@ -553,14 +553,53 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user }) {
   };
 
   // Placeholder handlers for workflow state changes
-  const handleStatusChange = (phase, newStatus) => {
-    console.log(`[ProjectMap] Status change: ${segment.segment_id} ${phase} → ${newStatus}`);
-    // TODO: Wire to mapService.js → Google Sheets update
+  const handleStatusChange = async (phase, statusData) => {
+    // statusData comes from workflow trackers - may be string or object
+    const newStatus = typeof statusData === 'string' ? statusData : (statusData?.value || statusData?.newStatus || statusData);
+    const segId = segment.segment_id;
+    const field = phase === 'boring' ? 'boring_status' : phase === 'pulling' ? 'pulling_status' : 'splicing_status';
+    console.log(`[ProjectMap] DB write: ${segId}.${field} = ${newStatus}`);
+
+    // Write to Google Sheets
+    const ok = await updateSegmentField(segId, field, newStatus);
+    if (ok) {
+      // Log the action
+      await logAction(segment.project_id || 'VXS-SLPH01-006', segId, user?.email, `${phase}_status_changed`, { from: segment[field], to: newStatus, notes: statusData?.notes });
+      
+      // Write timestamp if completing
+      if (newStatus === 'Complete' || newStatus === 'QC Approved') {
+        const tsField = phase === 'boring' ? 'boring_completed' : phase === 'pulling' ? 'pulling_completed' : 'completed';
+        await updateSegmentField(segId, tsField, new Date().toISOString());
+      }
+      if (newStatus === 'In Progress') {
+        const tsField = phase === 'boring' ? 'boring_started' : phase === 'pulling' ? 'pulling_started' : 'started';
+        await updateSegmentField(segId, tsField, new Date().toISOString());
+      }
+      if (newStatus === 'QC Approved') {
+        const qcField = phase === 'boring' ? 'boring_qc_approved_by' : phase === 'pulling' ? 'pulling_qc_approved_by' : 'qc_approved_by';
+        const qcDateField = phase === 'boring' ? 'boring_qc_approved_date' : phase === 'pulling' ? 'pulling_qc_approved_date' : 'qc_approved_date';
+        await updateSegmentField(segId, qcField, user?.name || user?.email || 'Admin');
+        await updateSegmentField(segId, qcDateField, new Date().toISOString());
+      }
+      if (statusData?.actual_footage) {
+        await updateSegmentField(segId, 'boring_actual_footage', statusData.actual_footage);
+      }
+      if (statusData?.notes) {
+        const notesField = phase === 'boring' ? 'boring_notes' : phase === 'pulling' ? 'pulling_notes' : 'notes';
+        await updateSegmentField(segId, notesField, statusData.notes);
+      }
+
+      // Notify parent to refresh local state
+      if (onSegmentUpdate) onSegmentUpdate(segId, field, newStatus);
+      console.log(`[ProjectMap] ✅ DB updated: ${segId}.${field} = ${newStatus}`);
+    } else {
+      console.error(`[ProjectMap] ❌ DB write failed: ${segId}.${field}`);
+    }
   };
 
   const handlePhotoUpload = (phase, photos) => {
     console.log(`[ProjectMap] Photo upload: ${segment.segment_id} ${phase}`, photos);
-    // TODO: Wire to Google Drive upload
+    // TODO: Wire to Google Drive upload (Round 2b)
   };
 
   return (
@@ -727,7 +766,7 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user }) {
       </div>
 
       {/* Version tag */}
-      <div style={{ padding: '4px 16px', fontSize: 9, color: 'transparent', textAlign: 'right', userSelect: 'none', flexShrink: 0 }}>v2.1.0</div>
+      <div style={{ padding: '4px 16px', fontSize: 9, color: 'transparent', textAlign: 'right', userSelect: 'none', flexShrink: 0 }}>v2.2.0</div>
     </div>
   );
 }
@@ -1020,7 +1059,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             width: 360, borderLeft: `1px solid ${borderColor}`,
             flexShrink: 0, overflow: 'hidden',
           }}>
-            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} />
+            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
           </div>
         )}
 
@@ -1039,14 +1078,14 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <div style={{ width: 40, height: 4, borderRadius: 2, background: borderColor }} />
             </div>
             <div style={{ overflow: 'auto', maxHeight: 'calc(60vh - 20px)' }}>
-              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} />
+              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
             </div>
           </div>
         )}}
       </div>
 
       {/* Hidden version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.3.0</div>
+      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.4.0</div>
     </div>
   );
 }
