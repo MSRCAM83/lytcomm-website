@@ -59,6 +59,7 @@ function App() {
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState('VXS-SLPH01-006');
 
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
@@ -228,9 +229,9 @@ function App() {
       case 'job-import':
         return <JobImportPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       case 'project-map':
-        return <ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+        return <ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} projectId={selectedProjectId} />;
       case 'admin-projects':
-        return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+        return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} />;
       case 'daily-report':
         return <DailyProductionReport darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       default:
