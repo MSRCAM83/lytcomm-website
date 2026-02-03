@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 3, 2026 - 5:00 PM CST
+### Last Updated: February 3, 2026 - 5:30 PM CST
 
 ---
 
@@ -12,15 +12,14 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.16
-Website deployed and working. Multi-project support + bulk assignment tools live.
+### ✅ Live Version: v3.17
+Website deployed and working. Map fixed (Leaflet), PDF upload fixed (pdf.js).
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 5:00 PM CST)
-- **AdminProjectDashboard v3.0.0** - MAJOR: Multi-project selector (dropdown loads all projects from DB), bulk assignment panel (select segments → pick work type → assign contractor), quick-select buttons (by section, unassigned only, select all), assignment writes to both Segments sheet and Assignments sheet, auto-refresh after assign
-- **App.js** - Added `selectedProjectId` state shared between AdminProjectDashboard and ProjectMapPage. Project selection persists when navigating between pages
-- **ProjectMapPage** - Now accepts `projectId` prop instead of hardcoded VXS-SLPH01-006. Map loads whichever project is selected
-- **mapService v3.2.0** - NEW: `bulkAssignSegments()` - updates boring/pulling/splicing assigned_to fields on multiple segments, creates assignment record in Assignments sheet. Also has `importProject()` from v3.1.0
-- **package.json v3.16.0** - Version bump
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 5:30 PM CST)
+- **ProjectMapPage v3.0.0** - CRITICAL FIX: Replaced dead Google Maps API key (403 error) with Leaflet/OpenStreetMap. Free, no API key needed. Street + Satellite layer toggle, color-coded polylines, handhole circle markers with tooltips, auto-fitBounds, status legend overlay
+- **JobImportPage v2.1.0** - CRITICAL FIX: PDF upload was sending binary garbage (readAsText on PDFs). Now uses pdfjs-dist for real PDF text extraction page-by-page. Works with text-based PDFs, gracefully handles scanned/image PDFs
+- **New dependencies**: leaflet 1.9.4, react-leaflet 5.0.0, pdfjs-dist 5.4.624
+- **package.json v3.17.0** - Version bump + new deps
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
