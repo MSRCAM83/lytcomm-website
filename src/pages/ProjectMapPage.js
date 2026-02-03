@@ -21,35 +21,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { ArrowLeft, Map, List, Search, AlertCircle, MapPin, Ruler, Users, Zap, X, ChevronDown, ChevronUp, Filter, Layers, Camera, CheckCircle, Clock, AlertTriangle, Navigation, Wrench, Cable } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { STATUS_COLORS, PHOTO_REQUIREMENTS } from '../config/mapConfig';
 import BoringTracker from '../components/Workflow/BoringTracker';
 import PullingTracker from '../components/Workflow/PullingTracker';
 import SplicingTracker from '../components/Workflow/SplicingTracker';
+import { loadFullProject, isDemoMode, updateSegmentField, logAction } from '../services/mapService';
 
 // Google Maps API key placeholder - set in environment or here
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
-
-// Demo project data - Phase 2 will load from Google Sheets via mapService
-const DEMO_SEGMENTS = [
-  { segment_id: 'VXS-SLPH01-006-A-A01', contractor_id: 'A→A01', section: 'A', from_handhole: 'A (17x30x18)', to_handhole: 'A01 (15x20x12)', footage: 148, street: 'W Parish Rd', gps_start: { lat: 30.2367, lng: -93.3776 }, gps_end: { lat: 30.2372, lng: -93.3768 }, boring_status: 'QC Approved', pulling_status: 'Complete', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A02', contractor_id: 'A01→A02', section: 'A', from_handhole: 'A01 (15x20x12)', to_handhole: 'A02 (15x20x12)', footage: 132, street: 'W Parish Rd', gps_start: { lat: 30.2372, lng: -93.3768 }, gps_end: { lat: 30.2378, lng: -93.3760 }, boring_status: 'QC Approved', pulling_status: 'In Progress', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A03', contractor_id: 'A02→A03', section: 'A', from_handhole: 'A02 (15x20x12)', to_handhole: 'A03 (15x20x12)', footage: 156, street: 'Beglis Pkwy', gps_start: { lat: 30.2378, lng: -93.3760 }, gps_end: { lat: 30.2385, lng: -93.3752 }, boring_status: 'Complete', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A04', contractor_id: 'A03→A04', section: 'A', from_handhole: 'A03 (15x20x12)', to_handhole: 'A04 (15x20x12)', footage: 198, street: 'Beglis Pkwy', gps_start: { lat: 30.2385, lng: -93.3752 }, gps_end: { lat: 30.2392, lng: -93.3743 }, boring_status: 'In Progress', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-A-A05', contractor_id: 'A04→A05', section: 'A', from_handhole: 'A04 (15x20x12)', to_handhole: 'A05 (15x20x12)', footage: 175, street: 'Elm St', gps_start: { lat: 30.2392, lng: -93.3743 }, gps_end: { lat: 30.2398, lng: -93.3735 }, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-B-B01', contractor_id: 'B→B01', section: 'B', from_handhole: 'B (17x30x18)', to_handhole: 'B01 (15x20x12)', footage: 210, street: 'S Cities Service Hwy', gps_start: { lat: 30.2350, lng: -93.3810 }, gps_end: { lat: 30.2358, lng: -93.3800 }, boring_status: 'QC Approved', pulling_status: 'QC Approved', splicing_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1', splicing_assigned_to: 'LYT Splice Crew' },
-  { segment_id: 'VXS-SLPH01-006-B-B02', contractor_id: 'B01→B02', section: 'B', from_handhole: 'B01 (15x20x12)', to_handhole: 'B02 (15x20x12)', footage: 185, street: 'S Cities Service Hwy', gps_start: { lat: 30.2358, lng: -93.3800 }, gps_end: { lat: 30.2365, lng: -93.3790 }, boring_status: 'QC Approved', pulling_status: 'In Progress', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-B-B03', contractor_id: 'B02→B03', section: 'B', from_handhole: 'B02 (15x20x12)', to_handhole: 'B03 (15x20x12)', footage: 162, street: 'Oak Ave', gps_start: { lat: 30.2365, lng: -93.3790 }, gps_end: { lat: 30.2370, lng: -93.3782 }, boring_status: 'Issue', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-C-C01', contractor_id: 'C→C01', section: 'C', from_handhole: 'C (30x48x24)', to_handhole: 'C01 (15x20x12)', footage: 220, street: 'N Main St', gps_start: { lat: 30.2340, lng: -93.3820 }, gps_end: { lat: 30.2348, lng: -93.3810 }, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
-  { segment_id: 'VXS-SLPH01-006-C-C02', contractor_id: 'C01→C02', section: 'C', from_handhole: 'C01 (15x20x12)', to_handhole: 'C02 (15x20x12)', footage: 195, street: 'N Main St', gps_start: { lat: 30.2348, lng: -93.3810 }, gps_end: { lat: 30.2355, lng: -93.3800 }, boring_status: 'Not Started', pulling_status: 'Not Started', splicing_status: 'Not Started', boring_assigned_to: '', pulling_assigned_to: '', splicing_assigned_to: '' },
-];
-
-const DEMO_PROJECT = {
-  project_id: 'VXS-SLPH01-006',
-  customer: 'Vexus Fiber',
-  project_name: 'Sulphur LA City Build',
-  po_number: '3160880',
-  total_value: 421712.30,
-};
 
 // Helper: get status color
 function getStatusColor(status) {
