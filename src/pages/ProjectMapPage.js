@@ -1,17 +1,18 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 2.5.0
+ * Version: 3.0.0
  * Created: 2026-02-02
+ * Updated: 2026-02-03
  * Route: #project-map
  * 
- * Interactive Google Maps-based project management view.
+ * Interactive map-based project management view using Leaflet/OpenStreetMap.
  * Displays construction segments as polylines with color-coded status,
- * handhole markers with icons, crew GPS positions, and segment detail panels.
+ * handhole markers with popups, and segment detail panels.
  * 
  * Features:
- * - Google Maps with satellite/roadmap toggle
+ * - Leaflet map with satellite/street toggle (no API key needed)
  * - Color-coded polyline segments (boring/pulling/splicing status)
- * - Clickable handhole markers with info windows
+ * - Clickable handhole markers with popups
  * - Segment detail side panel with workflow tabs
  * - Section/status/phase filters
  * - List view fallback
@@ -35,9 +36,16 @@ import { uploadPhotoBatch } from '../services/photoUploadService';
 import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// Google Maps API key - public key restricted by HTTP referrer to lytcomm.com
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyCbZXQimBAuIRXJQNq64VjF94FD35JOvLs';
+// Fix Leaflet default marker icons (webpack issue)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 // Helper: get status color
 function getStatusColor(status) {
@@ -64,236 +72,146 @@ function StatusIcon({ status, size }) {
 }
 
 // ===== GOOGLE MAPS COMPONENT =====
-function ProjectGoogleMap({ segments, selectedSegment, onSelectSegment, filterPhase, darkMode }) {
-  const mapRef = useRef(null);
+function ProjectLeafletMap({ segments, selectedSegment, onSelectSegment, filterPhase, darkMode }) {
+  const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  const polylinesRef = useRef([]);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapType, setMapType] = useState('roadmap');
+  const layersRef = useRef([]);
 
-  // Calculate map center from segments
-  const center = useMemo(() => {
-    if (segments.length === 0) return { lat: 30.2367, lng: -93.3776 };
-    let lat = 0, lng = 0;
-    segments.forEach(s => {
-      lat += s.gps_start.lat + s.gps_end.lat;
-      lng += s.gps_start.lng + s.gps_end.lng;
-    });
-    const count = segments.length * 2;
-    return { lat: lat / count, lng: lng / count };
-  }, [segments]);
-
-  // Load Google Maps script
+  // Initialize Leaflet map
   useEffect(() => {
-    if (window.google && window.google.maps) {
-      setMapLoaded(true);
-      return;
-    }
-    if (!GOOGLE_MAPS_API_KEY) {
-      // No API key - use fallback canvas map
-      setMapLoaded(false);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setMapLoaded(true);
-    document.head.appendChild(script);
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+    const map = L.map(mapContainerRef.current, {
+      center: [30.2366, -93.3776], // Sulphur LA default
+      zoom: 15,
+      zoomControl: true,
+    });
+
+    // Street layer
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19,
+    });
+
+    // Satellite layer
+    const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '© Esri',
+      maxZoom: 19,
+    });
+
+    // Add street layer by default
+    streetLayer.addTo(map);
+
+    // Layer control
+    L.control.layers({
+      'Street': streetLayer,
+      'Satellite': satLayer,
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+
     return () => {
-      // Cleanup not needed for Google Maps script
+      map.remove();
+      mapInstanceRef.current = null;
     };
   }, []);
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapLoaded || !mapRef.current || !window.google) return;
-    
-    const map = new window.google.maps.Map(mapRef.current, {
-      center,
-      zoom: 16,
-      mapTypeId: mapType,
-      disableDefaultUI: false,
-      zoomControl: true,
-      mapTypeControl: false,
-      scaleControl: true,
-      streetViewControl: true,
-      rotateControl: true,
-      fullscreenControl: true,
-      styles: darkMode ? [
-        { elementType: 'geometry', stylers: [{ color: '#1d2c4d' }] },
-        { elementType: 'labels.text.fill', stylers: [{ color: '#8ec3b9' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a3646' }] },
-        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#304a7d' }] },
-        { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#98a5be' }] },
-        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e1626' }] },
-      ] : [],
-    });
-    
-    mapInstanceRef.current = map;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded, darkMode]);
-
-  // Update map type
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setMapTypeId(mapType);
-    }
-  }, [mapType]);
-
   // Draw segments and markers
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.google) return;
     const map = mapInstanceRef.current;
+    if (!map) return;
 
-    // Clear existing
-    markersRef.current.forEach(m => m.setMap(null));
-    polylinesRef.current.forEach(p => p.setMap(null));
-    markersRef.current = [];
-    polylinesRef.current = [];
+    // Clear old layers
+    layersRef.current.forEach(l => map.removeLayer(l));
+    layersRef.current = [];
 
-    const handholes = new Set();
+    if (!segments || segments.length === 0) return;
+
+    const boundsArr = [];
+    const handholes = new window.Map();
 
     segments.forEach(seg => {
-      const status = filterPhase === 'boring' ? seg.boring_status 
-                   : filterPhase === 'pulling' ? seg.pulling_status 
-                   : seg.splicing_status;
-      const color = getStatusColor(status);
-      const isSelected = selectedSegment && selectedSegment.segment_id === seg.segment_id;
+      const startLat = parseFloat(seg.gps_start_lat);
+      const startLng = parseFloat(seg.gps_start_lng);
+      const endLat = parseFloat(seg.gps_end_lat);
+      const endLng = parseFloat(seg.gps_end_lng);
+
+      if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) return;
+
+      // Status color
+      const statusField = filterPhase === 'pulling' ? seg.pulling_status : filterPhase === 'splicing' ? (seg.splicing_status || 'Not Started') : seg.boring_status;
+      const color = statusField === 'QC Approved' ? '#4CAF50' :
+                    statusField === 'Complete' ? '#4CAF50' :
+                    statusField === 'In Progress' ? '#FFB800' :
+                    statusField === 'Issue' ? '#FF9800' :
+                    statusField === 'Blocked' ? '#9E9E9E' : '#FF4444';
 
       // Draw polyline
-      const polyline = new window.google.maps.Polyline({
-        path: [seg.gps_start, seg.gps_end],
-        strokeColor: color,
-        strokeOpacity: isSelected ? 1.0 : 0.8,
-        strokeWeight: isSelected ? 6 : 4,
-        map,
-        zIndex: isSelected ? 10 : 1,
-      });
+      const line = L.polyline([[startLat, startLng], [endLat, endLng]], {
+        color: color,
+        weight: 5,
+        opacity: selectedSegment === seg.segment_id ? 1.0 : 0.8,
+      }).addTo(map);
 
-      polyline.addListener('click', () => onSelectSegment(seg));
-      polylinesRef.current.push(polyline);
+      line.bindTooltip(`${seg.contractor_id} • ${seg.footage} LF`, { direction: 'center', className: 'seg-tooltip' });
+      line.on('click', () => onSelectSegment(seg.segment_id));
+      layersRef.current.push(line);
 
-      // Add footage label at midpoint
-      const midLat = (seg.gps_start.lat + seg.gps_end.lat) / 2;
-      const midLng = (seg.gps_start.lng + seg.gps_end.lng) / 2;
-      
-      const label = new window.google.maps.Marker({
-        position: { lat: midLat, lng: midLng },
-        map,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 0,
-        },
-        label: {
-          text: `${seg.footage}'`,
-          color: darkMode ? '#ffffff' : '#1e293b',
-          fontSize: '11px',
-          fontWeight: 'bold',
-        },
-        clickable: false,
-      });
-      markersRef.current.push(label);
+      boundsArr.push([startLat, startLng], [endLat, endLng]);
 
-      // Add handhole markers (deduplicate)
-      const addHandhole = (pos, name) => {
-        const key = `${pos.lat},${pos.lng}`;
-        if (handholes.has(key)) return;
-        handholes.add(key);
-
-        const isLarge = name.includes('30x48') || name.includes('24x36');
-        const isMedium = name.includes('17x30');
-        const fillColor = isLarge ? '#FF9800' : isMedium ? '#2196F3' : '#4CAF50';
-        const scale = isLarge ? 10 : isMedium ? 8 : 6;
-
-        const marker = new window.google.maps.Marker({
-          position: pos,
-          map,
-          title: name,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale,
-            fillColor,
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-          },
-          zIndex: 5,
-        });
-
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `<div style="padding:8px;font-family:system-ui;min-width:150px">
-            <strong style="font-size:14px">${name.split(' (')[0]}</strong><br/>
-            <span style="color:#666;font-size:12px">${name.includes('(') ? name.match(/\(([^)]+)\)/)?.[1] || '' : ''}</span>
-          </div>`,
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        markersRef.current.push(marker);
-      };
-
-      addHandhole(seg.gps_start, seg.from_handhole);
-      addHandhole(seg.gps_end, seg.to_handhole);
+      // Collect handholes
+      const fromKey = `${startLat},${startLng}`;
+      const toKey = `${endLat},${endLng}`;
+      if (!handholes.has(fromKey)) handholes.set(fromKey, { lat: startLat, lng: startLng, label: seg.from_handhole || seg.contractor_id?.split('→')[0] || '?' });
+      if (!handholes.has(toKey)) handholes.set(toKey, { lat: endLat, lng: endLng, label: seg.to_handhole || seg.contractor_id?.split('→')[1] || '?' });
     });
 
-    // Fit bounds to show all segments
-    if (segments.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      segments.forEach(s => {
-        bounds.extend(s.gps_start);
-        bounds.extend(s.gps_end);
-      });
-      map.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
+    // Add handhole markers
+    handholes.forEach((hh) => {
+      const isLarge = (hh.label || '').includes('30x48');
+      const isMedium = (hh.label || '').includes('17x30');
+      const radius = isLarge ? 8 : isMedium ? 6 : 5;
+      const fillColor = isLarge ? '#2196F3' : isMedium ? '#FFB800' : '#4CAF50';
+
+      const circle = L.circleMarker([hh.lat, hh.lng], {
+        radius: radius,
+        color: '#fff',
+        weight: 2,
+        fillColor: fillColor,
+        fillOpacity: 1,
+      }).addTo(map);
+
+      circle.bindTooltip(hh.label, { permanent: false, direction: 'top', offset: [0, -8] });
+      layersRef.current.push(circle);
+    });
+
+    // Fit bounds
+    if (boundsArr.length > 0) {
+      try {
+        map.fitBounds(boundsArr, { padding: [40, 40], maxZoom: 17 });
+      } catch (e) {
+        console.warn('fitBounds error:', e);
+      }
     }
-  }, [segments, selectedSegment, filterPhase, onSelectSegment, darkMode]);
-
-  // Fallback canvas map when no Google Maps API key
-  if (!GOOGLE_MAPS_API_KEY) {
-    return <CanvasMap segments={segments} selectedSegment={selectedSegment} onSelectSegment={onSelectSegment} filterPhase={filterPhase} darkMode={darkMode} />;
-  }
-
-  if (!mapLoaded) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: darkMode ? '#8892b0' : '#64748b' }}>
-        <Zap size={20} style={{ marginRight: 8, animation: 'spin 1s linear infinite' }} /> Loading map...
-      </div>
-    );
-  }
+  }, [segments, selectedSegment, onSelectSegment, filterPhase]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-      {/* Map type toggle */}
-      <div style={{ position: 'absolute', top: 10, right: 60, display: 'flex', gap: 4, zIndex: 5 }}>
-        {['roadmap', 'satellite', 'hybrid'].map(type => (
-          <button key={type} onClick={() => setMapType(type)} style={{
-            padding: '6px 12px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            background: mapType === type ? (darkMode ? '#c850c0' : '#0077B6') : (darkMode ? '#112240' : '#f1f5f9'),
-            color: mapType === type ? '#fff' : (darkMode ? '#8892b0' : '#64748b'),
-            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-          }}>
-            {type.charAt(0).toUpperCase() + type.slice(1)}
-          </button>
-        ))}
-      </div>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
       {/* Legend */}
       <div style={{
         position: 'absolute', bottom: 10, left: 10, padding: '8px 12px', borderRadius: 8,
         background: darkMode ? 'rgba(17,34,64,0.9)' : 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(8px)', fontSize: 11, zIndex: 5,
+        backdropFilter: 'blur(8px)', fontSize: 11, zIndex: 1000,
         boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
       }}>
         <div style={{ fontWeight: 700, marginBottom: 4, color: darkMode ? '#fff' : '#1e293b' }}>Status Legend</div>
         {[
-          ['Not Started', STATUS_COLORS.NOT_STARTED],
-          ['In Progress', STATUS_COLORS.IN_PROGRESS],
-          ['Complete', STATUS_COLORS.COMPLETE],
-          ['QC Approved', STATUS_COLORS.QC_APPROVED],
-          ['Issue', STATUS_COLORS.ISSUE],
+          ['Not Started', '#FF4444'],
+          ['In Progress', '#FFB800'],
+          ['Complete', '#4CAF50'],
+          ['QC Approved', '#4CAF50'],
+          ['Issue', '#FF9800'],
         ].map(([label, color]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <div style={{ width: 20, height: 3, background: color, borderRadius: 2 }} />
@@ -304,7 +222,6 @@ function ProjectGoogleMap({ segments, selectedSegment, onSelectSegment, filterPh
     </div>
   );
 }
-
 // ===== CANVAS FALLBACK MAP (no API key needed) =====
 function CanvasMap({ segments, selectedSegment, onSelectSegment, filterPhase, darkMode }) {
   const canvasRef = useRef(null);
@@ -1064,7 +981,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
         <div style={{ flex: 1, position: 'relative' }}>
           {viewMode === 'map' ? (
             <div style={{ position: 'relative', height: '100%' }}>
-              <ProjectGoogleMap
+              <ProjectLeafletMap
                 segments={filteredSegments}
                 selectedSegment={selectedSegment}
                 onSelectSegment={handleSelectSegment}
