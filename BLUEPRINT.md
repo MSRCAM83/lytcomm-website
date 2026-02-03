@@ -12,26 +12,17 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.13
-Website deployed and working. Project Map System Phase 9 COMPLETE: Foundation, Map, Workflow, Chat, API, Data Bridge, and LIVE DATABASE all built and pushed.
+### ✅ Live Version: v3.14
+Website deployed and working. Project Map System Phase 10 IN PROGRESS: Notifications, crew tracking, contractor-filtered views built and pushed.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 12:05 AM CST)
-- **ProjectMapPage.js v2.4.0** - WORKFLOW PERSISTENCE: Status changes write to Google Sheets DB via mapService, timestamps for start/complete, QC approval fields (approved_by, date), action logging to Work Log, actual footage + notes persistence, parent state refresh on DB write
-- **InvoiceGenerator v1.0.0** - Auto-invoice from rate cards + QC approved segments, Vexus billing rules (1x4/1x8/F1 splice calculations), expandable line items, section/contractor filters, print view, back button nav
-- **mapService.js v3.0.0** - LIVE Google Sheets database (8 separate spreadsheets), Gateway redirect handling, real CRUD ops, DB connectivity check + demo fallback, new: loadAssignments, loadRateCards, loadIssues, createIssue, resolveIssue, updateSpliceField
-- **Google Sheets 8-Table Database** initialized and populated:
-  - Projects: 1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70
-  - Segments: 1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg (12 segments A/B/C/D)
-  - Splice Points: 1lFMlmlyTgbtGkxB0zhJNoa7M2RFH5bd25VPLh_xdCFU (7 points)
-  - Assignments: 1g2Ml8PFsN0HZA_chLqje2OTnYAZXDPVMZ1trRmKN-qY (3 assignments)
-  - Rate Cards: 10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4 (18 rates)
-  - Users: 1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw (existing)
-  - Work Log: 1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8
-  - Issues: 1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g
-- **ContractorDashboard.js v2.3** - Project Map nav, live segment stats, assigned segments list
-- **ProjectMapPage.js v2.4.0** - WORKFLOW PERSISTENCE: Status changes write to Google Sheets DB via mapService, timestamps for start/complete, QC approval fields (approved_by, date), action logging to Work Log, actual footage + notes persistence, parent state refresh on DB write
-- **ProjectMapPage.js v2.3.0** - Contractor view mode, role-aware nav, hides PO for non-admins
-- **ProjectMapPage.js v2.2.0** - FIXED: Removed undefined DEMO_SEGMENTS/DEMO_PROJECT references (was causing page crash). Now uses async loadFullProject() on mount with loading spinner. Shows "DEMO" badge when in demo mode. All filters/stats use dynamic allSegments state.
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 12:15 AM CST)
+- **NotificationService v1.0.0** - NEW: Expiration alerts for certs/COI/licenses, email notifications via Gateway, push notification support, in-app notification storage, admin alert emails
+- **NotificationBell v1.0.0** - NEW: Dropdown notification bell component with unread badge, severity colors, mark-as-read, auto-checks compliance expirations on login
+- **CrewTracker v1.0.0** - NEW: GPS crew position overlay for project map, real-time tracking toggle, nearest segment detection, movement/stationary indicators, high accuracy mode, battery-conscious
+- **ProjectMapPage v2.5.0** - CONTRACTOR FILTERING: Contractors now only see segments assigned to their company. Stats/sections/filters all scoped to visible segments. CrewTracker wired into map view.
+- **AdminDashboard v3.7** - NotificationBell added to header
+- **EmployeeDashboard v2.4** - NotificationBell added to mobile header
+- **ContractorDashboard v2.4** - NotificationBell added to mobile header
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -283,6 +274,9 @@ src/
 │   │   └── SplicingTracker.js (v1.0.0 - NEW)
 │   └── Chat/
 │       └── FieldAssist.js (v1.0.0 - NEW)
+│   └── Map/
+│       └── CrewTracker.js (v1.0.0 - NEW)
+│   └── NotificationBell.js (v1.0.0 - NEW)
 ├── pages/
 │   ├── HomePage.js
 │   ├── AboutPage.js
@@ -298,6 +292,7 @@ src/
 │   ├── pdfService.js
 │   ├── mapService.js (v1.0.0 - NEW)
 │   └── workflowService.js (v1.0.0 - NEW)
+│   └── notificationService.js (v1.0.0 - NEW)
 ├── utils/
 │   ├── idGenerator.js (v1.0.0 - NEW)
 │   └── rateCardMatcher.js (v1.0.0 - NEW)
@@ -1033,16 +1028,13 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 4. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to Vercel environment variables
 
 #### 🔲 STILL NEEDED:
-- [ ] Google Sheets database creation (8 tabs with schemas)
-- [ ] Connect JobImportPage to /api/pdf-import endpoint (create pdf-import serverless fn)
-- [x] ~~Connect ProjectMapPage to live Google Sheets data (replace demo data)~~ ✅ DONE v3.0.0
-- [x] ~~Wire workflow status persistence to Google Sheets~~ ✅ DONE v2.4.0
-- [ ] Connect FieldAssist to /api/claude-chat endpoint (needs API key in Vercel env)
-- [ ] Add FieldAssist chat bubble to all dashboard pages
-- [ ] Admin dashboard links to project map system pages
-- [ ] Google Maps API key provisioning
-- [x] ~~Integrate workflow components into ProjectMapPage segment detail panel~~ ✅ DONE v2.1.0 + persistence v2.4.0
-- [ ] Contractor-filtered views (can only see assigned work)
-- [ ] Real-time data sync between map and Google Sheets
-- [ ] GPS tracking service (gpsService.js)
-- [ ] pdf-import Vercel serverless function
+- [ ] Google Maps API key provisioning (user action required)
+- [ ] Set ANTHROPIC_API_KEY in Vercel environment variables (user action required)
+- [x] ~~Contractor-filtered views (can only see assigned work)~~ ✅ DONE v2.5.0
+- [ ] Real-time data sync improvements (WebSocket consideration for future)
+- [x] ~~GPS tracking service~~ ✅ gpsService v1.0 + CrewTracker v1.0
+- [x] ~~Notification system~~ ✅ NotificationService v1.0 + NotificationBell v1.0
+- [x] ~~NotificationBell in dashboards~~ ✅ Admin v3.7, Employee v2.4, Contractor v2.4
+- [ ] Wire CrewTracker to report positions to Google Sheets (multi-user GPS)
+- [ ] Daily automated email digest for compliance alerts
+- [ ] Upload real Sulphur LA construction map PDF for testing
