@@ -19,10 +19,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { Navigation, Users, Battery, Signal, MapPin, Clock, Activity, X } from 'lucide-react';
-import { startTracking, stopTracking, isTracking, getCurrentPosition, findNearestSegment, calculateDistance } from '../../services/gpsService';
+import { startTracking, stopTracking, getCurrentPosition, findNearestSegment } from '../../services/gpsService';
 import { logAction } from '../../services/mapService';
 
 // Crew type colors
+// eslint-disable-next-line no-unused-vars
 const CREW_COLORS = {
   boring: '#FFB800',    // Yellow
   pulling: '#2196F3',   // Blue
@@ -32,6 +33,7 @@ const CREW_COLORS = {
 };
 
 // Crew type icons (emoji)
+// eslint-disable-next-line no-unused-vars
 const CREW_ICONS = {
   boring: '🚧',
   pulling: '🚛',
@@ -65,6 +67,7 @@ const CrewTracker = ({ segments = [], darkMode = true, isAdmin = false, user = n
   const muted = darkMode ? '#8892b0' : '#64748b';
   const accent = darkMode ? '#c850c0' : '#0077B6';
 
+// eslint-disable-next-line no-unused-vars
   const crewType = user?.role?.toLowerCase() === 'admin' ? 'admin'
     : user?.workType?.toLowerCase() || 'unknown';
 
