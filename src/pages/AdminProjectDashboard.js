@@ -1,25 +1,42 @@
 /**
  * LYT Communications - Admin Project Dashboard
- * Version: 2.0.0
- * Created: 2026-02-02
+ * Version: 3.0.0
  * Updated: 2026-02-03
  * Route: #admin-projects
  * 
- * Admin overview showing all projects with live data from Google Sheets.
- * Progress stats calculated from real segment statuses.
+ * Multi-project dashboard with:
+ * - Project selector (loads all projects from DB)
+ * - Progress stats from real segment data
+ * - Bulk assignment panel (select segments → assign contractor)
+ * - Section breakdown with drill-down
+ * - Open issues list
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, Map, Users, AlertCircle, Upload, BarChart3, Loader, Sun, Moon, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
-import { loadFullProject, loadIssues } from '../services/mapService';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  ArrowLeft, Plus, Map, Users, AlertCircle, Upload, BarChart3, Loader,
+  Sun, Moon, ChevronRight, Zap, AlertTriangle, UserPlus, Check, X,
+  ChevronDown, RefreshCw, Clipboard
+} from 'lucide-react';
+import { loadProjects, loadFullProject, loadIssues, bulkAssignSegments } from '../services/mapService';
 
-function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) {
+function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, selectedProjectId, setSelectedProjectId }) {
   const [loading, setLoading] = useState(true);
+  const [allProjects, setAllProjects] = useState([]);
   const [project, setProject] = useState(null);
   const [segments, setSegments] = useState([]);
   const [splicePoints, setSplicePoints] = useState([]);
   const [issues, setIssues] = useState([]);
   const [dataSource, setDataSource] = useState('loading');
+
+  // Bulk assignment state
+  const [assignMode, setAssignMode] = useState(false);
+  const [selectedSegments, setSelectedSegments] = useState(new Set());
+  const [assignWorkType, setAssignWorkType] = useState('boring');
+  const [assignContractor, setAssignContractor] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignResult, setAssignResult] = useState(null);
+
   const [showVersion, setShowVersion] = useState(false);
 
   const bg = darkMode ? '#0d1b2a' : '#ffffff';
@@ -28,43 +45,71 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
   const text = darkMode ? '#ffffff' : '#1e293b';
   const textMuted = darkMode ? '#8892b0' : '#64748b';
   const accent = darkMode ? '#c850c0' : '#0077B6';
+  const successGreen = '#28a745';
+  const warningOrange = '#FF9800';
+
+  const fetchProjectData = useCallback(async (projId) => {
+    setLoading(true);
+    try {
+      const data = await loadFullProject(projId);
+      const issueData = await loadIssues(projId);
+      setProject(data.project);
+      setSegments(data.segments || []);
+      setSplicePoints(data.splicePoints || []);
+      setIssues(Array.isArray(issueData) ? issueData : []);
+      setDataSource(data.isDemo ? 'demo' : 'live');
+    } catch (err) {
+      console.error('[AdminProjects] Load failed:', err);
+      setDataSource('error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchData() {
-      setLoading(true);
+    async function init() {
       try {
-        const data = await loadFullProject('VXS-SLPH01-006');
-        const issueData = await loadIssues('VXS-SLPH01-006');
+        const projects = await loadProjects();
         if (!cancelled) {
-          setProject(data.project);
-          setSegments(data.segments || []);
-          setSplicePoints(data.splicePoints || []);
-          setIssues(Array.isArray(issueData) ? issueData : []);
-          setDataSource(data.isDemo ? 'demo' : 'live');
-          setLoading(false);
+          setAllProjects(projects);
+          const pid = selectedProjectId || (projects[0]?.project_id) || 'VXS-SLPH01-006';
+          if (setSelectedProjectId && pid !== selectedProjectId) setSelectedProjectId(pid);
+          await fetchProjectData(pid);
         }
       } catch (err) {
-        console.error('[AdminProjects] Load failed:', err);
+        console.error('[AdminProjects] Init failed:', err);
         if (!cancelled) { setLoading(false); setDataSource('error'); }
       }
     }
-    fetchData();
+    init();
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleProjectChange = async (newId) => {
+    if (setSelectedProjectId) setSelectedProjectId(newId);
+    setSelectedSegments(new Set());
+    setAssignMode(false);
+    setAssignResult(null);
+    await fetchProjectData(newId);
+  };
 
   const stats = useMemo(() => {
-    if (!segments.length) return { boring: 0, pulling: 0, splicing: 0, totalFootage: 0, totalSegments: 0, totalSplices: 0, crews: 0, sections: [] };
+    if (!segments.length) return { boring: 0, pulling: 0, splicing: 0, totalFootage: 0, totalSegments: 0, totalSplices: 0, crews: 0, sections: [], unassignedBoring: 0, unassignedPulling: 0 };
     const total = segments.length;
-    const boringDone = segments.filter(seg => ['QC Approved', 'Complete'].includes(seg.boring_status)).length;
-    const pullingDone = segments.filter(seg => ['QC Approved', 'Complete'].includes(seg.pulling_status)).length;
+    const boringDone = segments.filter(s => ['QC Approved', 'Complete'].includes(s.boring_status)).length;
+    const pullingDone = segments.filter(s => ['QC Approved', 'Complete'].includes(s.pulling_status)).length;
     const splicingDone = splicePoints.filter(sp => ['QC Approved', 'Complete'].includes(sp.status)).length;
     const splicingTotal = splicePoints.length || 1;
-    const totalFootage = segments.reduce((sum, seg) => sum + (parseInt(seg.footage) || 0), 0);
+    const totalFootage = segments.reduce((sum, s) => sum + (parseInt(s.footage) || 0), 0);
     const contractors = new Set();
+    let unassignedBoring = 0;
+    let unassignedPulling = 0;
     segments.forEach(seg => {
       if (seg.boring_assigned_to) contractors.add(seg.boring_assigned_to);
+      else unassignedBoring++;
       if (seg.pulling_assigned_to) contractors.add(seg.pulling_assigned_to);
+      else unassignedPulling++;
     });
     const sections = [...new Set(segments.map(s => s.section))].sort();
     return {
@@ -72,11 +117,66 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
       pulling: Math.round((pullingDone / total) * 100),
       splicing: Math.round((splicingDone / splicingTotal) * 100),
       totalFootage, totalSegments: total, totalSplices: splicePoints.length,
-      crews: contractors.size, sections,
+      crews: contractors.size, sections, unassignedBoring, unassignedPulling,
     };
   }, [segments, splicePoints]);
 
   const openIssues = issues.filter(i => i.status !== 'Resolved' && i.status !== 'Closed');
+
+  const knownContractors = useMemo(() => {
+    const set = new Set();
+    segments.forEach(s => {
+      if (s.boring_assigned_to) set.add(s.boring_assigned_to);
+      if (s.pulling_assigned_to) set.add(s.pulling_assigned_to);
+      if (s.splicing_assigned_to) set.add(s.splicing_assigned_to);
+    });
+    return [...set].sort();
+  }, [segments]);
+
+  const toggleSegment = (segId) => {
+    setSelectedSegments(prev => {
+      const next = new Set(prev);
+      if (next.has(segId)) next.delete(segId);
+      else next.add(segId);
+      return next;
+    });
+  };
+
+  const selectAllInSection = (section) => {
+    const sectionSegs = segments.filter(s => s.section === section);
+    setSelectedSegments(prev => {
+      const next = new Set(prev);
+      const allSelected = sectionSegs.every(s => next.has(s.segment_id));
+      if (allSelected) sectionSegs.forEach(s => next.delete(s.segment_id));
+      else sectionSegs.forEach(s => next.add(s.segment_id));
+      return next;
+    });
+  };
+
+  const selectUnassigned = (workType) => {
+    const field = workType === 'boring' ? 'boring_assigned_to' : workType === 'pulling' ? 'pulling_assigned_to' : 'splicing_assigned_to';
+    const unassigned = segments.filter(s => !s[field]);
+    setSelectedSegments(new Set(unassigned.map(s => s.segment_id)));
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedSegments.size === 0 || !assignContractor.trim()) return;
+    setAssigning(true);
+    setAssignResult(null);
+    try {
+      const segIds = [...selectedSegments];
+      const result = await bulkAssignSegments(segIds, assignWorkType, assignContractor.trim(), selectedProjectId);
+      setAssignResult(result);
+      if (result.success || result.updated > 0) {
+        await fetchProjectData(selectedProjectId);
+        setSelectedSegments(new Set());
+      }
+    } catch (err) {
+      setAssignResult({ success: false, error: err.message });
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const ProgressBar = ({ percent, color, label }) => (
     <div style={{ marginBottom: 8 }}>
@@ -105,7 +205,7 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
       style={{ minHeight: '100vh', backgroundColor: bg, color: text }}>
       {/* Header */}
       <div style={{ backgroundColor: darkMode ? '#112240' : '#f1f5f9', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${borderColor}`, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <button onClick={() => setCurrentPage && setCurrentPage('admin-dashboard')} style={{ background: 'none', border: 'none', color: accent, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
             <ArrowLeft size={20} /> Dashboard
           </button>
@@ -123,6 +223,28 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
         </div>
       </div>
 
+      {/* Project Selector */}
+      {allProjects.length > 0 && (
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: textMuted, fontWeight: 500 }}>Project:</span>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+            <select value={selectedProjectId || ''} onChange={(e) => handleProjectChange(e.target.value)}
+              style={{ width: '100%', padding: '10px 36px 10px 14px', borderRadius: 8, border: `1px solid ${borderColor}`, backgroundColor: cardBg, color: text, fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', appearance: 'none' }}>
+              {allProjects.map(p => (
+                <option key={p.project_id} value={p.project_id}>
+                  {p.project_id} — {p.project_name || p.customer || 'Unnamed'}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} color={textMuted} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          </div>
+          <button onClick={() => fetchProjectData(selectedProjectId)} style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem' }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <span style={{ fontSize: '0.75rem', color: textMuted }}>{allProjects.length} project{allProjects.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
       {/* Quick Stats */}
       <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         {[
@@ -130,7 +252,7 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
           { label: 'Total Footage', value: `${stats.totalFootage.toLocaleString()} LF`, icon: <BarChart3 size={18} />, color: '#2196F3' },
           { label: 'Splice Points', value: stats.totalSplices, icon: <Zap size={18} />, color: '#4CAF50' },
           { label: 'Active Crews', value: stats.crews, icon: <Users size={18} />, color: '#FFB800' },
-          { label: 'Open Issues', value: openIssues.length, icon: <AlertTriangle size={18} />, color: openIssues.length > 0 ? '#FF9800' : '#4CAF50' },
+          { label: 'Open Issues', value: openIssues.length, icon: <AlertTriangle size={18} />, color: openIssues.length > 0 ? warningOrange : '#4CAF50' },
         ].map(stat => (
           <div key={stat.label} style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ color: stat.color }}>{stat.icon}</div>
@@ -149,11 +271,17 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
             { icon: <Upload size={18} />, label: 'Import Work Order', page: 'job-import', color: accent },
             { icon: <Map size={18} />, label: 'Interactive Map', page: 'project-map', color: '#4CAF50' },
             { icon: <BarChart3 size={18} />, label: 'Reports', page: 'metrics', color: '#2196F3' },
+            { icon: <UserPlus size={18} />, label: assignMode ? 'Cancel Assign' : 'Bulk Assign', action: () => { setAssignMode(!assignMode); setSelectedSegments(new Set()); setAssignResult(null); }, color: '#FFB800' },
           ].map(action => (
-            <button key={action.label} onClick={() => setCurrentPage && setCurrentPage(action.page)}
-              style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: '14px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: text, fontSize: '0.9rem', fontWeight: 500, flex: 1, minWidth: 160, transition: 'border-color 0.2s' }}
+            <button key={action.label} onClick={action.page ? () => setCurrentPage && setCurrentPage(action.page) : action.action}
+              style={{
+                backgroundColor: action.label.includes('Cancel') ? `${warningOrange}15` : cardBg,
+                border: `1px solid ${action.label.includes('Cancel') ? warningOrange : borderColor}`,
+                borderRadius: 10, padding: '14px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                gap: 10, color: text, fontSize: '0.9rem', fontWeight: 500, flex: 1, minWidth: 160, transition: 'border-color 0.2s',
+              }}
               onMouseOver={(e) => e.currentTarget.style.borderColor = action.color}
-              onMouseOut={(e) => e.currentTarget.style.borderColor = borderColor}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = action.label.includes('Cancel') ? warningOrange : borderColor}
             >
               <span style={{ color: action.color }}>{action.icon}</span>
               {action.label}
@@ -162,27 +290,150 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
         </div>
       </div>
 
-      {/* Project Card */}
+      {/* Bulk Assignment Panel */}
+      {assignMode && (
+        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${borderColor}`, backgroundColor: darkMode ? '#0a1628' : '#fffbf0' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#FFB800' }}>
+            <UserPlus size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Bulk Assignment
+          </h3>
+          
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16, alignItems: 'flex-end' }}>
+            <div style={{ minWidth: 160 }}>
+              <label style={{ fontSize: '0.75rem', color: textMuted, display: 'block', marginBottom: 4 }}>Work Type</label>
+              <select value={assignWorkType} onChange={(e) => setAssignWorkType(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, backgroundColor: cardBg, color: text, fontSize: '0.85rem' }}>
+                <option value="boring">🚧 Boring</option>
+                <option value="pulling">🚛 Fiber Pulling</option>
+                <option value="splicing">⚡ Splicing</option>
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ fontSize: '0.75rem', color: textMuted, display: 'block', marginBottom: 4 }}>Contractor / Crew</label>
+              <input type="text" value={assignContractor} onChange={(e) => setAssignContractor(e.target.value)}
+                placeholder="e.g. Gulf Coast Boring LLC" list="contractor-list"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, backgroundColor: cardBg, color: text, fontSize: '0.85rem', boxSizing: 'border-box' }} />
+              <datalist id="contractor-list">
+                {knownContractors.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
+            <button onClick={handleBulkAssign}
+              disabled={selectedSegments.size === 0 || !assignContractor.trim() || assigning}
+              style={{
+                backgroundColor: (selectedSegments.size === 0 || !assignContractor.trim() || assigning) ? '#6c757d' : successGreen,
+                color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 8,
+                cursor: (selectedSegments.size === 0 || !assignContractor.trim()) ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap',
+              }}>
+              {assigning ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
+              Assign {selectedSegments.size} Segment{selectedSegments.size !== 1 ? 's' : ''}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            <button onClick={() => selectUnassigned(assignWorkType)}
+              style={{ padding: '4px 12px', borderRadius: 6, border: `1px solid ${borderColor}`, background: cardBg, color: text, fontSize: '0.75rem', cursor: 'pointer' }}>
+              <Clipboard size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Select Unassigned ({assignWorkType === 'boring' ? stats.unassignedBoring : stats.unassignedPulling})
+            </button>
+            <button onClick={() => setSelectedSegments(new Set(segments.map(s => s.segment_id)))}
+              style={{ padding: '4px 12px', borderRadius: 6, border: `1px solid ${borderColor}`, background: cardBg, color: text, fontSize: '0.75rem', cursor: 'pointer' }}>
+              Select All ({segments.length})
+            </button>
+            <button onClick={() => setSelectedSegments(new Set())}
+              style={{ padding: '4px 12px', borderRadius: 6, border: `1px solid ${borderColor}`, background: cardBg, color: text, fontSize: '0.75rem', cursor: 'pointer' }}>
+              <X size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Clear
+            </button>
+            {stats.sections.map(sec => (
+              <button key={sec} onClick={() => selectAllInSection(sec)}
+                style={{ padding: '4px 12px', borderRadius: 6, border: `1px solid ${accent}44`, background: `${accent}11`, color: accent, fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
+                Section {sec}
+              </button>
+            ))}
+          </div>
+
+          {assignResult && (
+            <div style={{
+              padding: '8px 14px', borderRadius: 8, fontSize: '0.85rem', marginBottom: 8,
+              backgroundColor: assignResult.success ? `${successGreen}15` : '#e85a4f15',
+              border: `1px solid ${assignResult.success ? successGreen : '#e85a4f'}44`,
+              color: assignResult.success ? successGreen : '#e85a4f',
+            }}>
+              {assignResult.success
+                ? `✅ Assigned ${assignResult.updated} segments to ${assignContractor}`
+                : `⚠️ ${assignResult.updated || 0}/${assignResult.total || 0} assigned. ${assignResult.error || ''}`}
+            </div>
+          )}
+
+          <div style={{ maxHeight: 300, overflowY: 'auto', border: `1px solid ${borderColor}`, borderRadius: 8 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: darkMode ? '#0d1b2a' : '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', width: 36 }}>
+                    <input type="checkbox"
+                      checked={selectedSegments.size === segments.length && segments.length > 0}
+                      onChange={() => {
+                        if (selectedSegments.size === segments.length) setSelectedSegments(new Set());
+                        else setSelectedSegments(new Set(segments.map(s => s.segment_id)));
+                      }} />
+                  </th>
+                  {['Segment', 'Section', 'Footage', 'Boring Crew', 'Pulling Crew', 'Street'].map(h => (
+                    <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {segments.map(seg => (
+                  <tr key={seg.segment_id} onClick={() => toggleSegment(seg.segment_id)}
+                    style={{
+                      borderBottom: `1px solid ${borderColor}`, cursor: 'pointer',
+                      backgroundColor: selectedSegments.has(seg.segment_id) ? (darkMode ? '#1a2f4a' : '#e0f2fe') : 'transparent',
+                    }}>
+                    <td style={{ padding: '6px 12px' }}>
+                      <input type="checkbox" checked={selectedSegments.has(seg.segment_id)} readOnly />
+                    </td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: 600 }}>{seg.contractor_id}</td>
+                    <td style={{ padding: '6px 8px' }}>{seg.section}</td>
+                    <td style={{ padding: '6px 8px' }}>{seg.footage} LF</td>
+                    <td style={{ padding: '6px 8px', fontSize: '0.75rem' }}>
+                      <span style={{ color: seg.boring_assigned_to ? successGreen : textMuted }}>
+                        {seg.boring_assigned_to || 'Unassigned'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px 8px', fontSize: '0.75rem' }}>
+                      <span style={{ color: seg.pulling_assigned_to ? successGreen : textMuted }}>
+                        {seg.pulling_assigned_to || 'Unassigned'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px 8px', color: textMuted }}>{seg.street}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
       <div style={{ padding: 24 }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>Active Projects</h2>
+        <h2 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>{project?.project_name || 'Project Overview'}</h2>
+
         {project && (
           <div style={{ backgroundColor: cardBg, borderRadius: 12, padding: 20, marginBottom: 16, border: `1px solid ${borderColor}`, cursor: 'pointer', transition: 'border-color 0.2s' }}
-            onClick={() => setCurrentPage && setCurrentPage('project-map')}
+            onClick={() => { if (setSelectedProjectId) setSelectedProjectId(selectedProjectId); setCurrentPage && setCurrentPage('project-map'); }}
             onMouseOver={(e) => e.currentTarget.style.borderColor = accent}
-            onMouseOut={(e) => e.currentTarget.style.borderColor = borderColor}
-          >
+            onMouseOut={(e) => e.currentTarget.style.borderColor = borderColor}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{project.project_name || 'Sulphur LA City Build'}</h3>
-                  <span style={{ padding: '2px 10px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#4CAF5022', color: '#4CAF50', border: '1px solid #4CAF5044' }}>Active</span>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{project.project_name || 'Unnamed Project'}</h3>
+                  <span style={{ padding: '2px 10px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 600, backgroundColor: '#4CAF5022', color: '#4CAF50', border: '1px solid #4CAF5044' }}>{project.status || 'Active'}</span>
                 </div>
                 <p style={{ margin: 0, color: textMuted, fontSize: '0.85rem' }}>
-                  {project.customer || 'Vexus Fiber'} &bull; {project.project_id} &bull; PO #{project.po_number || '3160880'}
+                  {project.customer || 'Unknown'} &bull; {project.project_id} &bull; PO #{project.po_number || '---'}
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: '0 0 2px', fontSize: '1.2rem', fontWeight: 700, color: accent }}>${(parseFloat(project.total_value) || 421712.30).toLocaleString()}</p>
+                <p style={{ margin: '0 0 2px', fontSize: '1.2rem', fontWeight: 700, color: accent }}>${(parseFloat(project.total_value) || 0).toLocaleString()}</p>
                 <p style={{ margin: 0, color: textMuted, fontSize: '0.8rem' }}>{stats.totalSegments} segments &bull; {stats.crews} crews</p>
               </div>
             </div>
@@ -194,12 +445,17 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
                 style={{ backgroundColor: `${accent}15`, color: accent, border: `1px solid ${accent}33`, padding: '6px 14px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 500 }}>
                 <Map size={14} /> View Map
               </button>
+              {(stats.unassignedBoring > 0 || stats.unassignedPulling > 0) && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: warningOrange, fontSize: '0.8rem' }}>
+                  <UserPlus size={14} /> {stats.unassignedBoring} boring / {stats.unassignedPulling} pulling unassigned
+                </span>
+              )}
               {openIssues.length > 0 && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#FF9800', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: warningOrange, fontSize: '0.8rem', marginLeft: 'auto' }}>
                   <AlertCircle size={14} /> {openIssues.length} issues
                 </span>
               )}
-              <ChevronRight size={16} color={textMuted} style={{ marginLeft: openIssues.length === 0 ? 'auto' : 0 }} />
+              <ChevronRight size={16} color={textMuted} style={{ marginLeft: 'auto' }} />
             </div>
           </div>
         )}
@@ -215,18 +471,23 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
                 const pDone = segs.filter(s => ['QC Approved', 'Complete'].includes(s.pulling_status)).length;
                 const ft = segs.reduce((sum, s) => sum + (parseInt(s.footage) || 0), 0);
                 const hasIssue = segs.some(s => s.boring_status === 'Issue');
+                const unassigned = segs.filter(s => !s.boring_assigned_to).length;
                 return (
                   <div key={section} style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: 16, cursor: 'pointer' }}
                     onClick={() => setCurrentPage && setCurrentPage('project-map')}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <span style={{ fontSize: '1rem', fontWeight: 700, color: accent }}>Section {section}</span>
-                      {hasIssue && <AlertTriangle size={14} color="#FF9800" />}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {hasIssue && <AlertTriangle size={14} color={warningOrange} />}
+                        {unassigned > 0 && <UserPlus size={14} color={textMuted} />}
+                      </div>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: textMuted, marginBottom: 8 }}>{segs.length} segments &bull; {ft.toLocaleString()} LF</div>
                     <div style={{ display: 'flex', gap: 8, fontSize: '0.75rem' }}>
                       <span style={{ color: '#FFB800' }}>Bore: {bDone}/{segs.length}</span>
                       <span style={{ color: '#2196F3' }}>Pull: {pDone}/{segs.length}</span>
                     </div>
+                    {unassigned > 0 && <div style={{ fontSize: '0.7rem', color: textMuted, marginTop: 4 }}>{unassigned} unassigned</div>}
                   </div>
                 );
               })}
@@ -237,12 +498,12 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
         {/* Open Issues */}
         {openIssues.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#FF9800' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: warningOrange }}>
               <AlertTriangle size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Open Issues ({openIssues.length})
             </h3>
             {openIssues.map((issue, idx) => (
               <div key={idx} style={{ backgroundColor: cardBg, border: '1px solid #FF980044', borderRadius: 10, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <AlertCircle size={16} color="#FF9800" />
+                <AlertCircle size={16} color={warningOrange} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{issue.segment_id}</div>
                   <div style={{ fontSize: '0.8rem', color: textMuted }}>{issue.description || issue.issue_type}</div>
@@ -254,7 +515,8 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage }) 
         )}
       </div>
 
-      {showVersion && <div style={{ position: 'fixed', bottom: 10, right: 10, fontSize: '0.7rem', opacity: 0.5, color: darkMode ? '#fff' : '#333' }}>AdminProjectDashboard v2.0.0</div>}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {showVersion && <div style={{ position: 'fixed', bottom: 10, right: 10, fontSize: '0.7rem', opacity: 0.5, color: darkMode ? '#fff' : '#333' }}>AdminProjectDashboard v3.0.0</div>}
     </div>
   );
 }
