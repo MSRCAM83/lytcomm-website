@@ -10,7 +10,7 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-## 🚀 CURRENT STATUS (Feb 02, 2026 - 5:30 PM CST)
+## 🚀 CURRENT STATUS (Feb 02, 2026 - 7:40 PM CST)
 
 ### ✅ Live Version: v3.12
 Website deployed and working. Project Map System Phase 9: Foundation, Map, Workflow components, Chat, and API all built and pushed to GitHub.
@@ -27,11 +27,14 @@ Website deployed and working. Project Map System Phase 9: Foundation, Map, Workf
 - `src/pages/AdminProjectDashboard.js` v1.0.0 - Project management overview
 - `package.json` v3.11.0 - Added @react-google-maps/api, date-fns, uuid
 
-**Phase 2 - Interactive Map (COMPLETE):**
-- `src/pages/ProjectMapPage.js` v2.0.0 - ✅ Google Maps + Canvas fallback map
+**Phase 2 - Interactive Map (COMPLETE → UPDATED):**
+- `src/pages/ProjectMapPage.js` v2.1.0 - ✅ Tabbed workflow integration
   - Interactive polyline segments with color-coded status
   - Clickable handhole markers with info windows
-  - Segment detail side panel (desktop) / bottom sheet (mobile)
+  - **NEW: Tabbed detail panel (Overview | Boring | Pulling | Splicing)**
+  - **NEW: BoringTracker, PullingTracker, SplicingTracker wired into segment detail**
+  - **NEW: Phase status cards clickable → opens workflow tab**
+  - **NEW: Status dots on tabs showing current phase state**
   - Section/status/phase filters
   - Map/List view toggle
   - Satellite/Roadmap/Hybrid map type switching
@@ -89,11 +92,11 @@ Website deployed and working. Project Map System Phase 9: Foundation, Map, Workf
   - Ready to paste into reserved Apps Script slot
 
 **Next Steps:**
+- ✅ ~~Wire workflow components into ProjectMapPage detail panel~~ (DONE v2.1.0)
+- ✅ ~~Wire FieldAssist chat into App.js as floating widget~~ (DONE - already in App.js)
 - Run database initializer script to create Google Sheets database
 - Get Google Maps API key for production map
 - Wire mapService.js to real Google Sheets data (replace demo data)
-- Import workflow components into ProjectMapPage segment detail panel
-- Import FieldAssist chat into App.js as floating widget
 - Set ANTHROPIC_API_KEY in Vercel environment variables
 - Upload real Sulphur LA construction map PDF for testing
 - Create data bridge: Google Sheets ↔ React via Gateway script
