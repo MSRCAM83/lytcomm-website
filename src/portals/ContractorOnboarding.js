@@ -1,6 +1,6 @@
 // ContractorOnboarding.js v2.58 - Added phone auto-formatting
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown, Sun, Moon, Menu, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Building, FileText, FileCheck, Shield, Users, Wrench, DollarSign, CreditCard, AlertCircle, Upload, Download, RefreshCw, ChevronDown, Sun, Moon } from 'lucide-react';
 import { colors, LYT_INFO, URLS, skillOptions } from '../config/constants';
 import SignaturePad from '../components/SignaturePad';
 import EINInput from '../components/EINInput';
@@ -20,6 +20,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
   // Onboarding section accent colors (orange/green)
   const accentPrimary = darkMode ? '#ff6b35' : '#28a745';       // Orange vs Green
   const accentSecondary = darkMode ? '#c850c0' : '#00b4d8';     // Pink vs Teal
+// eslint-disable-next-line no-unused-vars
   const accentGradient = darkMode 
     ? 'linear-gradient(135deg, #ff6b35 0%, #c850c0 100%)'
     : 'linear-gradient(135deg, #28a745 0%, #00b4d8 100%)';
@@ -28,6 +29,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
   // Logo text colors
   const logoLY = darkMode ? '#e6c4d9' : '#0a3a7d';
   const logoT = darkMode ? '#e6c4d9' : '#2ec7c0';
+// eslint-disable-next-line no-unused-vars
   const logoComm = darkMode ? '#ffffff' : '#1e293b';
 
   const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
