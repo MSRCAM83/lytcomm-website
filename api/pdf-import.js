@@ -73,7 +73,7 @@ export default async function handler(req, res) {
           type: 'image',
           source: {
             type: 'base64',
-            media_type: 'image/png',
+            media_type: 'image/jpeg',
             data: work_order_images[i],
           },
         });
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
           type: 'image',
           source: {
             type: 'base64',
-            media_type: 'image/png',
+            media_type: 'image/jpeg',
             data: map_images[i],
           },
         });
