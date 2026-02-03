@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 3, 2026 - 4:15 PM CST
+### Last Updated: February 3, 2026 - 5:00 PM CST
 
 ---
 
@@ -12,14 +12,15 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.15
-Website deployed and working. PDF Import Pipeline LIVE: Real AI extraction via Claude API + automated database writes to Google Sheets.
+### ✅ Live Version: v3.16
+Website deployed and working. Multi-project support + bulk assignment tools live.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 4:15 PM CST)
-- **JobImportPage v2.0.0** - REAL PDF IMPORT: Reads uploaded PDF text, sends to /api/pdf-import Claude endpoint, displays AI-extracted data for review, writes confirmed data to all 3 database sheets (Projects, Segments, Splice Points) via Gateway API
-- **mapService v3.1.0** - NEW: `importProject()` batch-write function - writes project + segments + splice points to Google Sheets in one operation with error handling per row
-- **pdf-import v1.1.0** - Increased max_tokens to 8192 for complex multi-section extractions
-- **package.json v3.15.0** - Version bump
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 5:00 PM CST)
+- **AdminProjectDashboard v3.0.0** - MAJOR: Multi-project selector (dropdown loads all projects from DB), bulk assignment panel (select segments → pick work type → assign contractor), quick-select buttons (by section, unassigned only, select all), assignment writes to both Segments sheet and Assignments sheet, auto-refresh after assign
+- **App.js** - Added `selectedProjectId` state shared between AdminProjectDashboard and ProjectMapPage. Project selection persists when navigating between pages
+- **ProjectMapPage** - Now accepts `projectId` prop instead of hardcoded VXS-SLPH01-006. Map loads whichever project is selected
+- **mapService v3.2.0** - NEW: `bulkAssignSegments()` - updates boring/pulling/splicing assigned_to fields on multiple segments, creates assignment record in Assignments sheet. Also has `importProject()` from v3.1.0
+- **package.json v3.16.0** - Version bump
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -977,7 +978,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | File | Version | Status |
 |------|---------|--------|
 | src/config/mapConfig.js | v1.0.0 | ✅ Status colors, icons, rate cards, photo reqs |
-| src/services/mapService.js | v3.1.0 | ✅ Live DB: 8 Google Sheets, Gateway CRUD, redirect handling, importProject batch-write |
+| src/services/mapService.js | v3.2.0 | ✅ Live DB: 8 Google Sheets, Gateway CRUD, importProject, bulkAssignSegments |
 | src/services/apiService.js | v1.0.0 | ✅ Claude API integration service |
 | src/services/workflowService.js | v1.0.0 | ✅ Phase management logic |
 | src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
@@ -991,7 +992,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 |------|---------|--------|
 | src/pages/JobImportPage.js | v2.0.0 | ✅ PDF upload UI + real AI extraction + Gateway DB writes |
 | src/pages/ProjectMapPage.js | v2.4.0 | ✅ Interactive map + live workflow persistence to DB |
-| src/pages/AdminProjectDashboard.js | v1.0.0 | ✅ Admin project overview (274 lines) |
+| src/pages/AdminProjectDashboard.js | v3.0.0 | ✅ Multi-project selector, bulk assignment, section breakdown, live stats |
 
 #### Files In Repo - Workflow Components:
 | File | Version | Status |
