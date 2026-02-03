@@ -1,16 +1,21 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 2.0.0
+ * Version: 2.1.0
  * Updated: 2026-02-03
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
+ * Uses pdf.js for real text extraction from PDFs.
  * AI extracts project metadata, segments, splice points,
  * and matches to rate cards for billing.
  */
 
 import React, { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure pdf.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [workOrderFile, setWorkOrderFile] = useState(null);
@@ -85,45 +90,42 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setImportResult(null);
 
     try {
-      // Read PDF file as text (base64 for API)
-      const readFileAsText = (file) => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
+      // Extract text from PDFs using pdf.js
+      const extractPdfText = async (file) => {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(item => item.str).join(' ');
+          fullText += `\n--- Page ${i} ---\n${pageText}`;
+        }
+        return fullText.trim();
+      };
 
-      const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      // Try text extraction first, fallback to sending filename info
       let workOrderText = '';
       let mapText = '';
       
       try {
-        workOrderText = await readFileAsText(workOrderFile);
-        // If the "text" is mostly binary garbage, note it
-        const printableRatio = (workOrderText.match(/[\x20-\x7E\n\r\t]/g) || []).length / workOrderText.length;
-        if (printableRatio < 0.5) {
-          workOrderText = `[Binary PDF - filename: ${workOrderFile.name}, size: ${workOrderFile.size} bytes. PDF text extraction needed on server side.]`;
+        workOrderText = await extractPdfText(workOrderFile);
+        if (!workOrderText || workOrderText.length < 20) {
+          workOrderText = `[Scanned PDF with minimal extractable text - filename: ${workOrderFile.name}, size: ${workOrderFile.size} bytes, pages: unknown. The PDF may be image-based and require OCR.]`;
         }
-      } catch {
-        workOrderText = `[Could not read file: ${workOrderFile.name}]`;
+      } catch (pdfErr) {
+        console.warn('PDF text extraction failed:', pdfErr);
+        workOrderText = `[PDF extraction failed for: ${workOrderFile.name}. Error: ${pdfErr.message}]`;
       }
 
       if (mapFile) {
         try {
-          mapText = await readFileAsText(mapFile);
-          const printableRatio = (mapText.match(/[\x20-\x7E\n\r\t]/g) || []).length / mapText.length;
-          if (printableRatio < 0.5) {
-            mapText = `[Binary PDF - filename: ${mapFile.name}, size: ${mapFile.size} bytes. PDF text extraction needed on server side.]`;
+          mapText = await extractPdfText(mapFile);
+          if (!mapText || mapText.length < 20) {
+            mapText = `[Scanned construction map PDF with minimal extractable text - filename: ${mapFile.name}. Construction maps are typically image-based.]`;
           }
-        } catch {
-          mapText = `[Could not read file: ${mapFile.name}]`;
+        } catch (pdfErr) {
+          console.warn('Map PDF extraction failed:', pdfErr);
+          mapText = `[PDF extraction failed for: ${mapFile.name}. Error: ${pdfErr.message}]`;
         }
       }
 
