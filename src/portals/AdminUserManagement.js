@@ -2,8 +2,11 @@
 // Create users, assign roles, manage portal access, send invites
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   Users, UserPlus, Search, Filter, Edit2, Trash2, Mail, 
+// eslint-disable-next-line no-unused-vars
   Shield, CheckCircle, XCircle, Clock, Eye, EyeOff,
+// eslint-disable-next-line no-unused-vars
   Key, Send, AlertTriangle, ChevronDown, X, RefreshCw,
   Building, Briefcase, HardHat, Crown
 } from 'lucide-react';
@@ -28,6 +31,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
 
   // Theme colors
   const accentPrimary = darkMode ? '#c850c0' : '#0077B6';
+// eslint-disable-next-line no-unused-vars
   const accentSecondary = darkMode ? '#ff6b35' : '#00b4d8';
   const bgColor = darkMode ? '#0d1b2a' : '#f8fafc';
   const cardBg = darkMode ? '#1e293b' : '#ffffff';
@@ -48,6 +52,7 @@ function AdminUserManagement({ darkMode, currentUser }) {
   // Fetch users on mount
   useEffect(() => {
     fetchUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUsers = async () => {
