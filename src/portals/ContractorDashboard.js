@@ -1,12 +1,13 @@
 // ContractorDashboard.js v2.4 - NotificationBell + Project Map Integration + Live Segment Stats
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
-import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User, Loader, Menu, X, Map } from 'lucide-react';
+import { LogOut, Briefcase, DollarSign, Settings, ChevronRight, CheckCircle, Activity, Truck, AlertTriangle, Shield, ShieldAlert, MapPin, Shovel, User, Loader, Menu, X, Map } from 'lucide-react';
 import { loadFullProject, getContractorSegments } from '../services/mapService';
-import { colors, LYT_INFO, URLS } from '../config/constants';
+import { colors } from '../config/constants';
 import NotificationBell from '../components/NotificationBell';
 
 // API URLs
+// eslint-disable-next-line no-unused-vars
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
