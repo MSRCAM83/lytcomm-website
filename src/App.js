@@ -47,6 +47,7 @@ import UserProfile from './portals/UserProfile';
 import JobImportPage from './pages/JobImportPage';
 import ProjectMapPage from './pages/ProjectMapPage';
 import AdminProjectDashboard from './pages/AdminProjectDashboard';
+import DailyProductionReport from './pages/DailyProductionReport';
 
 // Phase 9 - Field Assist Chat
 import FieldAssist from './components/Chat/FieldAssist';
@@ -161,6 +162,7 @@ function App() {
     'job-import',
     'project-map',
     'admin-projects',
+    'daily-report',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -229,6 +231,8 @@ function App() {
         return <ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       case 'admin-projects':
         return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+      case 'daily-report':
+        return <DailyProductionReport darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
@@ -237,7 +241,7 @@ function App() {
   // Pages that should show the Field Assist chat button
   const chatEnabledPages = [
     'employee-dashboard', 'contractor-dashboard', 'admin-dashboard',
-    'work-map', 'potholes', 'project-map', 'admin-projects', 'job-import',
+    'work-map', 'potholes', 'project-map', 'admin-projects', 'job-import', 'daily-report',
     'daily-worksheet', 'invoices', 'metrics',
   ];
   const showFieldAssist = loggedInUser && chatEnabledPages.includes(currentPage);
