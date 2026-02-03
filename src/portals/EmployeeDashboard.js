@@ -1,8 +1,9 @@
-// EmployeeDashboard.js v2.3 - Project Map nav + Mobile Responsive with Collapsible Sidebar
+// EmployeeDashboard.js v2.4 - NotificationBell + Project Map nav + Mobile Responsive
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
 import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle, Menu, X } from 'lucide-react';
 import { colors } from '../config/constants';
+import NotificationBell from '../components/NotificationBell';
 
 // API URLs
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
@@ -705,7 +706,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Field</span>
           </div>
-          <div style={{ width: '44px' }} />
+          <NotificationBell darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />
         </div>
       )}
 
