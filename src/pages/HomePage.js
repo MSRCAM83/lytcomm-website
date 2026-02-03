@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, CheckCircle, MapPin, Construction, Unplug, Radio, X, Play, Loader } from 'lucide-react';
+import { ChevronRight, Shield, Award, Users, Zap, LogIn, UserPlus, MapPin, Construction, Unplug, Radio, X, Play, Loader } from 'lucide-react';
 import { URLS } from '../config/constants';
 import { fillW4, fillW9, fillMSA, createFormPdf } from '../services/pdfService';
 
