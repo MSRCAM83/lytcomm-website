@@ -1,11 +1,15 @@
 /**
  * LYT Communications - Map & Project Configuration
- * Version: 1.0.0
+ * Version: 1.1.0
  * Created: 2026-02-02
+ * Updated: 2026-02-03
  * 
  * Central configuration for the Project Map System including
  * status colors, map icons, billing rates, and project constants.
  */
+
+// Google Maps API key (public, restricted by HTTP referrer to lytcomm.com)
+export const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyCbZXQimBAuIRXJQNq64VjF94FD35JOvLs';
 
 // Segment status color coding
 export const STATUS_COLORS = {
@@ -215,4 +219,4 @@ export const SHEETS_CONFIG = {
   issues: 'Issues',
 };
 
-// v1.0.0
+// v1.1.0
