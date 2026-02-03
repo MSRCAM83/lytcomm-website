@@ -1,4 +1,4 @@
-// UserProfile.js v2.1 - Direct CSV fetch, mobile hamburger, phone formatting
+// UserProfile.js v3.0.0 - Full self-service profile, password, notifications, emergency contact
 // Self-service profile management for employees and contractors
 import React, { useState, useEffect } from 'react';
 import { 
@@ -127,12 +127,27 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
     confirmPassword: '',
   });
 
-  const [notifications, setNotifications] = useState({
-    emailAlerts: true,
-    smsAlerts: false,
-    certExpiry: true,
-    newAssignments: true,
-    weeklyDigest: false,
+  const [notifications, setNotifications] = useState(() => {
+    // Load saved prefs from localStorage
+    try {
+      const saved = localStorage.getItem(`lyt_notif_prefs_${user?.email || 'default'}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) { /* ignore */ }
+    return {
+      emailAlerts: true,
+      smsAlerts: false,
+      certExpiry: true,
+      newAssignments: true,
+      weeklyDigest: false,
+    };
+  });
+  const [notifDirty, setNotifDirty] = useState(false);
+
+  // Emergency contact state
+  const [emergencyContact, setEmergencyContact] = useState({
+    name: '',
+    phone: '',
+    relationship: '',
   });
 
   // Fetch user data on mount
@@ -164,9 +179,25 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
           phone: formatPhoneNumber(foundUser.phone || ''),
           role: foundUser.role || '',
           status: foundUser.status || 'active',
-          createdAt: foundUser.createdAt || '',
-          lastLogin: foundUser.lastLogin || ''
+          createdAt: foundUser.createdAt || foundUser.created_at || '',
+          lastLogin: foundUser.lastLogin || foundUser.last_login || ''
         });
+        // Load emergency contact if stored
+        if (foundUser.emergency_contact_name || foundUser.emergency_contact_phone) {
+          setEmergencyContact({
+            name: foundUser.emergency_contact_name || '',
+            phone: formatPhoneNumber(foundUser.emergency_contact_phone || ''),
+            relationship: foundUser.emergency_contact_relationship || '',
+          });
+        }
+        // Load notification prefs from server (overrides localStorage if present)
+        if (foundUser.notification_prefs) {
+          try {
+            const prefs = JSON.parse(foundUser.notification_prefs);
+            setNotifications(prev => ({ ...prev, ...prefs }));
+            localStorage.setItem(`lyt_notif_prefs_${currentUser.email}`, JSON.stringify({ ...notifications, ...prefs }));
+          } catch (e) { /* ignore parse errors */ }
+        }
       } else {
         // Use data from loggedInUser if not found in sheet
         const nameParts = (currentUser.name || '').split(' ');
@@ -197,7 +228,74 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
   };
 
   const handleNotificationChange = (field) => {
-    setNotifications(prev => ({ ...prev, [field]: !prev[field] }));
+    setNotifications(prev => {
+      const updated = { ...prev, [field]: !prev[field] };
+      // Persist to localStorage immediately
+      try {
+        localStorage.setItem(`lyt_notif_prefs_${currentUser?.email || 'default'}`, JSON.stringify(updated));
+      } catch (e) { /* ignore */ }
+      return updated;
+    });
+    setNotifDirty(true);
+  };
+
+  const handleSaveNotifications = async () => {
+    setSaving(true);
+    try {
+      await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'updateUser',
+          email: profileData.email,
+          updates: {
+            notification_prefs: JSON.stringify(notifications)
+          }
+        })
+      });
+      setMessage({ type: 'success', text: 'Notification preferences saved!' });
+      setNotifDirty(false);
+    } catch (err) {
+      // localStorage is already saved, so prefs still persist locally
+      setMessage({ type: 'success', text: 'Preferences saved locally!' });
+      setNotifDirty(false);
+    }
+    setSaving(false);
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleSaveEmergencyContact = async () => {
+    setSaving(true);
+    try {
+      await fetchWithRedirect(GATEWAY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'updateUser',
+          email: profileData.email,
+          updates: {
+            emergency_contact_name: emergencyContact.name,
+            emergency_contact_phone: emergencyContact.phone,
+            emergency_contact_relationship: emergencyContact.relationship,
+          }
+        })
+      });
+      setMessage({ type: 'success', text: 'Emergency contact saved!' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to save emergency contact' });
+    }
+    setSaving(false);
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleLogout = () => {
+    // Clear session data
+    try {
+      localStorage.removeItem('lytLoggedInUser');
+      sessionStorage.clear();
+    } catch (e) { /* ignore */ }
+    window.location.hash = '';
+    window.location.reload();
   };
 
   const handleSaveProfile = async () => {
@@ -345,6 +443,40 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
           </div>
         </div>
       </div>
+
+      {/* Emergency Contact */}
+      <div style={{ marginTop: '32px', padding: '20px', backgroundColor: darkMode ? '#1a2633' : '#fff5f5', borderRadius: '12px', border: `1px solid ${darkMode ? '#374151' : '#fed7d7'}` }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', color: textColor, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Phone size={18} style={{ color: '#ef4444' }} /> Emergency Contact
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Contact Name</label>
+            <input type="text" value={emergencyContact.name} onChange={(e) => setEmergencyContact(prev => ({ ...prev, name: e.target.value }))} disabled={!editing} placeholder="Jane Doe" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Contact Phone</label>
+            <input type="tel" value={emergencyContact.phone} onChange={(e) => setEmergencyContact(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))} disabled={!editing} placeholder="(000) 000-0000" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Relationship</label>
+            <select value={emergencyContact.relationship} onChange={(e) => setEmergencyContact(prev => ({ ...prev, relationship: e.target.value }))} disabled={!editing} style={{ ...inputStyle, backgroundColor: editing ? '#ffffff' : (darkMode ? '#374151' : '#f3f4f6'), color: '#1e293b' }}>
+              <option value="">Select...</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Parent">Parent</option>
+              <option value="Sibling">Sibling</option>
+              <option value="Child">Child</option>
+              <option value="Friend">Friend</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        {editing && (
+          <button onClick={handleSaveEmergencyContact} disabled={saving || !emergencyContact.name || !emergencyContact.phone} style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: (saving || !emergencyContact.name) ? 'not-allowed' : 'pointer', opacity: (saving || !emergencyContact.name) ? 0.6 : 1, fontWeight: '500' }}>
+            {saving ? <Loader size={16} /> : <Save size={16} />} Save Emergency Contact
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -371,16 +503,51 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
               {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          {passwordData.newPassword && passwordData.newPassword.length < 8 && (
+            <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px' }}>Password must be at least 8 characters</div>
+          )}
+          {passwordData.newPassword && passwordData.newPassword.length >= 8 && (
+            <div style={{ color: accentSecondary, fontSize: '0.8rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <CheckCircle size={14} /> Strong enough
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', marginBottom: '8px', color: mutedColor, fontSize: '0.9rem' }}>Confirm New Password</label>
           <input type="password" value={passwordData.confirmPassword} onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)} style={{ ...inputStyle, backgroundColor: '#ffffff', color: '#1e293b' }} />
+          {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+            <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px' }}>Passwords do not match</div>
+          )}
         </div>
 
-        <button onClick={handleChangePassword} disabled={saving || !passwordData.newPassword} style={{ width: '100%', padding: '14px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: (saving || !passwordData.newPassword) ? 'not-allowed' : 'pointer', opacity: (saving || !passwordData.newPassword) ? 0.7 : 1, fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <button onClick={handleChangePassword} disabled={saving || !passwordData.newPassword || passwordData.newPassword.length < 8 || passwordData.newPassword !== passwordData.confirmPassword} style={{ width: '100%', padding: '14px', backgroundColor: accentPrimary, color: '#fff', border: 'none', borderRadius: '8px', cursor: (saving || !passwordData.newPassword) ? 'not-allowed' : 'pointer', opacity: (saving || !passwordData.newPassword || passwordData.newPassword.length < 8) ? 0.7 : 1, fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
           {saving ? <Loader size={18} /> : <Lock size={18} />}
           {saving ? 'Changing...' : 'Change Password'}
+        </button>
+      </div>
+
+      {/* Session & Logout */}
+      <div style={{ marginTop: '40px', padding: '20px', backgroundColor: darkMode ? '#1a2633' : '#f8fafc', borderRadius: '12px' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', color: textColor, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Shield size={18} /> Session Information
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <span style={{ color: mutedColor, fontSize: '0.85rem' }}>Logged in as</span>
+            <p style={{ color: textColor, fontWeight: '500' }}>{currentUser?.email || 'N/A'}</p>
+          </div>
+          <div>
+            <span style={{ color: mutedColor, fontSize: '0.85rem' }}>Role</span>
+            <p style={{ color: textColor, fontWeight: '500', textTransform: 'capitalize' }}>{currentUser?.role || profileData.role || 'N/A'}</p>
+          </div>
+          <div>
+            <span style={{ color: mutedColor, fontSize: '0.85rem' }}>Session Started</span>
+            <p style={{ color: textColor }}>{new Date().toLocaleString()}</p>
+          </div>
+        </div>
+        <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'transparent', border: `2px solid #ef4444`, borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontWeight: '600', minHeight: '44px' }}>
+          <LogOut size={18} /> Sign Out
         </button>
       </div>
     </div>
@@ -388,26 +555,42 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
 
   const renderNotifications = () => (
     <div>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: textColor, marginBottom: '24px' }}>Notification Preferences</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: textColor }}>Notification Preferences</h3>
+        {notifDirty && (
+          <button onClick={handleSaveNotifications} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: accentSecondary, border: 'none', borderRadius: '8px', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '500', opacity: saving ? 0.7 : 1 }}>
+            {saving ? <Loader size={16} /> : <Save size={16} />} Save
+          </button>
+        )}
+      </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {[
-          { key: 'emailAlerts', label: 'Email Alerts', desc: 'Receive important notifications via email' },
-          { key: 'smsAlerts', label: 'SMS Alerts', desc: 'Receive urgent notifications via text' },
-          { key: 'certExpiry', label: 'Certification Expiry', desc: 'Notify when certifications are expiring' },
-          { key: 'newAssignments', label: 'New Assignments', desc: 'Notify when assigned to new projects' },
-          { key: 'weeklyDigest', label: 'Weekly Digest', desc: 'Receive weekly summary of activities' },
+          { key: 'emailAlerts', label: 'Email Alerts', desc: 'Receive important notifications via email', icon: Mail },
+          { key: 'smsAlerts', label: 'SMS Alerts', desc: 'Receive urgent notifications via text message', icon: Smartphone },
+          { key: 'certExpiry', label: 'Certification Expiry', desc: 'Notify when certifications are about to expire', icon: Award },
+          { key: 'newAssignments', label: 'New Assignments', desc: 'Notify when assigned to new projects or segments', icon: FileText },
+          { key: 'weeklyDigest', label: 'Weekly Digest', desc: 'Receive a weekly summary of activities', icon: Calendar },
         ].map((item) => (
           <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: darkMode ? '#1a2633' : '#f8fafc', borderRadius: '8px' }}>
-            <div>
-              <div style={{ fontWeight: '500', color: textColor }}>{item.label}</div>
-              <div style={{ fontSize: '0.85rem', color: mutedColor }}>{item.desc}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <item.icon size={20} style={{ color: notifications[item.key] ? accentPrimary : mutedColor, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: '500', color: textColor }}>{item.label}</div>
+                <div style={{ fontSize: '0.85rem', color: mutedColor }}>{item.desc}</div>
+              </div>
             </div>
-            <button onClick={() => handleNotificationChange(item.key)} style={{ width: '50px', height: '28px', borderRadius: '14px', backgroundColor: notifications[item.key] ? accentSecondary : mutedColor, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background-color 0.2s' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#fff', position: 'absolute', top: '3px', left: notifications[item.key] ? '25px' : '3px', transition: 'left 0.2s' }} />
+            <button onClick={() => handleNotificationChange(item.key)} style={{ width: '50px', height: '28px', borderRadius: '14px', backgroundColor: notifications[item.key] ? accentSecondary : mutedColor, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background-color 0.2s', flexShrink: 0 }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#fff', position: 'absolute', top: '3px', left: notifications[item.key] ? '25px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
             </button>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? '#1a2633' : '#f0f9ff', borderRadius: '8px', border: `1px solid ${darkMode ? '#374151' : '#bae6fd'}` }}>
+        <p style={{ fontSize: '0.85rem', color: mutedColor, margin: 0 }}>
+          💡 <strong>Tip:</strong> Email alerts are sent to {profileData.email || 'your registered email'}. To change your notification email, update your profile in the Profile tab.
+        </p>
       </div>
     </div>
   );
@@ -542,7 +725,7 @@ const UserProfile = ({ darkMode, setDarkMode, user, setCurrentPage, loggedInUser
       {/* Version */}
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px' }}>
-          UserProfile v2.1
+          UserProfile v3.0.0
         </div>
       )}
     </div>
