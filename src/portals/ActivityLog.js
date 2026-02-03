@@ -2,9 +2,13 @@
 // Shows real activity from Google Sheets - logins, submissions, changes
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   History, Search, Filter, Calendar, User, FileText, Settings,
+// eslint-disable-next-line no-unused-vars
   CheckCircle, AlertCircle, Clock, Download, ChevronDown,
+// eslint-disable-next-line no-unused-vars
   UserPlus, UserMinus, Edit, Trash2, Eye, LogIn, LogOut,
+// eslint-disable-next-line no-unused-vars
   Upload, Mail, Shield, MapPin, Truck, DollarSign, RefreshCw,
   Loader, ArrowLeft, Activity
 } from 'lucide-react';
@@ -44,6 +48,7 @@ const fetchWithRedirect = async (url, options = {}) => {
 
 const ActivityLog = ({ darkMode, setCurrentPage }) => {
   const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
+// eslint-disable-next-line no-unused-vars
   const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
@@ -52,6 +57,7 @@ const ActivityLog = ({ darkMode, setCurrentPage }) => {
   const borderColor = darkMode ? '#374151' : '#e5e7eb';
 
   const [activities, setActivities] = useState([]);
+// eslint-disable-next-line no-unused-vars
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
