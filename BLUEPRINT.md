@@ -1044,3 +1044,10 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 - FIXED: pdf.js worker URL pinned to CDN-available v4.8.69 (was returning 404)
 - Leaflet (raw) kept for ProjectMapPage - no React peer dep conflict
 - pdfjs-dist v4.8.69 for PDF text extraction in JobImportPage
+
+## v3.18.0 — Vision AI PDF Extraction (2026-02-03)
+- JobImportPage v3.0.0: Renders PDF pages to canvas images (JPEG), sends to Claude Vision API
+- pdf-import v2.0.0: Accepts base64 image arrays, uses Claude vision for scanned/image PDF extraction
+- vercel.json: 60s timeout + 1GB memory for pdf-import function
+- Payload optimization: JPEG @ 0.55 quality, 5 WO pages + 8 map pages max, size guard < 4.2MB
+- Fixes: scanned PDFs that returned all-zeros now work via visual reading
