@@ -445,6 +445,64 @@ export function getProjectStats(segments) {
 }
 
 /**
+ * Bulk assign segments to a contractor for a given work type.
+ * Updates the assigned_to field for boring/pulling/splicing on multiple segments.
+ */
+export async function bulkAssignSegments(segmentIds, workType, contractorName, projectId) {
+  const online = await checkDbConnection();
+  if (!online) return { success: false, error: 'Database offline' };
+
+  const fieldMap = {
+    boring: 'boring_assigned_to',
+    pulling: 'pulling_assigned_to',
+    splicing: 'splicing_assigned_to',
+  };
+  const field = fieldMap[workType];
+  if (!field) return { success: false, error: `Invalid work type: ${workType}` };
+
+  let updated = 0;
+  const errors = [];
+
+  for (const segId of segmentIds) {
+    try {
+      const ok = await updateSegmentField(segId, field, contractorName);
+      if (ok) updated++;
+      else errors.push(`Failed: ${segId}`);
+    } catch (err) {
+      errors.push(`${segId}: ${err.message}`);
+    }
+  }
+
+  // Also create an assignment record
+  try {
+    const assignmentId = `ASGN-${Date.now()}`;
+    await appendRow(DB.ASSIGNMENTS, [[
+      assignmentId,
+      projectId || '',
+      contractorName,
+      '',
+      workType,
+      JSON.stringify(segmentIds),
+      '',
+      new Date().toISOString(),
+      '',
+      'Medium',
+      'Assigned',
+      `Bulk assigned ${segmentIds.length} segments`,
+    ]]);
+  } catch (err) {
+    console.warn('[mapService] Assignment record failed:', err);
+  }
+
+  return {
+    success: errors.length === 0,
+    updated,
+    total: segmentIds.length,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
  * Import a full project (project + segments + splice points) from AI extraction.
  * Batch-writes all data to Google Sheets via Gateway.
  * Returns { success, counts, errors }
