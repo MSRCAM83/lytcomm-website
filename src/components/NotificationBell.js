@@ -19,7 +19,7 @@ import {
   checkExpirations,
   addNotification,
   SEVERITY,
-} from '../../services/notificationService';
+} from '../services/notificationService';
 
 const SEVERITY_COLORS = {
   info: '#2196F3',
