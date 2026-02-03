@@ -1,32 +1,40 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 2.2.0
+ * Version: 3.0.0
  * Updated: 2026-02-03
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
- * Uses pdf.js for real text extraction from PDFs.
- * AI extracts project metadata, segments, splice points,
- * and matches to rate cards for billing.
+ * v3.0.0: Renders PDF pages to images (canvas → base64) and sends
+ *         to Claude Vision API so scanned/image-based PDFs work.
+ *         Also extracts text as fallback for text-based PDFs.
  */
 
 import React, { useState, useCallback } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp, Image, Eye } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker - use pinned CDN version that actually exists
+// Configure pdf.js worker - pinned CDN version
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
+
+// Max pages to render as images (Claude has image limits)
+const MAX_PAGES = 20;
+// Render scale for page images (1.5 = good quality without huge size)
+const RENDER_SCALE = 1.5;
 
 function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [workOrderFile, setWorkOrderFile] = useState(null);
   const [mapFile, setMapFile] = useState(null);
   const [rateCardId, setRateCardId] = useState('vexus-la-tx-2026');
   const [processing, setProcessing] = useState(false);
+  const [progressMsg, setProgressMsg] = useState('');
   const [importResult, setImportResult] = useState(null);
   const [error, setError] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [dragOverWork, setDragOverWork] = useState(false);
   const [dragOverMap, setDragOverMap] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [previewImages, setPreviewImages] = useState([]);
 
   const bg = darkMode ? '#0d1b2a' : '#ffffff';
   const cardBg = darkMode ? '#112240' : '#f8fafc';
@@ -34,10 +42,66 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const text = darkMode ? '#ffffff' : '#1e293b';
   const textMuted = darkMode ? '#8892b0' : '#64748b';
   const accent = darkMode ? '#c850c0' : '#0077B6';
-  // eslint-disable-next-line no-unused-vars
-  const accentHover = darkMode ? '#e060d8' : '#005a8c';
   const successGreen = '#28a745';
   const errorRed = '#e85a4f';
+
+  /**
+   * Render a PDF file's pages to base64 PNG images + extract text
+   * Returns { images: string[], text: string, pageCount: number }
+   */
+  const processPdf = async (file, label) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pageCount = pdf.numPages;
+    const pagesToRender = Math.min(pageCount, MAX_PAGES);
+
+    const images = [];
+    let fullText = '';
+
+    for (let i = 1; i <= pagesToRender; i++) {
+      setProgressMsg(`${label}: Rendering page ${i}/${pagesToRender}...`);
+      const page = await pdf.getPage(i);
+
+      // Extract text (may be empty for scanned PDFs)
+      try {
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(' ').trim();
+        if (pageText.length > 5) {
+          fullText += `\n--- Page ${i} ---\n${pageText}`;
+        }
+      } catch (e) {
+        console.warn(`Text extraction failed for page ${i}:`, e);
+      }
+
+      // Render page to canvas → base64 PNG
+      try {
+        const viewport = page.getViewport({ scale: RENDER_SCALE });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // Convert to base64 (strip the data:image/png;base64, prefix)
+        const dataUrl = canvas.toDataURL('image/png', 0.85);
+        const base64 = dataUrl.split(',')[1];
+        images.push(base64);
+
+        // Cleanup
+        canvas.width = 0;
+        canvas.height = 0;
+      } catch (renderErr) {
+        console.warn(`Page ${i} render failed:`, renderErr);
+      }
+    }
+
+    if (pageCount > MAX_PAGES) {
+      fullText += `\n\n[NOTE: PDF has ${pageCount} pages but only first ${MAX_PAGES} were processed]`;
+    }
+
+    return { images, text: fullText.trim(), pageCount };
+  };
 
   // File drop handlers
   const handleDrop = useCallback((e, type) => {
@@ -88,71 +152,72 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setProcessing(true);
     setError(null);
     setImportResult(null);
+    setProgressMsg('Starting PDF processing...');
 
     try {
-      // Extract text from PDFs using pdf.js
-      const extractPdfText = async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map(item => item.str).join(' ');
-          fullText += `\n--- Page ${i} ---\n${pageText}`;
-        }
-        return fullText.trim();
-      };
-
-      let workOrderText = '';
-      let mapText = '';
-      
+      // Process work order PDF → images + text
+      let woImages = [];
+      let woText = '';
       try {
-        workOrderText = await extractPdfText(workOrderFile);
-        if (!workOrderText || workOrderText.length < 20) {
-          workOrderText = `[Scanned PDF with minimal extractable text - filename: ${workOrderFile.name}, size: ${workOrderFile.size} bytes, pages: unknown. The PDF may be image-based and require OCR.]`;
-        }
+        setProgressMsg('Processing work order PDF...');
+        const woResult = await processPdf(workOrderFile, 'Work Order');
+        woImages = woResult.images;
+        woText = woResult.text;
+        setProgressMsg(`Work order: ${woResult.pageCount} pages processed (${woImages.length} images, ${woText.length > 30 ? 'text found' : 'image-only'})`);
       } catch (pdfErr) {
-        console.warn('PDF text extraction failed:', pdfErr);
-        workOrderText = `[PDF extraction failed for: ${workOrderFile.name}. Error: ${pdfErr.message}]`;
+        console.error('Work order PDF processing failed:', pdfErr);
+        setError(`Failed to process work order PDF: ${pdfErr.message}`);
+        setProcessing(false);
+        return;
       }
 
+      // Process construction map PDF → images + text
+      let mapImages = [];
+      let mapText = '';
       if (mapFile) {
         try {
-          mapText = await extractPdfText(mapFile);
-          if (!mapText || mapText.length < 20) {
-            mapText = `[Scanned construction map PDF with minimal extractable text - filename: ${mapFile.name}. Construction maps are typically image-based.]`;
-          }
+          setProgressMsg('Processing construction map PDF...');
+          const mapResult = await processPdf(mapFile, 'Map');
+          mapImages = mapResult.images;
+          mapText = mapResult.text;
+          setProgressMsg(`Map: ${mapResult.pageCount} pages processed (${mapImages.length} images)`);
         } catch (pdfErr) {
-          console.warn('Map PDF extraction failed:', pdfErr);
-          mapText = `[PDF extraction failed for: ${mapFile.name}. Error: ${pdfErr.message}]`;
+          console.warn('Map PDF processing failed:', pdfErr);
+          // Non-fatal - continue with work order only
         }
       }
 
-      // Call the AI extraction API
+      // Validate we have something to send
+      if (woImages.length === 0 && woText.length < 30 && mapImages.length === 0) {
+        setError('Could not extract any content from the PDF. Please check the file.');
+        setProcessing(false);
+        return;
+      }
+
+      setProgressMsg(`Sending ${woImages.length + mapImages.length} page images to AI for extraction...`);
+
+      // Call the AI extraction API with images
       const response = await fetch('/api/pdf-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          work_order_text: workOrderText,
-          map_text: mapText || undefined,
+          work_order_text: woText.length > 30 ? woText : undefined,
+          work_order_images: woImages.length > 0 ? woImages : undefined,
+          map_text: mapText.length > 30 ? mapText : undefined,
+          map_images: mapImages.length > 0 ? mapImages : undefined,
           rate_card_id: rateCardId,
-          customer: 'VXS',
-          market: 'SLPH01',
-          build: '006',
         }),
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `API returned ${response.status}`);
+        throw new Error(errData.error || errData.details || `API returned ${response.status}`);
       }
 
       const data = await response.json();
       
       if (data.warning) {
-        // AI returned non-JSON, show raw response for debugging
-        setError(`AI extraction returned unexpected format. Raw response available in console.`);
+        setError(`AI extraction returned unexpected format. Check console for details.`);
         console.warn('Raw AI response:', data.raw_response);
         setProcessing(false);
         return;
@@ -162,10 +227,10 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         throw new Error('No extraction data returned');
       }
 
+      setProgressMsg('Building project preview...');
+
       const ext = data.extracted;
-      
-      // Build the import result in the expected format
-      const projectId = ext.project?.project_id || `VXS-SLPH01-006`;
+      const projectId = ext.project?.project_id || 'VXS-SLPH01-006';
       
       const result = {
         project: {
@@ -210,10 +275,12 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           totalSplicePoints: ext.total_splice_points || (ext.splice_points || []).length,
           estimatedValue: ext.grand_total || ext.project?.total_value || 0,
         },
-        _raw: ext, // Keep raw data for debugging
+        _usage: data.usage,
+        _raw: ext,
       };
 
       setImportResult(result);
+      setProgressMsg('');
     } catch (err) {
       setError(`Import failed: ${err.message}`);
       console.error('Import error:', err);
@@ -232,7 +299,6 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       
       const projectId = importResult.project.project_id;
       
-      // Prepare segments for DB (strip display formatting, pass raw data)
       const segmentsForDb = importResult.segments.map(seg => ({
         contractor_id: seg.contractor_id,
         section: seg.section,
@@ -242,7 +308,6 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         street: seg.street,
       }));
 
-      // Prepare splice points for DB
       const splicesForDb = importResult.splice_points.map(sp => ({
         contractor_id: sp.contractor_id,
         location: sp.location,
@@ -387,10 +452,15 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           border: `1px solid ${borderColor}`,
         }}>
           <h2 style={{ margin: '0 0 8px', fontSize: '1.1rem' }}>
+            <Image size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
             Step 1: Upload PDFs
           </h2>
-          <p style={{ color: textMuted, margin: '0 0 20px', fontSize: '0.9rem' }}>
-            Upload the Metronet work order and construction map PDFs. The AI will extract all project data automatically.
+          <p style={{ color: textMuted, margin: '0 0 6px', fontSize: '0.9rem' }}>
+            Upload the work order and construction map PDFs. Pages are rendered as images so the AI can <strong>visually read</strong> scanned maps and drawings.
+          </p>
+          <p style={{ color: accent, margin: '0 0 20px', fontSize: '0.8rem' }}>
+            <Eye size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+            Vision-powered extraction — works with scanned PDFs, engineering drawings, and image-based documents
           </p>
           
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
@@ -454,11 +524,11 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             padding: '12px 16px',
             marginBottom: '24px',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: '10px',
           }}>
-            <AlertCircle size={20} color={errorRed} />
-            <span style={{ color: errorRed }}>{error}</span>
+            <AlertCircle size={20} color={errorRed} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span style={{ color: errorRed, whiteSpace: 'pre-wrap' }}>{error}</span>
           </div>
         )}
 
@@ -481,21 +551,38 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               gap: '10px',
               width: '100%',
               justifyContent: 'center',
-              marginBottom: '24px',
+              marginBottom: '16px',
             }}
           >
             {processing ? (
               <>
                 <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                Processing with AI...
+                {progressMsg || 'Processing...'}
               </>
             ) : (
               <>
-                <Upload size={20} />
-                Extract Project Data
+                <Eye size={20} />
+                Extract Project Data (Vision AI)
               </>
             )}
           </button>
+        )}
+
+        {/* Progress indicator */}
+        {processing && progressMsg && (
+          <div style={{
+            backgroundColor: darkMode ? '#0a1628' : '#eff6ff',
+            border: `1px solid ${accent}40`,
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '24px',
+            textAlign: 'center',
+          }}>
+            <p style={{ color: accent, margin: 0, fontSize: '0.9rem' }}>
+              <Loader size={14} style={{ verticalAlign: 'middle', marginRight: '8px', animation: 'spin 1s linear infinite' }} />
+              {progressMsg}
+            </p>
+          </div>
         )}
 
         {/* Step 3: Import Preview */}
@@ -512,6 +599,13 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               Step 3: Review Extracted Data
             </h2>
 
+            {/* AI Usage Stats */}
+            {importResult._usage && (
+              <p style={{ color: textMuted, fontSize: '0.75rem', margin: '0 0 16px' }}>
+                AI tokens used: {importResult._usage.input_tokens?.toLocaleString()} in / {importResult._usage.output_tokens?.toLocaleString()} out
+              </p>
+            )}
+
             {/* Project Summary */}
             <div style={{
               backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
@@ -527,14 +621,14 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                   ['Customer', importResult.project.customer],
                   ['Project Name', importResult.project.project_name],
                   ['PO Number', importResult.project.po_number],
-                  ['Total Value', `$${importResult.project.total_value.toLocaleString()}`],
+                  ['Total Value', `$${(importResult.project.total_value || 0).toLocaleString()}`],
                   ['Start Date', importResult.project.start_date],
                   ['Completion Date', importResult.project.completion_date],
                   ['Rate Card', importResult.project.rate_card_id],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p style={{ color: textMuted, fontSize: '0.8rem', margin: '0 0 2px' }}>{label}</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{value}</p>
+                    <p style={{ margin: 0, fontWeight: 500 }}>{value || '—'}</p>
                   </div>
                 ))}
               </div>
@@ -544,9 +638,9 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {[
                 ['Segments', importResult.stats.totalSegments, accent],
-                ['Total Footage', `${importResult.stats.totalFootage.toLocaleString()} LF`, '#FFB800'],
+                ['Total Footage', `${(importResult.stats.totalFootage || 0).toLocaleString()} LF`, '#FFB800'],
                 ['Splice Points', importResult.stats.totalSplicePoints, '#4CAF50'],
-                ['Est. Value', `$${importResult.stats.estimatedValue.toLocaleString()}`, successGreen],
+                ['Est. Value', `$${(importResult.stats.estimatedValue || 0).toLocaleString()}`, successGreen],
               ].map(([label, value, color]) => (
                 <div key={label} style={{
                   backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
@@ -591,27 +685,32 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               </button>
               {expandedSection === 'segments' && (
                 <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                        {['ID', 'Section', 'From', 'To', 'Footage', 'Street'].map(h => (
-                          <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importResult.segments.map(seg => (
-                        <tr key={seg.segment_id} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{seg.contractor_id}</td>
-                          <td style={{ padding: '8px' }}>{seg.section}</td>
-                          <td style={{ padding: '8px' }}>{seg.from_handhole}</td>
-                          <td style={{ padding: '8px' }}>{seg.to_handhole}</td>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>{seg.footage} LF</td>
-                          <td style={{ padding: '8px' }}>{seg.street}</td>
+                  {importResult.segments.length === 0 ? (
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No segments extracted. The map may need clearer labeling.</p>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                          {['ID', 'Section', 'From', 'To', 'Footage', 'Street', 'Value'].map(h => (
+                            <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {importResult.segments.map((seg, i) => (
+                          <tr key={seg.segment_id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{seg.contractor_id}</td>
+                            <td style={{ padding: '8px' }}>{seg.section}</td>
+                            <td style={{ padding: '8px' }}>{seg.from_handhole}</td>
+                            <td style={{ padding: '8px' }}>{seg.to_handhole}</td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{seg.footage} LF</td>
+                            <td style={{ padding: '8px' }}>{seg.street}</td>
+                            <td style={{ padding: '8px', color: successGreen }}>${(seg.total_value || 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </div>
@@ -644,26 +743,31 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               </button>
               {expandedSection === 'splices' && (
                 <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                        {['Location', 'Handhole', 'Type', 'Position', 'Fibers'].map(h => (
-                          <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importResult.splice_points.map(sp => (
-                        <tr key={sp.splice_id} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>{sp.location}</td>
-                          <td style={{ padding: '8px' }}>{sp.handhole_type}</td>
-                          <td style={{ padding: '8px' }}>{sp.splice_type}</td>
-                          <td style={{ padding: '8px' }}>{sp.position_type}</td>
-                          <td style={{ padding: '8px' }}>{sp.fiber_count}</td>
+                  {importResult.splice_points.length === 0 ? (
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No splice points extracted.</p>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                          {['Location', 'Handhole', 'Type', 'Position', 'Fibers', 'Value'].map(h => (
+                            <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {importResult.splice_points.map((sp, i) => (
+                          <tr key={sp.splice_id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{sp.location}</td>
+                            <td style={{ padding: '8px' }}>{sp.handhole_type}</td>
+                            <td style={{ padding: '8px' }}>{sp.splice_type}</td>
+                            <td style={{ padding: '8px' }}>{sp.position_type}</td>
+                            <td style={{ padding: '8px' }}>{sp.fiber_count}</td>
+                            <td style={{ padding: '8px', color: successGreen }}>${(sp.total_value || 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </div>
@@ -723,7 +827,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       <div style={{ position: 'fixed', bottom: '4px', right: '8px', fontSize: '0.6rem', color: 'transparent', userSelect: 'none' }}
         onDoubleClick={(e) => { e.target.style.color = textMuted; }}
       >
-        JobImportPage v2.0.0
+        JobImportPage v3.0.0
       </div>
     </div>
   );
