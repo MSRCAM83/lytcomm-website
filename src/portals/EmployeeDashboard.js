@@ -1,4 +1,4 @@
-// EmployeeDashboard.js v2.2 - Mobile Responsive with Collapsible Sidebar
+// EmployeeDashboard.js v2.3 - Project Map nav + Mobile Responsive with Collapsible Sidebar
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
 import { LogOut, Clock, Briefcase, FileText, Settings, Bell, Play, Square, Calendar, MapPin, ChevronRight, Download, Folder, Camera, HardHat, Activity, Plus, AlertTriangle, Truck, Zap, Phone, Award, Upload, Eye, ShieldAlert, Shovel, User, RefreshCw, Loader, CheckCircle, Menu, X } from 'lucide-react';
@@ -325,6 +325,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
     { id: 'dashboard', label: 'Dashboard', icon: Clock },
     { id: 'profile', label: 'My Profile', icon: User, external: 'profile' },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
+    { id: 'project-map', label: 'Project Map', icon: MapPin, external: 'project-map' },
     { id: 'potholes', label: 'Pothole Docs', icon: Shovel, external: 'potholes' },
     { id: 'production', label: 'Daily Production', icon: Activity },
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
@@ -815,7 +816,7 @@ const EmployeeDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, dark
       {/* Version Number - Triple Click to Show */}
       {showVersion && (
         <div style={{ position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5, color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px', zIndex: 9999 }}>
-          EmployeeDashboard v2.2
+          EmployeeDashboard v2.3
         </div>
       )}
     </div>
