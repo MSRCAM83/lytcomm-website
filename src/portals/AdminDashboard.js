@@ -204,6 +204,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     { id: 'project-map', label: 'Interactive Map', icon: Map, external: 'project-map' },
     { id: 'admin-projects', label: 'Projects Overview', icon: FolderOpen, external: 'admin-projects' },
     { id: 'job-import', label: 'Import Work Orders', icon: Upload, external: 'job-import' },
+    { id: 'daily-report', label: 'Daily Report', icon: FileText, external: 'daily-report' },
     { id: 'divider-field', label: '── Field Operations ──', divider: true },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
     { id: 'potholes', label: 'Pothole Approvals', icon: Shovel, external: 'potholes' },
