@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Crew GPS Tracker Component
- * Version: 1.0.0
+ * Version: 1.1.0
  * Created: 2026-02-03
  *
  * Shows real-time crew GPS positions on the project map.
@@ -20,6 +20,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { Navigation, Users, Battery, Signal, MapPin, Clock, Activity, X } from 'lucide-react';
 import { startTracking, stopTracking, isTracking, getCurrentPosition, findNearestSegment, calculateDistance } from '../../services/gpsService';
+import { logAction } from '../../services/mapService';
 
 // Crew type colors
 const CREW_COLORS = {
@@ -79,9 +80,24 @@ const CrewTracker = ({ segments = [], darkMode = true, isAdmin = false, user = n
           setMyPosition(pos);
           setError(null);
           // Find nearest segment
+          let nearestInfo = null;
           if (segments.length > 0) {
-            const nearest = findNearestSegment(pos, segments);
-            setNearestSeg(nearest);
+            nearestInfo = findNearestSegment(pos, segments);
+            setNearestSeg(nearestInfo);
+          }
+          // Report position to Google Sheets Work Log (throttled - every 5th update)
+          if (!window._gpsReportCount) window._gpsReportCount = 0;
+          window._gpsReportCount++;
+          if (window._gpsReportCount % 5 === 1) {
+            const userEmail = window.lytUser?.email || 'unknown';
+            const projectId = segments[0]?.project_id || 'unknown';
+            const segId = nearestInfo?.segment?.segment_id || '';
+            logAction(projectId, segId, userEmail, 'GPS Update', JSON.stringify({
+              lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy,
+              speed: pos.speed, isMoving: pos.isMoving,
+              nearestSegment: nearestInfo?.segment?.segment_id || null,
+              nearestDistance: nearestInfo?.distance ? Math.round(nearestInfo.distance) : null,
+            }), { lat: pos.lat, lng: pos.lng }).catch(() => {/* silent - don't break tracking on log failure */});
           }
         },
         onError: (msg) => setError(msg),
@@ -287,7 +303,7 @@ const CrewTracker = ({ segments = [], darkMode = true, isAdmin = false, user = n
 
       {/* Hidden version - triple click */}
       <div
-        onClick={(e) => { if (e.detail === 3) alert('CrewTracker v1.0.0'); }}
+        onClick={(e) => { if (e.detail === 3) alert('CrewTracker v1.1.0'); }}
         style={{ height: 1, opacity: 0 }}
       />
     </div>
