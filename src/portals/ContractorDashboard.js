@@ -1,9 +1,10 @@
-// ContractorDashboard.js v2.3 - Project Map Integration + Live Segment Stats
+// ContractorDashboard.js v2.4 - NotificationBell + Project Map Integration + Live Segment Stats
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
 import { LogOut, Briefcase, FileText, DollarSign, Upload, Users, Wrench, Settings, ChevronRight, Plus, Download, CheckCircle, Clock, AlertCircle, Activity, Truck, Camera, Zap, Phone, Eye, AlertTriangle, Shield, ShieldAlert, Award, MapPin, Shovel, User, Loader, Menu, X, Map } from 'lucide-react';
 import { loadFullProject, getContractorSegments } from '../services/mapService';
 import { colors, LYT_INFO, URLS } from '../config/constants';
+import NotificationBell from '../components/NotificationBell';
 
 // API URLs
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
@@ -621,7 +622,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Contractor</span>
           </div>
-          <div style={{ width: '44px' }} />
+          <NotificationBell darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />
         </div>
       )}
 
