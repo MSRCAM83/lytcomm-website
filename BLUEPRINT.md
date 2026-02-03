@@ -15,14 +15,15 @@
 ### ✅ Live Version: v3.14
 Website deployed and working. Project Map System Phase 10 IN PROGRESS: Notifications, crew tracking, contractor-filtered views, daily production reports built and pushed.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 1:10 AM CST)
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 1:25 AM CST)
 - **Google Maps API Key LIVE** - Hardcoded in ProjectMapPage v2.6.0 + exported from mapConfig v1.1.0
 - **Claude API Serverless Function v1.0.0** - `/api/claude-chat.js` for LYT Field Assist. ANTHROPIC_API_KEY set in Vercel env vars.
-- **CrewTracker v1.1.0** - GPS positions now report to Google Sheets Work Log (throttled: every 5th update). Logs lat/lng, accuracy, speed, nearest segment.
-- **notificationService v1.1.0** - Added `sendDailyComplianceDigest()` function. Scans all contractors/employees, builds HTML digest email, sends to all 3 admins.
-- **cron-digest.js v1.0.0** - NEW: Vercel serverless cron endpoint. Runs daily at 7:00 AM CST (13:00 UTC). Scans compliance, emails digest to matt/mason/donnie.
-- **vercel.json** - Added cron schedule for daily digest
-- **UserProfile v3.0.0** - PHASE 8 COMPLETE: Notification prefs now persist (localStorage + Gateway). Emergency contact section with name/phone/relationship. Security tab has session info + logout button. Password validation with strength indicator and match check.
+- **CrewTracker v1.1.0** - GPS positions now report to Google Sheets Work Log (throttled: every 5th update).
+- **notificationService v1.1.0** - Added `sendDailyComplianceDigest()`. Daily 7AM CST email to all admins.
+- **cron-digest.js v1.0.0** - Vercel serverless cron for compliance digest.
+- **vercel.json** - Added cron schedule for daily digest.
+- **UserProfile v3.0.0** - PHASE 8 COMPLETE: Persistent notif prefs, emergency contact, session/logout, password validation.
+- **InvoiceGenerator v2.0.0** - Major upgrade: Invoice numbering (LYT-INV-YYYY-NNNN), CSV export, date range filter, invoice history (localStorage), professional print layout with LYT branding/address/terms, copy-to-clipboard, expanded rate card (UG12/13/18/23/24). Filtered segment count stat added.
 - **NotificationService v1.0.0** - NEW: Expiration alerts for certs/COI/licenses, email notifications via Gateway, push notification support, in-app notification storage, admin alert emails
 - **NotificationBell v1.0.0** - NEW: Dropdown notification bell component with unread badge, severity colors, mark-as-read, auto-checks compliance expirations on login
 - **CrewTracker v1.0.0** - NEW: GPS crew position overlay for project map, real-time tracking toggle, nearest segment detection, movement/stationary indicators, high accuracy mode, battery-conscious
