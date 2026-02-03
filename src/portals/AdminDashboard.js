@@ -1,7 +1,7 @@
-// AdminDashboard.js v3.5 - Direct CSV fetch + Gateway for updates
+// AdminDashboard.js v3.6 - Project Map System navigation + Direct CSV fetch + Gateway for updates
 // Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen } from 'lucide-react';
 import { colors } from '../config/constants';
 
 // Direct Google Sheets CSV URLs (for reading data)
@@ -199,10 +199,16 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     { id: 'activity-log', label: 'Activity Log', icon: History, external: 'activity-log' },
     { id: 'onboarding', label: 'Pending Onboarding', icon: UserPlus, badge: pendingOnboarding.length },
     { id: 'recruiting', label: 'Recruiting Pipeline', icon: Target, external: 'recruiting' },
+    { id: 'divider-maps', label: '── Project Maps ──', divider: true },
+    { id: 'project-map', label: 'Interactive Map', icon: Map, external: 'project-map' },
+    { id: 'admin-projects', label: 'Projects Overview', icon: FolderOpen, external: 'admin-projects' },
+    { id: 'job-import', label: 'Import Work Orders', icon: Upload, external: 'job-import' },
+    { id: 'divider-field', label: '── Field Operations ──', divider: true },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
     { id: 'potholes', label: 'Pothole Approvals', icon: Shovel, external: 'potholes' },
     { id: 'daily-worksheet', label: 'Daily Work Sheets', icon: FileText, external: 'daily-worksheet' },
     { id: 'invoice-gen', label: 'Invoice Generator', icon: DollarSign, external: 'invoices' },
+    { id: 'divider-mgmt', label: '── Management ──', divider: true },
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'contractors', label: 'Contractors', icon: Briefcase },
     { id: 'user-management', label: 'User Management', icon: UserCog, external: 'admin-users' },
@@ -938,6 +944,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
         {/* Navigation */}
         <div style={{ flex: 1, padding: '12px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {navItems.map((item) => (
+            item.divider ? (
+              <div key={item.id} style={{ padding: '8px 16px 4px', fontSize: '0.7rem', fontWeight: '600', color: mutedColor, letterSpacing: '0.5px', textTransform: 'uppercase', userSelect: 'none' }}>
+                {item.label.replace(/─/g, '').trim()}
+              </div>
+            ) : (
             <button
               key={item.id}
               onClick={() => {
@@ -946,7 +957,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 } else {
                   setActiveTab(item.id);
                 }
-                if (isMobile) setSidebarOpen(false); // Close sidebar on mobile after selection
+                if (isMobile) setSidebarOpen(false);
               }}
               style={{
                 width: '100%',
@@ -981,6 +992,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               )}
               {item.external && <ChevronRight size={14} color={mutedColor} />}
             </button>
+            )
           ))}
         </div>
 
@@ -1036,7 +1048,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           borderRadius: '4px',
           zIndex: 9999
         }}>
-          AdminDashboard v3.5
+          AdminDashboard v3.6
         </div>
       )}
     </div>
