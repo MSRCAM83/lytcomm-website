@@ -27,6 +27,7 @@ Website deployed and working. Project Map System Phase 9 COMPLETE: Foundation, M
   - Work Log: 1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8
   - Issues: 1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g
 - **ContractorDashboard.js v2.3** - Project Map nav, live segment stats, assigned segments list
+- **ProjectMapPage.js v2.4.0** - WORKFLOW PERSISTENCE: Status changes write to Google Sheets DB via mapService, timestamps for start/complete, QC approval fields (approved_by, date), action logging to Work Log, actual footage + notes persistence, parent state refresh on DB write
 - **ProjectMapPage.js v2.3.0** - Contractor view mode, role-aware nav, hides PO for non-admins
 - **ProjectMapPage.js v2.2.0** - FIXED: Removed undefined DEMO_SEGMENTS/DEMO_PROJECT references (was causing page crash). Now uses async loadFullProject() on mount with loading spinner. Shows "DEMO" badge when in demo mode. All filters/stats use dynamic allSegments state.
 
@@ -995,7 +996,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | File | Version | Status |
 |------|---------|--------|
 | src/pages/JobImportPage.js | v1.0.0 | ✅ PDF upload UI (600 lines, demo data) |
-| src/pages/ProjectMapPage.js | v2.0.0 | ✅ Interactive map (927 lines, demo data) |
+| src/pages/ProjectMapPage.js | v2.4.0 | ✅ Interactive map + live workflow persistence to DB |
 | src/pages/AdminProjectDashboard.js | v1.0.0 | ✅ Admin project overview (274 lines) |
 
 #### Files In Repo - Workflow Components:
@@ -1032,12 +1033,13 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 #### 🔲 STILL NEEDED:
 - [ ] Google Sheets database creation (8 tabs with schemas)
 - [ ] Connect JobImportPage to /api/pdf-import endpoint (create pdf-import serverless fn)
-- [ ] Connect ProjectMapPage to live Google Sheets data (replace demo data)
+- [x] ~~Connect ProjectMapPage to live Google Sheets data (replace demo data)~~ ✅ DONE v3.0.0
+- [x] ~~Wire workflow status persistence to Google Sheets~~ ✅ DONE v2.4.0
 - [ ] Connect FieldAssist to /api/claude-chat endpoint (needs API key in Vercel env)
 - [ ] Add FieldAssist chat bubble to all dashboard pages
 - [ ] Admin dashboard links to project map system pages
 - [ ] Google Maps API key provisioning
-- [ ] Integrate workflow components into ProjectMapPage segment detail panel
+- [x] ~~Integrate workflow components into ProjectMapPage segment detail panel~~ ✅ DONE v2.1.0 + persistence v2.4.0
 - [ ] Contractor-filtered views (can only see assigned work)
 - [ ] Real-time data sync between map and Google Sheets
 - [ ] GPS tracking service (gpsService.js)
