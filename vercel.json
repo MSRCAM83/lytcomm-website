@@ -2,6 +2,9 @@
   "buildCommand": "CI=false npm run build",
   "outputDirectory": "build",
   "framework": "create-react-app",
+  "crons": [
+    { "path": "/api/cron-digest", "schedule": "0 13 * * *" }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]
