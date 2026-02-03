@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, CheckCheck, Trash2, AlertTriangle, Info, AlertCircle, X } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, AlertTriangle, Info, AlertCircle, X } from 'lucide-react';
 import {
   getStoredNotifications,
   getUnreadCount,
@@ -18,6 +18,7 @@ import {
   clearNotifications,
   checkExpirations,
   addNotification,
+// eslint-disable-next-line no-unused-vars
   SEVERITY,
 } from '../services/notificationService';
 
