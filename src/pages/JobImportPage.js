@@ -1,6 +1,6 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 2.1.0
+ * Version: 2.2.0
  * Updated: 2026-02-03
  * Route: #job-import
  * 
@@ -14,8 +14,8 @@ import React, { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+// Configure pdf.js worker - use pinned CDN version that actually exists
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
 
 function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [workOrderFile, setWorkOrderFile] = useState(null);
