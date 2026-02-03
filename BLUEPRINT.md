@@ -13,7 +13,7 @@
 ## 🚀 CURRENT STATUS (Feb 02, 2026 - 5:25 PM CST)
 
 ### ✅ Live Version: v3.12
-Website deployed and working. Project Map System Phase 9 build in progress - API endpoints, workflow components, and chat built.
+Website deployed and working. Project Map System Phase 9: All workflow components, chat, and API built. Ready for data integration.
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -907,7 +907,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 - Database schema for 8 Google Sheets designed
 - All billing rates, photo requirements, workflow rules documented
 
-#### Files Already In Repo (from earlier session):
+#### Files In Repo - Config & Services:
 | File | Version | Status |
 |------|---------|--------|
 | src/config/mapConfig.js | v1.0.0 | ✅ Status colors, icons, rate cards, photo reqs |
@@ -917,49 +917,52 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
 | src/utils/idGenerator.js | v1.0.0 | ✅ Two-tier ID system |
 | src/utils/rateCardMatcher.js | v1.0.0 | ✅ Billing calculations |
+
+#### Files In Repo - Pages:
+| File | Version | Status |
+|------|---------|--------|
 | src/pages/JobImportPage.js | v1.0.0 | ✅ PDF upload UI (600 lines, demo data) |
 | src/pages/ProjectMapPage.js | v2.0.0 | ✅ Interactive map (927 lines, demo data) |
 | src/pages/AdminProjectDashboard.js | v1.0.0 | ✅ Admin project overview (274 lines) |
 
-#### Files Pushed This Session:
+#### Files In Repo - Workflow Components:
 | File | Version | Status |
 |------|---------|--------|
-| api/claude-chat.js | v1.0.0 | ✅ Vercel serverless - Field Assist chat endpoint |
-| api/pdf-import.js | v1.0.0 | ✅ Vercel serverless - PDF extraction endpoint |
-| src/components/Workflow/BoringTracker.js | v1.0.0 | ✅ Boring phase workflow tracker |
-| src/components/Workflow/SplicingTracker.js | v1.0.0 | ✅ Splice workflow with photo validation |
-| src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito Claude chat (floating bubble) |
+| src/components/Workflow/BoringTracker.js | v1.0.0 | ✅ Boring phase: pothole approval, status, photos, QC |
+| src/components/Workflow/PullingTracker.js | v1.0.0 | ✅ Pulling phase: direction, cable type, splicer QC |
+| src/components/Workflow/SplicingTracker.js | v1.0.0 | ✅ Splicing: type-specific photos, power meter, OTDR |
+| src/components/Workflow/PhotoUploader.js | v1.0.0 | ✅ Camera/file upload with GPS, type tagging |
+| src/components/Workflow/QCApproval.js | v1.0.0 | ✅ Admin QC review: gallery, tests, approve/reject |
 
-#### Database Setup Script Created:
-- `LYT_ProjectMap_DB_Setup_v1.0.gs` (Google Apps Script)
-- Creates new Google Sheet with all 8 tabs + headers + sample data
-- User needs to run in Apps Script editor (any reserved script ID)
-- Returns Spreadsheet ID to configure in mapConfig.js
+#### Files In Repo - Chat & API:
+| File | Version | Status |
+|------|---------|--------|
+| src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito chat (floating bubble + offline fallback) |
+| api/claude-chat.js | v1.0.0 | ✅ Vercel serverless Claude proxy endpoint |
 
-#### App.js Routes (already configured):
+#### App.js Routes (configured):
 - `#job-import` → JobImportPage
 - `#project-map` → ProjectMapPage  
 - `#admin-projects` → AdminProjectDashboard
 
 #### API Endpoints (Vercel serverless):
 - `POST /api/claude-chat` → Field Assist chat (needs ANTHROPIC_API_KEY env var)
-- `POST /api/pdf-import` → PDF extraction (needs ANTHROPIC_API_KEY env var)
 
 #### ⚠️ REQUIRED SETUP STEPS:
-1. Run `LYT_ProjectMap_DB_Setup_v1.0.gs` in Apps Script → get Spreadsheet ID
+1. Run database setup script in Apps Script → get Spreadsheet ID
 2. Add Spreadsheet ID to `src/config/mapConfig.js` as PROJECT_MAP_SHEET_ID
 3. Add `ANTHROPIC_API_KEY` to Vercel environment variables
 4. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to Vercel environment variables
-5. Connect components to live data (replace DEMO_SEGMENTS in ProjectMapPage)
 
 #### 🔲 STILL NEEDED:
-- [ ] PullingTracker.js (fiber pull workflow component)
-- [ ] PhotoUploader.js (shared photo capture component)
-- [ ] QCApproval.js (admin QC review interface)
+- [ ] Google Sheets database creation (8 tabs with schemas)
 - [ ] Connect JobImportPage to /api/pdf-import endpoint
-- [ ] Connect ProjectMapPage to live Google Sheets data
-- [ ] Connect FieldAssist to /api/claude-chat endpoint
+- [ ] Connect ProjectMapPage to live Google Sheets data (replace demo data)
+- [ ] Connect FieldAssist to /api/claude-chat endpoint (needs API key)
 - [ ] Add FieldAssist chat bubble to all dashboard pages
 - [ ] Admin dashboard links to project map system pages
 - [ ] Google Maps API key provisioning
-- [ ] OTDR upload component for feeder splices
+- [ ] Segment detail side panels in map view
+- [ ] Integrate workflow components into ProjectMapPage segment details
+- [ ] Contractor-filtered views (can only see assigned work)
+- [ ] Real-time data sync between map and Google Sheets
