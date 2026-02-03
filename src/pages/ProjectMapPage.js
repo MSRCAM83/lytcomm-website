@@ -32,6 +32,7 @@ import SplicingTracker from '../components/Workflow/SplicingTracker';
 // eslint-disable-next-line no-unused-vars
 import { loadFullProject, isDemoMode, updateSegmentField, logAction } from '../services/mapService';
 import { uploadPhotoBatch } from '../services/photoUploadService';
+import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
 
@@ -879,9 +880,21 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const textMuted = darkMode ? '#8892b0' : '#64748b';
   const accent = darkMode ? '#c850c0' : '#0077B6';
 
-  // Filter segments
-  const filteredSegments = useMemo(() => {
+  // Contractor-filtered base segments (contractors only see assigned work)
+  const visibleSegments = useMemo(() => {
+    if (!isContractor || !user?.company) return allSegments;
+    const company = (user.company || '').toLowerCase();
     return allSegments.filter(seg => {
+      const boringMatch = (seg.boring_assigned_to || '').toLowerCase().includes(company);
+      const pullingMatch = (seg.pulling_assigned_to || '').toLowerCase().includes(company);
+      const splicingMatch = (seg.splicing_assigned_to || '').toLowerCase().includes(company);
+      return boringMatch || pullingMatch || splicingMatch;
+    });
+  }, [allSegments, isContractor, user]);
+
+  // Filter segments (section, status, phase, search)
+  const filteredSegments = useMemo(() => {
+    return visibleSegments.filter(seg => {
       if (filterSection !== 'all' && seg.section !== filterSection) return false;
       if (filterStatus !== 'all') {
         const status = filterPhase === 'boring' ? seg.boring_status : filterPhase === 'pulling' ? seg.pulling_status : seg.splicing_status;
@@ -893,25 +906,25 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       }
       return true;
     });
-  }, [allSegments, filterSection, filterStatus, filterPhase, searchTerm]);
+  }, [visibleSegments, filterSection, filterStatus, filterPhase, searchTerm]);
 
-  // Stats
+  // Stats (based on visible segments for role-appropriate counts)
   const stats = useMemo(() => {
-    const totalFootage = allSegments.reduce((sum, s) => sum + (parseFloat(s.footage) || 0), 0);
+    const totalFootage = visibleSegments.reduce((sum, s) => sum + (parseFloat(s.footage) || 0), 0);
     const phaseKey = filterPhase === 'boring' ? 'boring_status' : filterPhase === 'pulling' ? 'pulling_status' : 'splicing_status';
-    const approved = allSegments.filter(s => s[phaseKey] === 'QC Approved').length;
-    const complete = allSegments.filter(s => s[phaseKey] === 'Complete').length;
-    const inProgress = allSegments.filter(s => s[phaseKey] === 'In Progress').length;
-    const issues = allSegments.filter(s => s[phaseKey] === 'Issue').length;
-    const notStarted = allSegments.filter(s => s[phaseKey] === 'Not Started').length;
-    return { totalFootage, approved, complete, inProgress, issues, notStarted, total: allSegments.length };
-  }, [allSegments, filterPhase]);
+    const approved = visibleSegments.filter(s => s[phaseKey] === 'QC Approved').length;
+    const complete = visibleSegments.filter(s => s[phaseKey] === 'Complete').length;
+    const inProgress = visibleSegments.filter(s => s[phaseKey] === 'In Progress').length;
+    const issues = visibleSegments.filter(s => s[phaseKey] === 'Issue').length;
+    const notStarted = visibleSegments.filter(s => s[phaseKey] === 'Not Started').length;
+    return { totalFootage, approved, complete, inProgress, issues, notStarted, total: visibleSegments.length };
+  }, [visibleSegments, filterPhase]);
 
   const handleSelectSegment = useCallback((seg) => {
     setSelectedSegment(prev => prev && prev.segment_id === seg.segment_id ? null : seg);
   }, []);
 
-  const sections = [...new Set(allSegments.map(s => s.section))].sort();
+  const sections = [...new Set(visibleSegments.map(s => s.section))].sort();
 
   return (
     <div style={{ minHeight: '100vh', background: bg, color: text, display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -1050,13 +1063,25 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         {/* Map or List View */}
         <div style={{ flex: 1, position: 'relative' }}>
           {viewMode === 'map' ? (
-            <ProjectGoogleMap
-              segments={filteredSegments}
-              selectedSegment={selectedSegment}
-              onSelectSegment={handleSelectSegment}
-              filterPhase={filterPhase}
-              darkMode={darkMode}
-            />
+            <div style={{ position: 'relative', height: '100%' }}>
+              <ProjectGoogleMap
+                segments={filteredSegments}
+                selectedSegment={selectedSegment}
+                onSelectSegment={handleSelectSegment}
+                filterPhase={filterPhase}
+                darkMode={darkMode}
+              />
+              {/* Crew GPS Tracker - visible to all logged-in users */}
+              {user && (
+                <CrewTracker
+                  segments={visibleSegments}
+                  darkMode={darkMode}
+                  isAdmin={isAdmin}
+                  user={user}
+                  onCrewClick={(seg) => handleSelectSegment(seg)}
+                />
+              )}
+            </div>
           ) : (
             /* List View */
             <div style={{ overflow: 'auto', height: '100%', padding: 16 }}>
