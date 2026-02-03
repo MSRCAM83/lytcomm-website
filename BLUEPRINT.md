@@ -15,11 +15,13 @@
 ### ✅ Live Version: v3.14
 Website deployed and working. Project Map System Phase 10 IN PROGRESS: Notifications, crew tracking, contractor-filtered views, daily production reports built and pushed.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 12:35 AM CST)
-- **Google Maps API Key LIVE** - Hardcoded in ProjectMapPage v2.6.0 + exported from mapConfig v1.1.0. Key: AIzaSyCbZXQimBAuIRXJQNq64VjF94FD35JOvLs (restricted by HTTP referrer)
-- **Claude API Serverless Function v1.0.0** - NEW: `/api/claude-chat.js` Vercel serverless function for LYT Field Assist. Proxies to Claude Sonnet 4 with fiber optic industry system prompt. Context-aware (user, project, segment). ANTHROPIC_API_KEY env var required in Vercel.
-- **mapConfig v1.1.0** - Added GOOGLE_MAPS_API_KEY export for centralized access
-- **ProjectMapPage v2.6.0** - Google Maps API key wired in (was empty placeholder before)
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 12:50 AM CST)
+- **Google Maps API Key LIVE** - Hardcoded in ProjectMapPage v2.6.0 + exported from mapConfig v1.1.0
+- **Claude API Serverless Function v1.0.0** - `/api/claude-chat.js` for LYT Field Assist. ANTHROPIC_API_KEY set in Vercel env vars.
+- **CrewTracker v1.1.0** - GPS positions now report to Google Sheets Work Log (throttled: every 5th update). Logs lat/lng, accuracy, speed, nearest segment.
+- **notificationService v1.1.0** - Added `sendDailyComplianceDigest()` function. Scans all contractors/employees, builds HTML digest email, sends to all 3 admins.
+- **cron-digest.js v1.0.0** - NEW: Vercel serverless cron endpoint. Runs daily at 7:00 AM CST (13:00 UTC). Scans compliance, emails digest to matt/mason/donnie.
+- **vercel.json** - Added cron schedule for daily digest
 - **NotificationService v1.0.0** - NEW: Expiration alerts for certs/COI/licenses, email notifications via Gateway, push notification support, in-app notification storage, admin alert emails
 - **NotificationBell v1.0.0** - NEW: Dropdown notification bell component with unread badge, severity colors, mark-as-read, auto-checks compliance expirations on login
 - **CrewTracker v1.0.0** - NEW: GPS crew position overlay for project map, real-time tracking toggle, nearest segment detection, movement/stationary indicators, high accuracy mode, battery-conscious
@@ -1036,12 +1038,14 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 
 #### 🔲 STILL NEEDED:
 - [x] ~~Google Maps API key provisioning~~ ✅ DONE - Hardcoded in ProjectMapPage v2.6.0 + mapConfig v1.1.0
-- [ ] Set ANTHROPIC_API_KEY in Vercel environment variables → Value: sk-ant-api03-SDTjpgRZ2k-... (user must add in Vercel Dashboard → Settings → Env Vars)
+- [x] ~~Set ANTHROPIC_API_KEY in Vercel~~ ✅ DONE - User added to Vercel env vars
 - [x] ~~Contractor-filtered views (can only see assigned work)~~ ✅ DONE v2.5.0
 - [ ] Real-time data sync improvements (WebSocket consideration for future)
 - [x] ~~GPS tracking service~~ ✅ gpsService v1.0 + CrewTracker v1.0
 - [x] ~~Notification system~~ ✅ NotificationService v1.0 + NotificationBell v1.0
 - [x] ~~NotificationBell in dashboards~~ ✅ Admin v3.7, Employee v2.4, Contractor v2.4
-- [ ] Wire CrewTracker to report positions to Google Sheets (multi-user GPS)
-- [ ] Daily automated email digest for compliance alerts
+- [x] ~~Wire CrewTracker to report positions to Google Sheets~~ ✅ DONE CrewTracker v1.1.0
+- [x] ~~Daily automated email digest for compliance alerts~~ ✅ DONE cron-digest v1.0.0 (7AM CST daily)
 - [ ] Upload real Sulphur LA construction map PDF for testing
+- [ ] Restrict Google Maps API key to lytcomm.com in Google Cloud Console
+- [ ] Phase 8: User Self-Service (profile updates, password changes, notification prefs)
