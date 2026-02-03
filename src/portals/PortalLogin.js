@@ -1,7 +1,6 @@
 // PortalLogin.js v3.8 - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
 
 // Portal Backend URL
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
