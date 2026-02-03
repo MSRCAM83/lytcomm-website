@@ -444,6 +444,120 @@ export function getProjectStats(segments) {
   return stats;
 }
 
+/**
+ * Import a full project (project + segments + splice points) from AI extraction.
+ * Batch-writes all data to Google Sheets via Gateway.
+ * Returns { success, counts, errors }
+ */
+export async function importProject(projectData, segmentsData, splicePointsData, projectId) {
+  const online = await checkDbConnection();
+  if (!online) return { success: false, error: 'Database offline' };
+
+  const errors = [];
+  let projectWritten = false;
+  let segmentsWritten = 0;
+  let splicesWritten = 0;
+
+  // 1. Write project row
+  try {
+    const projRow = [[
+      projectId,
+      projectData.customer || '',
+      projectData.project_name || '',
+      projectData.po_number || '',
+      projectData.total_value || 0,
+      projectData.start_date || '',
+      projectData.completion_date || '',
+      projectData.status || 'Active',
+      '', // map_pdf_url
+      '', // work_order_pdf_url
+      projectData.rate_card_id || 'vexus-la-tx-2026',
+      new Date().toISOString(),
+      projectData.created_by || 'matt@lytcomm.com',
+    ]];
+    const ok = await appendRow(DB.PROJECTS, projRow);
+    if (ok) projectWritten = true;
+    else errors.push('Failed to write project row');
+  } catch (err) {
+    errors.push(`Project write error: ${err.message}`);
+  }
+
+  // 2. Write segment rows
+  for (const seg of (segmentsData || [])) {
+    try {
+      const segmentId = `${projectId}-${seg.section || 'X'}-${(seg.to_handhole || seg.contractor_id || '').replace(/[^A-Za-z0-9]/g, '')}`;
+      const row = [[
+        segmentId,                                  // segment_id
+        projectId,                                  // project_id
+        seg.contractor_id || '',                    // contractor_id
+        seg.section || '',                          // section
+        seg.from_handhole || '',                    // from_handhole
+        seg.to_handhole || '',                      // to_handhole
+        seg.footage || 0,                           // footage
+        seg.street || '',                           // street
+        seg.gps_start_lat || '',                    // gps_start_lat
+        seg.gps_start_lng || '',                    // gps_start_lng
+        seg.gps_end_lat || '',                      // gps_end_lat
+        seg.gps_end_lng || '',                      // gps_end_lng
+        'Not Started',                              // boring_status
+        '', '', '', '', '', '', '', '',             // boring fields (assigned_to through notes)
+        'Not Started',                              // pulling_status
+        '', '', '', '', '', '', '', '',             // pulling fields
+      ]];
+      const ok = await appendRow(DB.SEGMENTS, row);
+      if (ok) segmentsWritten++;
+      else errors.push(`Failed to write segment ${seg.contractor_id}`);
+    } catch (err) {
+      errors.push(`Segment ${seg.contractor_id}: ${err.message}`);
+    }
+  }
+
+  // 3. Write splice point rows
+  for (const sp of (splicePointsData || [])) {
+    try {
+      const spliceId = `${projectId}-SPL-${(sp.contractor_id || sp.location || '').replace(/[^A-Za-z0-9]/g, '')}`;
+      const requiredPhotos = sp.splice_type === '1x4'
+        ? '["basket","splice_tray","strength_members","grommets","closed","cables","in_ground"]'
+        : sp.splice_type === '1x8'
+          ? '["basket","splitter_tray","splice_tray","strength_members","grommets","closed","cables","in_ground"]'
+          : '["basket","splice_trays","strength_members","closed","cables","in_ground"]';
+      
+      const row = [[
+        spliceId,                                   // splice_id
+        projectId,                                  // project_id
+        sp.contractor_id || '',                     // contractor_id
+        sp.location || '',                          // location
+        sp.handhole_type || '',                     // handhole_type
+        sp.splice_type || '',                       // splice_type
+        sp.position_type || '',                     // position_type
+        sp.fiber_count || 2,                        // fiber_count
+        sp.tray_count || 1,                         // tray_count
+        sp.gps_lat || '',                           // gps_lat
+        sp.gps_lng || '',                           // gps_lng
+        'Not Started',                              // status
+        '', '', '', '', '',                         // assigned_to through qc_approved_date
+        requiredPhotos,                             // required_photos
+        '', '', '', '',                             // uploaded_photos through notes
+      ]];
+      const ok = await appendRow(DB.SPLICE_POINTS, row);
+      if (ok) splicesWritten++;
+      else errors.push(`Failed to write splice ${sp.contractor_id}`);
+    } catch (err) {
+      errors.push(`Splice ${sp.contractor_id}: ${err.message}`);
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    counts: {
+      project: projectWritten ? 1 : 0,
+      segments: segmentsWritten,
+      splicePoints: splicesWritten,
+    },
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
 export { DB };
 
-// v3.0.0
+// v3.1.0
