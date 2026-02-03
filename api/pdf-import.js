@@ -1,12 +1,13 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.0.0
+ * Version: 2.1.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Vision API.
  * 
- * v2.0.0: Now accepts base64 page images for scanned/image PDFs.
+ * v2.1.0: Upgraded to Claude Opus 4 for superior vision accuracy on
+ *         scanned construction maps and engineering drawings.
  *         Falls back to text if images not provided.
  * 
  * POST /api/pdf-import
@@ -106,7 +107,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-20250514',
         max_tokens: 8192,
         system: 'You are a fiber optic construction data extraction specialist. You can read construction maps, engineering drawings, and work orders. Extract structured JSON data accurately. Always return valid JSON. Never include markdown code fences or commentary outside the JSON.',
         messages: [{ role: 'user', content: contentBlocks }],
