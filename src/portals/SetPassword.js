@@ -1,7 +1,6 @@
 // SetPassword.js v2.1 - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Lock, Eye, EyeOff, Sun, Moon, CheckCircle, AlertCircle } from 'lucide-react';
-import { colors } from '../config/constants';
 
 // Portal Backend URL
 const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyUHklFqQCDIFzHKVq488fYtAIW1lChNnWV2FWHnvGEr7Eq0oREhDE5CueoBJ6k-xhKOg/exec';
