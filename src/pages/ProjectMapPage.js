@@ -20,7 +20,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 // eslint-disable-next-line no-unused-vars
-import { ArrowLeft, Map, List, Search, AlertCircle, MapPin, Ruler, Users, Zap, X, ChevronDown, ChevronUp, Filter, Layers, Camera, CheckCircle, Clock, AlertTriangle, Navigation, Wrench, Cable, Zap as ZapIcon } from 'lucide-react';
+import { ArrowLeft, Map, List, Search, AlertCircle, MapPin, Ruler, Users, Zap, X, ChevronDown, ChevronUp, Filter, Layers, Camera, CheckCircle, Clock, AlertTriangle, Navigation, Wrench, Cable } from 'lucide-react';
 import { STATUS_COLORS, PHOTO_REQUIREMENTS } from '../config/mapConfig';
 import BoringTracker from '../components/Workflow/BoringTracker';
 import PullingTracker from '../components/Workflow/PullingTracker';
@@ -532,9 +532,9 @@ function CanvasMap({ segments, selectedSegment, onSelectSegment, filterPhase, da
   );
 }
 
-// ===== SEGMENT DETAIL PANEL =====
-function SegmentDetailPanel({ segment, darkMode, onClose, user }) {
-  const [activeTab, setActiveTab] = useState('info');
+// ===== SEGMENT DETAIL PANEL (v2.1.0 - Tabbed Workflow) =====
+function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user }) {
+  const [activeTab, setActiveTab] = useState('overview');
 
   if (!segment) return null;
 
@@ -544,184 +544,57 @@ function SegmentDetailPanel({ segment, darkMode, onClose, user }) {
   const textMuted = darkMode ? '#8892b0' : '#64748b';
   const accent = darkMode ? '#c850c0' : '#0077B6';
 
-  const isAdmin = user?.role === 'Admin' || user?.role === 'admin';
-
-  const tabs = [
-    { key: 'info', label: 'Info', icon: '📋' },
-    { key: 'boring', label: 'Boring', icon: '🚧' },
-    { key: 'pulling', label: 'Pulling', icon: '🚛' },
-    { key: 'splicing', label: 'Splicing', icon: '⚡' },
-  ];
-
   const phases = [
     { key: 'boring', label: 'Boring', status: segment.boring_status, assigned: segment.boring_assigned_to, icon: '🚧' },
     { key: 'pulling', label: 'Fiber Pulling', status: segment.pulling_status, assigned: segment.pulling_assigned_to, icon: '🚛' },
     { key: 'splicing', label: 'Splicing', status: segment.splicing_status || 'Not Started', assigned: segment.splicing_assigned_to || '', icon: '⚡' },
   ];
 
-  // Stub handlers — will connect to Google Sheets backend later
-  const handleStatusUpdate = (phase, newStatus, data) => {
-    console.log('[StatusUpdate]', phase, newStatus, data);
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <MapPin size={13} /> },
+    { id: 'boring', label: 'Boring', icon: <Wrench size={13} /> },
+    { id: 'pulling', label: 'Pulling', icon: <Cable size={13} /> },
+    { id: 'splicing', label: 'Splicing', icon: <Zap size={13} /> },
+  ];
+
+  // Build segment data that workflow components expect
+  const segmentData = {
+    ...segment,
+    segment_id: segment.segment_id,
+    project_id: segment.segment_id?.split('-').slice(0, 3).join('-') || 'VXS-SLPH01-006',
+    boring_photos: segment.boring_photos || [],
+    pulling_photos: segment.pulling_photos || [],
+    splicing_photos: segment.splicing_photos || [],
+    boring_actual_footage: segment.boring_actual_footage || segment.footage,
+    pulling_cable_type: segment.pulling_cable_type || '',
+    pulling_direction: segment.pulling_direction || '',
+    handhole_type: segment.to_handhole?.match(/\(([^)]+)\)/)?.[1] || '15x20x12',
   };
+
+  // Placeholder handlers for workflow state changes
+  const handleStatusChange = (phase, newStatus) => {
+    console.log(`[ProjectMap] Status change: ${segment.segment_id} ${phase} → ${newStatus}`);
+    // TODO: Wire to mapService.js → Google Sheets update
+  };
+
   const handlePhotoUpload = (phase, photos) => {
-    console.log('[PhotoUpload]', phase, photos);
-  };
-  const handleQCApprove = (phase, approved, notes) => {
-    console.log('[QCApprove]', phase, approved, notes);
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'boring':
-        return (
-          <div style={{ padding: '12px 16px' }}>
-            <BoringTracker
-              segment={segment}
-              darkMode={darkMode}
-              user={user || { name: 'Demo User', role: 'Admin' }}
-              onStatusUpdate={(status, data) => handleStatusUpdate('boring', status, data)}
-              onPhotoUpload={(photos) => handlePhotoUpload('boring', photos)}
-            />
-          </div>
-        );
-      case 'pulling':
-        return (
-          <div style={{ padding: '12px 16px' }}>
-            <PullingTracker
-              segment={segment}
-              darkMode={darkMode}
-              user={user || { name: 'Demo User', role: 'Admin' }}
-              isAdmin={isAdmin}
-              isSplicer={user?.role === 'Splicer'}
-              onStatusUpdate={(status, data) => handleStatusUpdate('pulling', status, data)}
-              onPhotoUpload={(photos) => handlePhotoUpload('pulling', photos)}
-              onQCApprove={(approved, notes) => handleQCApprove('pulling', approved, notes)}
-            />
-          </div>
-        );
-      case 'splicing':
-        return (
-          <div style={{ padding: '12px 16px' }}>
-            <SplicingTracker
-              segment={segment}
-              splicePoint={{
-                splice_type: '1x4',
-                position_type: 'mid-span',
-                tray_count: 1,
-                fiber_count: 2,
-              }}
-              darkMode={darkMode}
-              user={user || { name: 'Demo User', role: 'Admin' }}
-              isAdmin={isAdmin}
-              onStatusUpdate={(status, data) => handleStatusUpdate('splicing', status, data)}
-              onPhotoUpload={(photos) => handlePhotoUpload('splicing', photos)}
-              onQCApprove={(approved, notes) => handleQCApprove('splicing', approved, notes)}
-            />
-          </div>
-        );
-      default:
-        return (
-          <div style={{ padding: '16px 20px' }}>
-            {/* Location */}
-            <div style={{ background: cardBg, borderRadius: 10, padding: 16, marginBottom: 12, border: `1px solid ${borderColor}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <MapPin size={16} color={accent} />
-                <span style={{ fontWeight: 600, color: text }}>Location</span>
-              </div>
-              <div style={{ fontSize: 13, color: textMuted, lineHeight: 1.6 }}>
-                <div><strong style={{ color: text }}>From:</strong> {segment.from_handhole}</div>
-                <div><strong style={{ color: text }}>To:</strong> {segment.to_handhole}</div>
-                <div><strong style={{ color: text }}>Street:</strong> {segment.street}</div>
-                <div><strong style={{ color: text }}>Section:</strong> {segment.section}</div>
-              </div>
-            </div>
-
-            {/* Footage */}
-            <div style={{ background: cardBg, borderRadius: 10, padding: 16, marginBottom: 12, border: `1px solid ${borderColor}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <Ruler size={16} color={accent} />
-                <span style={{ fontWeight: 600, color: text }}>Footage</span>
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: accent }}>{segment.footage} <span style={{ fontSize: 14, fontWeight: 400 }}>LF</span></div>
-            </div>
-
-            {/* Phase Status — clickable to open workflow tabs */}
-            <div style={{ fontWeight: 600, color: text, marginBottom: 8, fontSize: 14 }}>Workflow Status</div>
-            {phases.map(phase => (
-              <div key={phase.key} style={{
-                background: cardBg, borderRadius: 10, padding: 14, marginBottom: 8,
-                border: `1px solid ${borderColor}`,
-                borderLeft: `4px solid ${getStatusColor(phase.status)}`,
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-              onClick={() => setActiveTab(phase.key)}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = `0 2px 8px ${getStatusColor(phase.status)}30`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 16 }}>{phase.icon}</span>
-                    <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>{phase.label}</span>
-                  </div>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                    background: getStatusColor(phase.status) + '20',
-                    color: getStatusColor(phase.status),
-                  }}>
-                    <StatusIcon status={phase.status} size={12} />
-                    {phase.status}
-                  </div>
-                </div>
-                {phase.assigned && (
-                  <div style={{ fontSize: 12, color: textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Users size={11} /> {phase.assigned}
-                  </div>
-                )}
-                <div style={{ fontSize: 10, color: accent, marginTop: 4, fontWeight: 500, opacity: 0.8 }}>Tap to manage →</div>
-              </div>
-            ))}
-
-            {/* Quick Actions */}
-            <div style={{ fontWeight: 600, color: text, marginBottom: 8, marginTop: 16, fontSize: 14 }}>Quick Actions</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {[
-                { icon: <Camera size={14} />, label: 'Upload Photos', color: '#28a745', tab: 'boring' },
-                { icon: <Users size={14} />, label: 'Assign Crew', color: '#0077B6', tab: 'info' },
-                { icon: <AlertTriangle size={14} />, label: 'Report Issue', color: '#e85a4f', tab: 'info' },
-                { icon: <CheckCircle size={14} />, label: 'QC Approve', color: '#c850c0', tab: 'boring' },
-              ].map(action => (
-                <button key={action.label} onClick={() => setActiveTab(action.tab)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '10px 12px',
-                  background: action.color + '15', border: `1px solid ${action.color}40`,
-                  borderRadius: 8, cursor: 'pointer', color: action.color,
-                  fontSize: 12, fontWeight: 600, transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => e.target.style.background = action.color + '25'}
-                onMouseLeave={e => e.target.style.background = action.color + '15'}
-                >
-                  {action.icon} {action.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-    }
+    console.log(`[ProjectMap] Photo upload: ${segment.segment_id} ${phase}`, photos);
+    // TODO: Wire to Google Drive upload
   };
 
   return (
     <div style={{
-      width: '100%', height: '100%', overflow: 'auto',
+      width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column',
       background: darkMode ? '#0d1b2a' : '#ffffff',
     }}>
       {/* Header */}
       <div style={{
-        padding: '16px 20px', borderBottom: `1px solid ${borderColor}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px', borderBottom: `1px solid ${borderColor}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
       }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: text }}>{segment.contractor_id}</div>
-          <div style={{ fontSize: 12, color: textMuted }}>{segment.segment_id}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: text }}>{segment.contractor_id}</div>
+          <div style={{ fontSize: 11, color: textMuted }}>{segment.segment_id}</div>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 4 }}>
           <X size={20} />
@@ -730,35 +603,150 @@ function SegmentDetailPanel({ segment, darkMode, onClose, user }) {
 
       {/* Tab Bar */}
       <div style={{
-        display: 'flex', borderBottom: `1px solid ${borderColor}`,
-        background: darkMode ? '#0a1628' : '#f1f5f9',
-        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+        display: 'flex', borderBottom: `1px solid ${borderColor}`, flexShrink: 0,
+        background: darkMode ? '#0a1628' : '#f8fafc',
       }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              flex: 1, padding: '10px 8px', border: 'none', cursor: 'pointer',
-              background: activeTab === tab.key ? (darkMode ? '#0d1b2a' : '#ffffff') : 'transparent',
-              color: activeTab === tab.key ? accent : textMuted,
-              fontWeight: activeTab === tab.key ? 700 : 500,
-              fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-              borderBottom: activeTab === tab.key ? `2px solid ${accent}` : '2px solid transparent',
-              transition: 'all 0.2s', minWidth: 70, whiteSpace: 'nowrap',
-            }}
-          >
-            <span style={{ fontSize: 14 }}>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          // Show status dot for workflow tabs
+          let statusDot = null;
+          if (tab.id === 'boring') statusDot = segment.boring_status;
+          if (tab.id === 'pulling') statusDot = segment.pulling_status;
+          if (tab.id === 'splicing') statusDot = segment.splicing_status || 'Not Started';
+
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer',
+              background: 'transparent',
+              borderBottom: isActive ? `2px solid ${accent}` : '2px solid transparent',
+              color: isActive ? accent : textMuted,
+              fontSize: 11, fontWeight: isActive ? 700 : 500,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              transition: 'all 0.2s',
+            }}>
+              {tab.icon}
+              {tab.label}
+              {statusDot && (
+                <div style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: getStatusColor(statusDot),
+                  flexShrink: 0,
+                }} />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content */}
-      {renderTabContent()}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {activeTab === 'overview' && (
+          <div style={{ padding: '14px 16px' }}>
+            {/* Location */}
+            <div style={{ background: cardBg, borderRadius: 10, padding: 14, marginBottom: 10, border: `1px solid ${borderColor}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <MapPin size={15} color={accent} />
+                <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Location</span>
+              </div>
+              <div style={{ fontSize: 12, color: textMuted, lineHeight: 1.7 }}>
+                <div><strong style={{ color: text }}>From:</strong> {segment.from_handhole}</div>
+                <div><strong style={{ color: text }}>To:</strong> {segment.to_handhole}</div>
+                <div><strong style={{ color: text }}>Street:</strong> {segment.street}</div>
+                <div><strong style={{ color: text }}>Section:</strong> {segment.section}</div>
+              </div>
+            </div>
+
+            {/* Footage */}
+            <div style={{ background: cardBg, borderRadius: 10, padding: 14, marginBottom: 10, border: `1px solid ${borderColor}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Ruler size={15} color={accent} />
+                <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Footage</span>
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: accent }}>{segment.footage} <span style={{ fontSize: 13, fontWeight: 400 }}>LF</span></div>
+            </div>
+
+            {/* Phase Status */}
+            <div style={{ fontWeight: 600, color: text, marginBottom: 8, fontSize: 13 }}>Workflow Status</div>
+            {phases.map(phase => (
+              <div key={phase.key} onClick={() => setActiveTab(phase.key)} style={{
+                background: cardBg, borderRadius: 10, padding: 12, marginBottom: 8,
+                border: `1px solid ${borderColor}`,
+                borderLeft: `4px solid ${getStatusColor(phase.status)}`,
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#162b4d' : '#f1f5f9'}
+              onMouseLeave={e => e.currentTarget.style.background = cardBg}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15 }}>{phase.icon}</span>
+                    <span style={{ fontWeight: 600, color: text, fontSize: 12 }}>{phase.label}</span>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 600,
+                    background: getStatusColor(phase.status) + '20',
+                    color: getStatusColor(phase.status),
+                  }}>
+                    <StatusIcon status={phase.status} size={11} />
+                    {phase.status}
+                  </div>
+                </div>
+                {phase.assigned && (
+                  <div style={{ fontSize: 11, color: textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Users size={10} /> {phase.assigned}
+                  </div>
+                )}
+                <div style={{ fontSize: 10, color: accent, marginTop: 4, textAlign: 'right' }}>Tap to manage →</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'boring' && (
+          <div style={{ padding: '8px' }}>
+            <BoringTracker
+              segment={segmentData}
+              darkMode={darkMode}
+              user={user}
+              onStatusUpdate={(status) => handleStatusChange('boring', status)}
+              onPhotoUpload={(photos) => handlePhotoUpload('boring', photos)}
+            />
+          </div>
+        )}
+
+        {activeTab === 'pulling' && (
+          <div style={{ padding: '8px' }}>
+            <PullingTracker
+              segment={segmentData}
+              darkMode={darkMode}
+              user={user}
+              isAdmin={isAdmin || false}
+              isSplicer={user?.role === 'Splicer' || false}
+              onStatusUpdate={(status) => handleStatusChange('pulling', status)}
+              onPhotoUpload={(photos) => handlePhotoUpload('pulling', photos)}
+              onQCApprove={(data) => handleStatusChange('pulling', 'QC Approved')}
+            />
+          </div>
+        )}
+
+        {activeTab === 'splicing' && (
+          <div style={{ padding: '8px' }}>
+            <SplicingTracker
+              segment={segmentData}
+              darkMode={darkMode}
+              user={user}
+              isAdmin={isAdmin || false}
+              onStatusUpdate={(status) => handleStatusChange('splicing', status)}
+              onPhotoUpload={(photos) => handlePhotoUpload('splicing', photos)}
+              onQCApprove={(data) => handleStatusChange('splicing', 'QC Approved')}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Version tag */}
-      <div style={{ padding: '8px 20px', fontSize: 9, color: darkMode ? '#1e3a5f' : '#e2e8f0', textAlign: 'right', userSelect: 'none' }}>v2.1.0</div>
+      <div style={{ padding: '4px 16px', fontSize: 9, color: 'transparent', textAlign: 'right', userSelect: 'none', flexShrink: 0 }}>v2.1.0</div>
     </div>
   );
 }
@@ -1006,7 +994,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             width: 360, borderLeft: `1px solid ${borderColor}`,
             flexShrink: 0, overflow: 'hidden',
           }}>
-            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} user={user} />
+            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={user?.role === 'Admin' || user?.role === 'admin'} user={user} />
           </div>
         )}
 
@@ -1025,14 +1013,14 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <div style={{ width: 40, height: 4, borderRadius: 2, background: borderColor }} />
             </div>
             <div style={{ overflow: 'auto', maxHeight: 'calc(60vh - 20px)' }}>
-              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} user={user} />
+              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={user?.role === 'Admin' || user?.role === 'admin'} user={user} />
             </div>
           </div>
-        )}
+        )}}
       </div>
 
       {/* Hidden version */}
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.0.0</div>
+      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: 'transparent', userSelect: 'none' }}>ProjectMapPage v2.1.0</div>
     </div>
   );
 }
