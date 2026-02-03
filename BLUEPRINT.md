@@ -12,13 +12,22 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.12
-Website deployed and working. Project Map System Phase 9: Foundation, Map, Workflow components, Chat, API, and Data Bridge all built and pushed.
+### ✅ Live Version: v3.13
+Website deployed and working. Project Map System Phase 9 COMPLETE: Foundation, Map, Workflow, Chat, API, Data Bridge, and LIVE DATABASE all built and pushed.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026)
-- **ContractorDashboard.js v2.3** - Added Project Map nav item, live segment stats from mapService (Active Segments, Completed, Issues), assigned segments list with color-coded status badges, "View Project Map" quick action button
-- **ProjectMapPage.js v2.3.0** - Contractor view mode: CONTRACTOR VIEW badge, hides PO number for non-admins, back button routes to correct dashboard based on role (admin→admin-projects, contractor→contractor-dashboard)
-- **mapService.js v2.0.0** - Full data bridge: Gateway integration, demo fallback, segment normalization, updateSegmentField, logAction, getProjectStats. Demo data built-in for when DB not yet configured.
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 11:30 PM CST)
+- **mapService.js v3.0.0** - LIVE Google Sheets database (8 separate spreadsheets), Gateway redirect handling, real CRUD ops, DB connectivity check + demo fallback, new: loadAssignments, loadRateCards, loadIssues, createIssue, resolveIssue, updateSpliceField
+- **Google Sheets 8-Table Database** initialized and populated:
+  - Projects: 1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70
+  - Segments: 1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg (12 segments A/B/C/D)
+  - Splice Points: 1lFMlmlyTgbtGkxB0zhJNoa7M2RFH5bd25VPLh_xdCFU (7 points)
+  - Assignments: 1g2Ml8PFsN0HZA_chLqje2OTnYAZXDPVMZ1trRmKN-qY (3 assignments)
+  - Rate Cards: 10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4 (18 rates)
+  - Users: 1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw (existing)
+  - Work Log: 1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8
+  - Issues: 1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g
+- **ContractorDashboard.js v2.3** - Project Map nav, live segment stats, assigned segments list
+- **ProjectMapPage.js v2.3.0** - Contractor view mode, role-aware nav, hides PO for non-admins
 - **ProjectMapPage.js v2.2.0** - FIXED: Removed undefined DEMO_SEGMENTS/DEMO_PROJECT references (was causing page crash). Now uses async loadFullProject() on mount with loading spinner. Shows "DEMO" badge when in demo mode. All filters/stats use dynamic allSegments state.
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
@@ -28,7 +37,7 @@ Website deployed and working. Project Map System Phase 9: Foundation, Map, Workf
 - `src/utils/idGenerator.js` v1.0.0 - Two-tier ID system (internal + contractor)
 - `src/utils/rateCardMatcher.js` v1.0.0 - Billing calculation engine (boring, pulling, splicing)
 - `src/services/workflowService.js` v1.0.0 - Phase transitions, QC gates, photo validation
-- `src/services/mapService.js` v2.0.0 - Data bridge: Gateway read/write, demo fallback, segment normalization
+- `src/services/mapService.js` v3.0.0 - Live DB: 8 spreadsheet CRUD, Gateway redirect handling, connectivity check
 - `src/pages/JobImportPage.js` v1.0.0 - PDF work order upload + AI extraction UI
 - `src/pages/AdminProjectDashboard.js` v1.0.0 - Project management overview
 - `package.json` v3.11.0 - Added @react-google-maps/api, date-fns, uuid
@@ -102,7 +111,7 @@ Website deployed and working. Project Map System Phase 9: Foundation, Map, Workf
 - ✅ ~~Wire FieldAssist chat into App.js as floating widget~~ (DONE - already in App.js)
 - Run database initializer script to create Google Sheets database
 - Get Google Maps API key for production map
-- Wire mapService.js to real Google Sheets data (replace demo data)
+- ~~Wire mapService.js to real Google Sheets data~~ ✅ DONE (v3.0.0)
 - Set ANTHROPIC_API_KEY in Vercel environment variables
 - Upload real Sulphur LA construction map PDF for testing
 - Create data bridge: Google Sheets ↔ React via Gateway script
@@ -973,7 +982,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | File | Version | Status |
 |------|---------|--------|
 | src/config/mapConfig.js | v1.0.0 | ✅ Status colors, icons, rate cards, photo reqs |
-| src/services/mapService.js | v1.0.0 | ✅ Gateway integration for Sheets reads/writes |
+| src/services/mapService.js | v3.0.0 | ✅ Live DB: 8 Google Sheets, Gateway CRUD, redirect handling |
 | src/services/apiService.js | v1.0.0 | ✅ Claude API integration service |
 | src/services/workflowService.js | v1.0.0 | ✅ Phase management logic |
 | src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
