@@ -970,6 +970,8 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/services/pdfService.js | updated | ✅ PDF generation (930 lines) |
 | src/utils/idGenerator.js | v1.0.0 | ✅ Two-tier ID system |
 | src/utils/rateCardMatcher.js | v1.0.0 | ✅ Billing calculations |
+| src/utils/segmentParser.js | v1.0.0 | ✅ Map text → segments, handholes, splice points |
+| src/utils/backfeedDetector.js | v1.0.0 | ✅ Backfeed routes, optimal sequence, drill setups |
 
 #### Files In Repo - Pages:
 | File | Version | Status |
@@ -984,13 +986,14 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/components/Workflow/BoringTracker.js | v1.0.0 | ✅ Boring phase: pothole approval, status, photos, QC |
 | src/components/Workflow/PullingTracker.js | v1.0.0 | ✅ Pulling phase: direction, cable type, splicer QC |
 | src/components/Workflow/SplicingTracker.js | v1.0.0 | ✅ Splicing: type-specific photos, power meter, OTDR |
-| src/components/Workflow/PhotoUploader.js | v1.0.0 | ✅ Camera/file upload with GPS, type tagging |
+| src/components/Workflow/PhotoUploader.js | v1.1.0 | ✅ Camera/file upload with GPS, type tagging, prop compat |
 | src/components/Workflow/QCApproval.js | v1.0.0 | ✅ Admin QC review: gallery, tests, approve/reject |
 
 #### Files In Repo - Chat & API:
 | File | Version | Status |
 |------|---------|--------|
 | src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito chat (floating bubble + offline fallback) |
+| src/components/Chat/ChatBubble.js | v1.0.0 | ✅ Message display with timestamps, typing indicator |
 | api/claude-chat.js | v1.0.0 | ✅ Vercel serverless Claude proxy endpoint |
 
 #### App.js Routes (configured):
@@ -1009,13 +1012,14 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 
 #### 🔲 STILL NEEDED:
 - [ ] Google Sheets database creation (8 tabs with schemas)
-- [ ] Connect JobImportPage to /api/pdf-import endpoint
+- [ ] Connect JobImportPage to /api/pdf-import endpoint (create pdf-import serverless fn)
 - [ ] Connect ProjectMapPage to live Google Sheets data (replace demo data)
-- [ ] Connect FieldAssist to /api/claude-chat endpoint (needs API key)
+- [ ] Connect FieldAssist to /api/claude-chat endpoint (needs API key in Vercel env)
 - [ ] Add FieldAssist chat bubble to all dashboard pages
 - [ ] Admin dashboard links to project map system pages
 - [ ] Google Maps API key provisioning
-- [ ] Segment detail side panels in map view
-- [ ] Integrate workflow components into ProjectMapPage segment details
+- [ ] Integrate workflow components into ProjectMapPage segment detail panel
 - [ ] Contractor-filtered views (can only see assigned work)
 - [ ] Real-time data sync between map and Google Sheets
+- [ ] GPS tracking service (gpsService.js)
+- [ ] pdf-import Vercel serverless function
