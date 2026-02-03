@@ -12,10 +12,11 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
-### ✅ Live Version: v3.17
+### ✅ Live Version: v3.18.1
 Website deployed and working. Map fixed (Leaflet), PDF upload fixed (pdf.js).
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 5:30 PM CST)
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 1:35 PM CST)
+- **JobImportPage v3.1.0** - FIX: Dynamic pdf.js worker URL auto-matches installed version. Pinned pdfjs-dist to exact 4.8.69 in package.json (removed ^ caret). Eliminates "API version X does not match Worker version Y" errors permanently.
 - **ProjectMapPage v3.0.0** - CRITICAL FIX: Replaced dead Google Maps API key (403 error) with Leaflet/OpenStreetMap. Free, no API key needed. Street + Satellite layer toggle, color-coded polylines, handhole circle markers with tooltips, auto-fitBounds, status legend overlay
 - **JobImportPage v2.1.0** - CRITICAL FIX: PDF upload was sending binary garbage (readAsText on PDFs). Now uses pdfjs-dist for real PDF text extraction page-by-page. Works with text-based PDFs, gracefully handles scanned/image PDFs
 - **New dependencies**: leaflet 1.9.4, react-leaflet 5.0.0, pdfjs-dist 5.4.624
