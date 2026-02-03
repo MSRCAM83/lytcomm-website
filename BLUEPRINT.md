@@ -15,7 +15,9 @@
 ### ✅ Live Version: v3.13
 Website deployed and working. Project Map System Phase 9 COMPLETE: Foundation, Map, Workflow, Chat, API, Data Bridge, and LIVE DATABASE all built and pushed.
 
-### 🔧 LATEST CHANGES (Feb 03, 2026 - 11:30 PM CST)
+### 🔧 LATEST CHANGES (Feb 03, 2026 - 12:05 AM CST)
+- **ProjectMapPage.js v2.4.0** - WORKFLOW PERSISTENCE: Status changes write to Google Sheets DB via mapService, timestamps for start/complete, QC approval fields (approved_by, date), action logging to Work Log, actual footage + notes persistence, parent state refresh on DB write
+- **InvoiceGenerator v1.0.0** - Auto-invoice from rate cards + QC approved segments, Vexus billing rules (1x4/1x8/F1 splice calculations), expandable line items, section/contractor filters, print view, back button nav
 - **mapService.js v3.0.0** - LIVE Google Sheets database (8 separate spreadsheets), Gateway redirect handling, real CRUD ops, DB connectivity check + demo fallback, new: loadAssignments, loadRateCards, loadIssues, createIssue, resolveIssue, updateSpliceField
 - **Google Sheets 8-Table Database** initialized and populated:
   - Projects: 1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70
@@ -956,7 +958,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | WorkMap | v2.0 | ✅ GPS + saves to Work Sessions |
 | PotholeVerification | v2.1 | ✅ Dynamic projects + saves to Potholes |
 | DailyWorkSheet | v2.1 | ✅ Dynamic projects + saves to Work Sheets |
-| InvoiceGenerator | v2.1 | ✅ Dynamic projects + saves to Invoices |
+| InvoiceGenerator | v1.0.0 | ✅ Auto-invoice from rate cards + QC approved segments, expandable line items, print view |
 
 ### ✅ COMPLETE - All Requirements Met
 - No mock data anywhere
