@@ -1,8 +1,9 @@
-// AdminDashboard.js v3.6 - Project Map System navigation + Direct CSV fetch + Gateway for updates
+// AdminDashboard.js v3.7 - NotificationBell + Project Map System navigation
 // Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
 import { LogOut, LayoutDashboard, Users, Briefcase, Clock, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, AlertCircle, Plus, Search, Filter, UserPlus, Shield, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen } from 'lucide-react';
 import { colors } from '../config/constants';
+import NotificationBell from '../components/NotificationBell';
 
 // Direct Google Sheets CSV URLs (for reading data)
 const USERS_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw/gviz/tq?tqx=out:csv';
@@ -842,8 +843,10 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
             <span style={{ color: darkMode ? '#e6c4d9' : '#2ec7c0' }}>t</span>
             <span style={{ color: mutedColor, fontSize: '0.85rem', marginLeft: '6px' }}>Admin</span>
           </div>
-          {/* Dark Mode Toggle */}
-          {setDarkMode && (
+          {/* Dark Mode Toggle + Notifications */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <NotificationBell darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />
+            {setDarkMode && (
             <button
               onClick={() => setDarkMode(!darkMode)}
               style={{
@@ -862,6 +865,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
               {darkMode ? <Sun size={22} /> : <Moon size={22} />}
             </button>
           )}
+          </div>
         </div>
       )}
 
