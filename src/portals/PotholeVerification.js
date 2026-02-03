@@ -2,7 +2,9 @@
 // Pothole documentation and approval workflow
 import React, { useState, useEffect } from 'react';
 import { 
+// eslint-disable-next-line no-unused-vars
   Camera, CheckCircle, XCircle, Clock, MapPin, Upload, 
+// eslint-disable-next-line no-unused-vars
   Eye, AlertTriangle, Image, Trash2, Send, ChevronDown,
   ArrowLeft, RefreshCw, Loader, Plus
 } from 'lucide-react';
