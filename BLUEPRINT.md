@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 2, 2026 - 5:30 PM CST
+### Last Updated: February 3, 2026 - 2:15 AM CST
 
 ---
 
@@ -10,10 +10,14 @@
 
 **Live URL:** https://lytcomm.com (auto-deploys from main branch via Vercel)
 
-## 🚀 CURRENT STATUS (Feb 02, 2026 - 7:40 PM CST)
+## 🚀 CURRENT STATUS (Feb 03, 2026 - 2:15 AM CST)
 
 ### ✅ Live Version: v3.12
-Website deployed and working. Project Map System Phase 9: Foundation, Map, Workflow components, Chat, and API all built and pushed to GitHub.
+Website deployed and working. Project Map System Phase 9: Foundation, Map, Workflow components, Chat, API, and Data Bridge all built and pushed.
+
+### 🔧 LATEST CHANGES (Feb 03, 2026)
+- **mapService.js v2.0.0** - Full data bridge: Gateway integration, demo fallback, segment normalization, updateSegmentField, logAction, getProjectStats. Demo data built-in for when DB not yet configured.
+- **ProjectMapPage.js v2.2.0** - FIXED: Removed undefined DEMO_SEGMENTS/DEMO_PROJECT references (was causing page crash). Now uses async loadFullProject() on mount with loading spinner. Shows "DEMO" badge when in demo mode. All filters/stats use dynamic allSegments state.
 
 ### 🏗️ PROJECT MAP SYSTEM STATUS
 
@@ -22,7 +26,7 @@ Website deployed and working. Project Map System Phase 9: Foundation, Map, Workf
 - `src/utils/idGenerator.js` v1.0.0 - Two-tier ID system (internal + contractor)
 - `src/utils/rateCardMatcher.js` v1.0.0 - Billing calculation engine (boring, pulling, splicing)
 - `src/services/workflowService.js` v1.0.0 - Phase transitions, QC gates, photo validation
-- `src/services/mapService.js` v1.0.0 - Google Sheets integration, segment data mgmt
+- `src/services/mapService.js` v2.0.0 - Data bridge: Gateway read/write, demo fallback, segment normalization
 - `src/pages/JobImportPage.js` v1.0.0 - PDF work order upload + AI extraction UI
 - `src/pages/AdminProjectDashboard.js` v1.0.0 - Project management overview
 - `package.json` v3.11.0 - Added @react-google-maps/api, date-fns, uuid
