@@ -995,6 +995,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito chat (floating bubble + offline fallback) |
 | src/components/Chat/ChatBubble.js | v1.0.0 | ✅ Message display with timestamps, typing indicator |
 | api/claude-chat.js | v1.0.0 | ✅ Vercel serverless Claude proxy endpoint |
+| api/pdf-import.js | v1.0.0 | PDF extraction via Claude - work order & map data parsing | ✅ Live |
 
 #### App.js Routes (configured):
 - `#job-import` → JobImportPage
