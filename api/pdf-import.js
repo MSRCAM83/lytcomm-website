@@ -1,11 +1,12 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.7.0
- * Updated: 2026-02-03
+ * Version: 2.8.0
+ * Updated: 2026-02-04
  * 
  * Vercel serverless function that processes uploaded work order
- * and construction map PDFs via Claude Opus 4 Vision API.
+ * and construction map PDFs via Claude Opus 4.5 Vision API.
  * 
+ * v2.8.0: Upgraded to Opus 4.5 - better vision, 3x cheaper, smarter.
  * v2.7.0: Full data - restored 10 images, 16384 max_tokens, 750s safety timeout.
  *         Fluid Compute (800s maxDuration) means no more 504s.
  *         Opus gets ALL the data and ALL the time it needs.
@@ -133,7 +134,7 @@ export default async function handler(req, res) {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-opus-4-20250514',
+          model: 'claude-opus-4-5-20251101',
           max_tokens: 16384,
           system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
           messages: [{ role: 'user', content: contentBlocks }],
