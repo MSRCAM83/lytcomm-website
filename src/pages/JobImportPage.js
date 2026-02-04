@@ -1,10 +1,13 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 4.0.0
+ * Version: 4.1.0
  * Updated: 2026-02-04
  * Route: #job-import
  * 
- * Upload work order PDFs and construction map PDFs.
+ * v4.1.0: COMPLETE 4-BUCKET EXTRACTION - Segments + Splices (with billing) +
+ *         Unallocated WO items. Fixed: splice billing was being excluded.
+ *         Added: WO line items display, unallocated items display, reconciliation.
+ *         Fixed: text extraction preserves line breaks for table data.
  * v4.0.0: MAP TILING - Renders map pages at 4.0x scale, then tiles into
  *         legend crop + 6 map section tiles (3x2 grid). Each tile is
  *         ~1175x1584px = under Claude Vision's 1568 native threshold.
@@ -185,12 +188,32 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       setProgressMsg(`${label}: Processing page ${i}/${pagesToRender}...`);
       const page = await pdf.getPage(i);
 
-      // Extract text
+      // Extract text - preserve line structure for table data
       try {
         const content = await page.getTextContent();
-        const pageText = content.items.map(item => item.str).join(' ').trim();
-        if (pageText.length > 5) {
-          fullText += `\n--- Page ${i} ---\n${pageText}`;
+        // Group text items by Y position to preserve rows
+        const items = content.items;
+        if (items.length > 0) {
+          let lastY = null;
+          let lineText = '';
+          const lines = [];
+          for (const item of items) {
+            const y = Math.round(item.transform[5]); // Y position
+            if (lastY !== null && Math.abs(y - lastY) > 3) {
+              // New line (Y position changed)
+              if (lineText.trim()) lines.push(lineText.trim());
+              lineText = item.str;
+            } else {
+              // Same line - add with separator
+              lineText += (lineText && item.str ? '  ' : '') + item.str;
+            }
+            lastY = y;
+          }
+          if (lineText.trim()) lines.push(lineText.trim());
+          const pageText = lines.join('\n');
+          if (pageText.length > 5) {
+            fullText += `\n--- Page ${i} ---\n${pageText}`;
+          }
         }
       } catch (e) {
         console.warn(`Text extraction failed for page ${i}:`, e);
@@ -398,12 +421,20 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           customer: ext.project?.customer || 'Vexus Fiber',
           project_name: ext.project?.project_name || '',
           po_number: ext.project?.po_number || '',
-          total_value: ext.grand_total || ext.project?.total_value || 0,
+          total_value: ext.project?.total_value || ext.grand_total || 0,
           start_date: ext.project?.start_date || '',
           completion_date: ext.project?.completion_date || '',
           status: 'Active',
           rate_card_id: rateCardId,
         },
+        work_order_line_items: (ext.work_order_line_items || []).map(li => ({
+          code: li.code || '',
+          description: li.description || '',
+          qty: li.qty || 0,
+          uom: li.uom || '',
+          rate: li.rate || 0,
+          total: li.total || 0,
+        })),
         segments: (ext.segments || []).map((seg, i) => ({
           segment_id: `${projectId}-${seg.section || 'X'}-${(seg.to_handhole || `S${i}`).replace(/[^A-Za-z0-9]/g, '')}`,
           contractor_id: seg.contractor_id || `${seg.from_handhole}→${seg.to_handhole}`,
@@ -412,6 +443,8 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           to_handhole: seg.to_handhole ? `${seg.to_handhole} (${seg.to_hh_size || ''})` : '',
           footage: seg.footage || 0,
           street: seg.street || '',
+          duct_count: seg.duct_count || null,
+          cable_type: seg.cable_type || null,
           boring_status: 'Not Started',
           work_items: seg.work_items || [],
           total_value: seg.total_value || 0,
@@ -429,11 +462,23 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           work_items: sp.work_items || [],
           total_value: sp.total_value || 0,
         })),
+        unallocated_items: (ext.unallocated_items || []).map(ui => ({
+          code: ui.code || '',
+          description: ui.description || '',
+          qty: ui.qty || 0,
+          uom: ui.uom || '',
+          rate: ui.rate || 0,
+          total: ui.total || 0,
+        })),
         stats: {
           totalSegments: ext.total_segments || (ext.segments || []).length,
           totalFootage: ext.total_footage || (ext.segments || []).reduce((sum, s) => sum + (s.footage || 0), 0),
           totalSplicePoints: ext.total_splice_points || (ext.splice_points || []).length,
-          estimatedValue: ext.grand_total || ext.project?.total_value || 0,
+          segmentsTotal: ext.segments_total || (ext.segments || []).reduce((sum, s) => sum + (s.total_value || 0), 0),
+          splicesTotal: ext.splices_total || (ext.splice_points || []).reduce((sum, s) => sum + (s.total_value || 0), 0),
+          unallocatedTotal: ext.unallocated_total || (ext.unallocated_items || []).reduce((sum, u) => sum + (u.total || 0), 0),
+          grandTotal: ext.grand_total || 0,
+          woTotal: ext.project?.total_value || 0,
         },
         _usage: data.usage,
         _raw: ext,
@@ -800,19 +845,23 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                 ['Segments', importResult.stats.totalSegments, accent],
                 ['Total Footage', `${(importResult.stats.totalFootage || 0).toLocaleString()} LF`, '#FFB800'],
                 ['Splice Points', importResult.stats.totalSplicePoints, '#4CAF50'],
-                ['Est. Value', `$${(importResult.stats.estimatedValue || 0).toLocaleString()}`, successGreen],
+                ['Segments $', `$${(importResult.stats.segmentsTotal || 0).toLocaleString()}`, accent],
+                ['Splicing $', `$${(importResult.stats.splicesTotal || 0).toLocaleString()}`, '#4CAF50'],
+                ['Unallocated $', `$${(importResult.stats.unallocatedTotal || 0).toLocaleString()}`, '#FFB800'],
+                ['Grand Total', `$${(importResult.stats.grandTotal || 0).toLocaleString()}`, successGreen],
+                ['WO Total', `$${(importResult.stats.woTotal || 0).toLocaleString()}`, textMuted],
               ].map(([label, value, color]) => (
                 <div key={label} style={{
                   backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
                   borderRadius: '8px',
-                  padding: '16px',
+                  padding: '12px 16px',
                   flex: '1',
-                  minWidth: '140px',
+                  minWidth: '120px',
                   textAlign: 'center',
                   border: `1px solid ${borderColor}`,
                 }}>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color, margin: '0 0 4px' }}>{value}</p>
-                  <p style={{ color: textMuted, fontSize: '0.8rem', margin: 0 }}>{label}</p>
+                  <p style={{ fontSize: '1.2rem', fontWeight: 700, color, margin: '0 0 4px' }}>{value}</p>
+                  <p style={{ color: textMuted, fontSize: '0.75rem', margin: 0 }}>{label}</p>
                 </div>
               ))}
             </div>
@@ -872,7 +921,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
               borderRadius: '8px',
               border: `1px solid ${borderColor}`,
-              marginBottom: '24px',
+              marginBottom: '16px',
             }}>
               <button
                 onClick={() => setExpandedSection(expandedSection === 'splices' ? null : 'splices')}
@@ -882,7 +931,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                   alignItems: 'center', fontSize: '1rem', fontWeight: 600,
                 }}
               >
-                Splice Points ({importResult.splice_points.length})
+                Splice Points ({importResult.splice_points.length}) — ${(importResult.stats.splicesTotal || 0).toLocaleString()}
                 {expandedSection === 'splices' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </button>
               {expandedSection === 'splices' && (
@@ -906,7 +955,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                             <td style={{ padding: '8px' }}>{sp.splice_type}</td>
                             <td style={{ padding: '8px' }}>{sp.position_type}</td>
                             <td style={{ padding: '8px' }}>{sp.fiber_count}</td>
-                            <td style={{ padding: '8px', color: successGreen }}>${(sp.total_value || 0).toLocaleString()}</td>
+                            <td style={{ padding: '8px', color: successGreen, fontWeight: 600 }}>${(sp.total_value || 0).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -915,6 +964,102 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                 </div>
               )}
             </div>
+
+            {/* Work Order Line Items */}
+            <div style={{
+              backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
+              borderRadius: '8px',
+              border: `1px solid ${borderColor}`,
+              marginBottom: '16px',
+            }}>
+              <button
+                onClick={() => setExpandedSection(expandedSection === 'wolines' ? null : 'wolines')}
+                style={{
+                  width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                  color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '1rem', fontWeight: 600,
+                }}
+              >
+                WO Line Items ({(importResult.work_order_line_items || []).length})
+                {expandedSection === 'wolines' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
+              {expandedSection === 'wolines' && (
+                <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
+                  {(importResult.work_order_line_items || []).length === 0 ? (
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No work order line items extracted.</p>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                          {['Code', 'Description', 'Qty', 'UOM', 'Rate', 'Total'].map(h => (
+                            <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(importResult.work_order_line_items || []).map((li, i) => (
+                          <tr key={i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: 600 }}>{li.code}</td>
+                            <td style={{ padding: '8px' }}>{li.description}</td>
+                            <td style={{ padding: '8px' }}>{(li.qty || 0).toLocaleString()}</td>
+                            <td style={{ padding: '8px' }}>{li.uom}</td>
+                            <td style={{ padding: '8px' }}>${(li.rate || 0).toFixed(2)}</td>
+                            <td style={{ padding: '8px', color: successGreen }}>${(li.total || 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Unallocated Items */}
+            {(importResult.unallocated_items || []).length > 0 && (
+              <div style={{
+                backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
+                borderRadius: '8px',
+                border: `1px solid ${borderColor}`,
+                marginBottom: '24px',
+              }}>
+                <button
+                  onClick={() => setExpandedSection(expandedSection === 'unallocated' ? null : 'unallocated')}
+                  style={{
+                    width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                    color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', fontSize: '1rem', fontWeight: 600,
+                  }}
+                >
+                  Unallocated Items ({(importResult.unallocated_items || []).length}) — ${(importResult.stats.unallocatedTotal || 0).toLocaleString()}
+                  {expandedSection === 'unallocated' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                {expandedSection === 'unallocated' && (
+                  <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                          {['Code', 'Description', 'Qty', 'UOM', 'Rate', 'Total'].map(h => (
+                            <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(importResult.unallocated_items || []).map((ui, i) => (
+                          <tr key={i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: 600 }}>{ui.code}</td>
+                            <td style={{ padding: '8px' }}>{ui.description}</td>
+                            <td style={{ padding: '8px' }}>{(ui.qty || 0).toLocaleString()}</td>
+                            <td style={{ padding: '8px' }}>{ui.uom}</td>
+                            <td style={{ padding: '8px' }}>${(ui.rate || 0).toFixed(2)}</td>
+                            <td style={{ padding: '8px', color: '#FFB800' }}>${(ui.total || 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Confirm / Cancel */}
             <div style={{ display: 'flex', gap: '16px' }}>
@@ -952,7 +1097,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       <div style={{ position: 'fixed', bottom: '4px', right: '8px', fontSize: '0.6rem', color: 'transparent', userSelect: 'none' }}
         onDoubleClick={(e) => { e.target.style.color = textMuted; }}
       >
-        JobImportPage v4.0.0
+        JobImportPage v4.1.0
       </div>
     </div>
   );
