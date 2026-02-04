@@ -1,10 +1,12 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 3.1.0
+ * Version: 3.2.0
  * Updated: 2026-02-03
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
+ * v3.2.0: Better error diagnostics - shows raw AI response preview in error message
+ *         and logs full details to browser console for debugging
  * v3.1.0: Dynamic worker URL - auto-matches installed pdfjs-dist version
  *         Fixes "API version X does not match Worker version Y" error
  * v3.0.0: Renders PDF pages to images (canvas → base64) and sends
@@ -248,15 +250,21 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       const data = await response.json();
       
+      console.log('API response keys:', Object.keys(data));
+      console.log('API version check - has success:', !!data.success, 'has warning:', !!data.warning, 'has extracted:', !!data.extracted);
+      
       if (data.warning) {
-        setError(`AI extraction returned unexpected format. Check console for details.`);
-        console.warn('Raw AI response:', data.raw_response);
+        const preview = (data.raw_response || '').substring(0, 200);
+        setError(`AI could not parse extraction. Preview: ${preview || 'empty'}. Check browser console (F12) for full response.`);
+        console.warn('Full raw AI response:', data.raw_response);
+        console.warn('Usage:', data.usage);
         setProcessing(false);
         return;
       }
 
       if (!data.success || !data.extracted) {
-        throw new Error('No extraction data returned');
+        console.error('Unexpected response shape:', JSON.stringify(data).substring(0, 500));
+        throw new Error(`No extraction data returned. Keys: ${Object.keys(data).join(', ')}`);
       }
 
       setProgressMsg('Building project preview...');
