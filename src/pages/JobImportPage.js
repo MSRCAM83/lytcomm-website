@@ -1,17 +1,18 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 3.2.0
- * Updated: 2026-02-03
+ * Version: 3.3.0
+ * Updated: 2026-02-04
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
+ * v3.3.0: Split processing - WO as text only (no images), map at max quality.
+ *         Work order text extracted by pdf.js, frees full 4.5MB budget for
+ *         high-resolution map images so Claude can read footage numbers accurately.
+ *         Map render: 2.0x scale, 80% JPEG quality (~400-700KB/page).
  * v3.2.0: Better error diagnostics - shows raw AI response preview in error message
  *         and logs full details to browser console for debugging
  * v3.1.0: Dynamic worker URL - auto-matches installed pdfjs-dist version
- *         Fixes "API version X does not match Worker version Y" error
- * v3.0.0: Renders PDF pages to images (canvas → base64) and sends
- *         to Claude Vision API so scanned/image-based PDFs work.
- *         Also extracts text as fallback for text-based PDFs.
+ * v3.0.0: Renders PDF pages to images (canvas → base64) for Claude Vision API.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -22,12 +23,15 @@ import * as pdfjsLib from 'pdfjs-dist';
 const PDFJS_VERSION = pdfjsLib.version || '4.8.69';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
-// Max pages to render as images (keep payload under Vercel 4.5MB limit)
-const MAX_PAGES_WORKORDER = 5;
+// Work order: text-only extraction (no images needed - saves bandwidth for map)
+const MAX_PAGES_WORKORDER = 10;
+// Map: high-quality images for accurate footage reading
 const MAX_PAGES_MAP = 8;
-// Render scale (1.0 = native resolution, keeps file size reasonable)
+// Map render settings (high quality - full 4.5MB budget goes to map images)
+const MAP_RENDER_SCALE = 2.0;
+const MAP_JPEG_QUALITY = 0.80;
+// Legacy defaults for any fallback image rendering
 const RENDER_SCALE = 1.5;
-// JPEG quality (0.5 = decent quality, small size. Base64 ~100-300KB per page)
 const JPEG_QUALITY = 0.55;
 
 function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
@@ -56,8 +60,15 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   /**
    * Render a PDF file's pages to base64 JPEG images + extract text
    * Returns { images: string[], text: string, pageCount: number }
+   * @param {File} file - PDF file
+   * @param {string} label - Display label
+   * @param {number} maxPages - Max pages to process
+   * @param {object} opts - { scale, quality, textOnly }
    */
-  const processPdf = async (file, label, maxPages) => {
+  const processPdf = async (file, label, maxPages, opts = {}) => {
+    const scale = opts.scale || RENDER_SCALE;
+    const quality = opts.quality || JPEG_QUALITY;
+    const textOnly = opts.textOnly || false;
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const pageCount = pdf.numPages;
@@ -81,34 +92,36 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         console.warn(`Text extraction failed for page ${i}:`, e);
       }
 
-      // Render page to canvas → base64 JPEG (much smaller than PNG)
-      try {
-        const viewport = page.getViewport({ scale: RENDER_SCALE });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
+      // Render page to canvas → base64 JPEG (skip if textOnly mode)
+      if (!textOnly) {
+        try {
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
 
-        // White background (JPEG has no transparency)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // White background (JPEG has no transparency)
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+          await page.render({ canvasContext: ctx, viewport }).promise;
 
-        // Convert to JPEG base64 (much smaller than PNG)
-        const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-        const base64 = dataUrl.split(',')[1];
-        images.push(base64);
+          // Convert to JPEG base64
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const base64 = dataUrl.split(',')[1];
+          images.push(base64);
 
-        // Log size for debugging
-        const sizeKB = Math.round(base64.length * 0.75 / 1024);
-        console.log(`${label} page ${i}: ${sizeKB}KB (${canvas.width}x${canvas.height})`);
+          // Log size for debugging
+          const sizeKB = Math.round(base64.length * 0.75 / 1024);
+          console.log(`${label} page ${i}: ${sizeKB}KB (${canvas.width}x${canvas.height}) scale=${scale} q=${quality}`);
 
-        // Cleanup
-        canvas.width = 0;
-        canvas.height = 0;
-      } catch (renderErr) {
-        console.warn(`Page ${i} render failed:`, renderErr);
+          // Cleanup
+          canvas.width = 0;
+          canvas.height = 0;
+        } catch (renderErr) {
+          console.warn(`Page ${i} render failed:`, renderErr);
+        }
       }
     }
 
@@ -171,15 +184,18 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setProgressMsg('Starting PDF processing...');
 
     try {
-      // Process work order PDF → images + text
+      // Process work order PDF → TEXT ONLY (no images needed, saves bandwidth for map)
       let woImages = [];
       let woText = '';
       try {
-        setProgressMsg('Processing work order PDF...');
-        const woResult = await processPdf(workOrderFile, 'Work Order', MAX_PAGES_WORKORDER);
-        woImages = woResult.images;
+        setProgressMsg('Extracting work order text...');
+        const woResult = await processPdf(workOrderFile, 'Work Order', MAX_PAGES_WORKORDER, { textOnly: true });
+        woImages = []; // No images for work order - text is sufficient
         woText = woResult.text;
-        setProgressMsg(`Work order: ${woResult.pageCount} pages processed (${woImages.length} images, ${woText.length > 30 ? 'text found' : 'image-only'})`);
+        setProgressMsg(`Work order: ${woResult.pageCount} pages, ${woText.length} chars of text extracted`);
+        if (woText.length < 30) {
+          console.warn('Work order has very little text - may be a scanned image PDF');
+        }
       } catch (pdfErr) {
         console.error('Work order PDF processing failed:', pdfErr);
         setError(`Failed to process work order PDF: ${pdfErr.message}`);
@@ -187,16 +203,20 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         return;
       }
 
-      // Process construction map PDF → images + text
+      // Process construction map PDF → HIGH QUALITY images (full 4.5MB budget)
       let mapImages = [];
       let mapText = '';
       if (mapFile) {
         try {
-          setProgressMsg('Processing construction map PDF...');
-          const mapResult = await processPdf(mapFile, 'Map', MAX_PAGES_MAP);
+          setProgressMsg('Rendering construction map at high resolution...');
+          const mapResult = await processPdf(mapFile, 'Map', MAX_PAGES_MAP, {
+            scale: MAP_RENDER_SCALE,
+            quality: MAP_JPEG_QUALITY,
+          });
           mapImages = mapResult.images;
           mapText = mapResult.text;
-          setProgressMsg(`Map: ${mapResult.pageCount} pages processed (${mapImages.length} images)`);
+          const totalMapKB = mapImages.reduce((sum, img) => sum + Math.round(img.length * 0.75 / 1024), 0);
+          setProgressMsg(`Map: ${mapResult.pageCount} pages, ${mapImages.length} high-res images (${(totalMapKB/1024).toFixed(1)}MB)`);
         } catch (pdfErr) {
           console.warn('Map PDF processing failed:', pdfErr);
           // Non-fatal - continue with work order only
@@ -204,16 +224,16 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       }
 
       // Validate we have something to send
-      if (woImages.length === 0 && woText.length < 30 && mapImages.length === 0) {
-        setError('Could not extract any content from the PDF. Please check the file.');
+      if (woText.length < 30 && mapImages.length === 0) {
+        setError('Could not extract content. Work order needs text, map needs images. Check the files.');
         setProcessing(false);
         return;
       }
 
-      // Build payload and check size
+      // Build payload - WO as text only, map as high-quality images
       const payload = {
         work_order_text: woText.length > 30 ? woText : undefined,
-        work_order_images: woImages.length > 0 ? woImages : undefined,
+        // No work order images - text is the source of truth
         map_text: mapText.length > 30 ? mapText : undefined,
         map_images: mapImages.length > 0 ? mapImages : undefined,
         rate_card_id: rateCardId,
@@ -221,20 +241,18 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       const payloadStr = JSON.stringify(payload);
       const payloadMB = (payloadStr.length / (1024 * 1024)).toFixed(1);
-      console.log(`Payload size: ${payloadMB}MB (${woImages.length} WO images + ${mapImages.length} map images)`);
+      console.log(`Payload size: ${payloadMB}MB (text-only WO: ${(woText.length/1024).toFixed(0)}KB + ${mapImages.length} map images)`);
 
       if (payloadStr.length > 4.2 * 1024 * 1024) {
-        // Too large for Vercel - reduce quality and retry
-        setProgressMsg(`Payload too large (${payloadMB}MB). Reducing image quality...`);
-        // Re-render at lower quality
-        const reduceImages = (imgs) => imgs.slice(0, Math.ceil(imgs.length * 0.6));
-        payload.work_order_images = payload.work_order_images ? reduceImages(payload.work_order_images) : undefined;
-        payload.map_images = payload.map_images ? reduceImages(payload.map_images) : undefined;
+        // Too large for Vercel - reduce map image count (keep quality high)
+        setProgressMsg(`Payload too large (${payloadMB}MB). Reducing map pages...`);
+        const keepPages = Math.max(3, Math.ceil(mapImages.length * 0.6));
+        payload.map_images = mapImages.slice(0, keepPages);
         const reducedSize = (JSON.stringify(payload).length / (1024 * 1024)).toFixed(1);
-        console.log(`Reduced payload: ${reducedSize}MB`);
+        console.log(`Reduced payload: ${reducedSize}MB (${keepPages} map pages kept at high quality)`);
       }
 
-      setProgressMsg(`Sending ${(woImages.length || 0) + (mapImages.length || 0)} page images to AI for extraction (${payloadMB}MB)...`);
+      setProgressMsg(`Sending work order text + ${(mapImages.length || 0)} high-res map images to AI (${payloadMB}MB)...`);
 
       // Call the AI extraction API with images
       const response = await fetch('/api/pdf-import', {
