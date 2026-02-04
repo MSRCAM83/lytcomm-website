@@ -1,14 +1,14 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.3.0
+ * Version: 2.4.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Vision API.
  * 
- * v2.3.0: Fixed JSON parsing - robust extraction handles preamble text, 
- *         markdown fences, and explanatory text around the JSON.
- *         Strengthened system prompt for strict JSON-only output.
+ * v2.4.0: Fixed content extraction for Opus 4 vision - handles thinking blocks
+ *         and multi-block responses. Only text blocks are now used for JSON.
+ * v2.3.0: Fixed JSON parsing - robust extraction handles preamble text.
  * v2.2.0: Fixed 504 timeout - increased maxDuration to 120s (Pro plan).
  * v2.1.0: Upgraded to Claude Opus 4 for superior vision accuracy.
  *         Falls back to text if images not provided.
@@ -138,7 +138,22 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const rawText = data.content?.[0]?.text || '';
+    
+    // Extract text from response - handle thinking blocks, multiple text blocks
+    let rawText = '';
+    if (data.content && Array.isArray(data.content)) {
+      rawText = data.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text || '')
+        .join('\n');
+    } else if (data.content?.[0]?.text) {
+      rawText = data.content[0].text;
+    }
+    
+    console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}`);
+    if (rawText.length < 10) {
+      console.error('Empty/tiny response. Full content:', JSON.stringify(data.content || []).substring(0, 1000));
+    }
 
     // Parse JSON from response - handle various output formats
     let extracted;
