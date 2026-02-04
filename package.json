@@ -1,6 +1,6 @@
 {
   "name": "lyt-communications",
-  "version": "3.18.0",
+  "version": "3.18.1",
   "private": true,
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
