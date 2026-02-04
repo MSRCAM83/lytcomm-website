@@ -135,7 +135,7 @@ export default async function handler(req, res) {
         signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-opus-4-5-20251101',
-          max_tokens: 16384,
+          max_tokens: 32768,
           system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
           messages: [{ role: 'user', content: contentBlocks }],
         }),
@@ -230,12 +230,61 @@ export default async function handler(req, res) {
 
 /**
  * Repair truncated JSON from max_tokens cutoff
+ * Handles: mid-string, mid-key, mid-value, unclosed arrays/objects
  */
 function repairTruncatedJSON(rawText) {
   let truncated = rawText.substring(rawText.indexOf('{'));
   if (!truncated || truncated.length < 10) return null;
   
+  // First, try to find the largest valid JSON object in the text
+  let bestParse = null;
+  for (let i = truncated.length; i > 100; i--) {
+    if (truncated[i] === '}') {
+      try {
+        bestParse = JSON.parse(truncated.substring(0, i + 1));
+        console.log(`JSON repair: found valid JSON ending at char ${i + 1} of ${truncated.length}`);
+        return bestParse;
+      } catch (e) {
+        // keep scanning backwards
+      }
+    }
+  }
+  
+  // If no valid subset found, try aggressive repair
   let braces = 0, brackets = 0, inString = false, escape = false;
+  let lastSafePos = 0;
+  
+  for (let i = 0; i < truncated.length; i++) {
+    const ch = truncated[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') { braces--; if (braces === 0 && brackets === 0) lastSafePos = i; }
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+    
+    // Track last position where we could safely truncate
+    if (ch === ',' && braces > 0 && brackets === 0) lastSafePos = i - 1;
+  }
+  
+  if (braces === 0 && brackets === 0 && !inString) {
+    return JSON.parse(truncated);
+  }
+  
+  // Close open string if we're mid-string
+  if (inString) truncated += '"';
+  
+  // Remove trailing partial values (multiple patterns)
+  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*"?[^",\]\}]*$/, '');
+  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*\[?[^\]]*$/, '');
+  truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
+  truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
+  truncated = truncated.replace(/,\s*$/, '');
+  
+  // Recount after cleanup
+  braces = 0; brackets = 0; inString = false; escape = false;
   for (let i = 0; i < truncated.length; i++) {
     const ch = truncated[i];
     if (escape) { escape = false; continue; }
@@ -248,18 +297,7 @@ function repairTruncatedJSON(rawText) {
     else if (ch === ']') brackets--;
   }
   
-  if (braces === 0 && brackets === 0 && !inString) {
-    return JSON.parse(truncated);
-  }
-  
   if (inString) truncated += '"';
-  
-  // Remove trailing partial values
-  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*[^,\]\}]*$/, '');
-  truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
-  truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
-  truncated = truncated.replace(/,\s*$/, '');
-  
   for (let i = 0; i < brackets; i++) truncated += ']';
   for (let i = 0; i < braces; i++) truncated += '}';
   
