@@ -1,6 +1,6 @@
 # LYT COMMUNICATIONS - PROJECT BLUEPRINT
 ## For Claude Session Continuity
-### Last Updated: February 3, 2026 - 9:35 PM CST
+### Last Updated: February 4, 2026 - 1:45 AM CST
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## 🚀 CURRENT STATUS (Feb 03, 2026 - 9:15 PM CST)
 
-### ✅ Live Version: v3.18.1
+### ✅ Live Version: v4.0.0
 Website deployed and working. Map fixed (Leaflet), PDF upload fixed (pdf.js).
 
 ### 🔧 LATEST CHANGES (Feb 03, 2026 - 9:15 PM CST)
@@ -992,7 +992,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 #### Files In Repo - Pages:
 | File | Version | Status |
 |------|---------|--------|
-| src/pages/JobImportPage.js | v2.0.0 | ✅ PDF upload UI + real AI extraction + Gateway DB writes |
+| src/pages/JobImportPage.js | v4.0.0 | ✅ PDF upload UI + real AI extraction + Gateway DB writes |
 | src/pages/ProjectMapPage.js | v2.4.0 | ✅ Interactive map + live workflow persistence to DB |
 | src/pages/AdminProjectDashboard.js | v3.0.0 | ✅ Multi-project selector, bulk assignment, section breakdown, live stats |
 
@@ -1011,7 +1011,7 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 | src/components/Chat/FieldAssist.js | v1.0.0 | ✅ Incognito chat (floating bubble + offline fallback) |
 | src/components/Chat/ChatBubble.js | v1.0.0 | ✅ Message display with timestamps, typing indicator |
 | api/claude-chat.js | v1.0.0 | ✅ Vercel serverless Claude proxy endpoint |
-| api/pdf-import.js | v1.1.0 | ✅ PDF extraction via Claude - work order & map data parsing, 8192 token limit |
+| api/pdf-import.js | v3.0.0 | ✅ PDF extraction via Claude - work order & map data parsing, 8192 token limit |
 
 #### App.js Routes (configured):
 - `#job-import` → JobImportPage
@@ -1047,6 +1047,12 @@ All form submissions now have proper destination tabs in the Onboarding Sheet:
 - FIXED: pdf.js worker URL pinned to CDN-available v4.8.69 (was returning 404)
 - Leaflet (raw) kept for ProjectMapPage - no React peer dep conflict
 - pdfjs-dist v4.8.69 for PDF text extraction in JobImportPage
+
+## v4.0.0 — High-Res Map Tiling (2026-02-04)
+- **JobImportPage v4.0.0**: Map pages rendered at 4.0x scale (4896x3168), then tiled into legend + key map + 6 section tiles (3x2 grid). Each tile ~1175x1584px = under Claude Vision's 1568 native threshold. 7x more pixel detail per map section. JPEG quality 85% for sharp text. Replaces single full-page 2.0x image that was too low-res to read footage numbers.
+- **pdf-import v3.0.0**: Tile-aware system prompt. Processes legend tile first (learn symbols), key map second (section layout), then scans each section tile R1C1→R2C3 for handholes, footage, streets, splice callouts. Accepts `map_tile_labels[]` array for tile identification. Max 16 map images (up from 10). `buildSystemPrompt()` split from `buildExtractionPrompt()` for cleaner architecture.
+- **vercel.json**: No changes needed (50mb bodyParser, 800s timeout already configured)
+- **Root cause fixed**: Overview map showed all 48 handholes in 2448x1584 pixels = footage numbers were 2-3px tall = unreadable by Vision API. Now each tile shows 1/6th of the map at 7x more detail.
 
 ## v3.18.0 — Vision AI PDF Extraction (2026-02-03)
 - JobImportPage v3.0.0: Renders PDF pages to canvas images (JPEG), sends to Claude Vision API
