@@ -1,24 +1,24 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.9.0
+ * Version: 3.0.0
  * Updated: 2026-02-04
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Opus 4.5 Vision API.
  * 
- * v2.9.0: MAJOR - Split processing. Work order as TEXT (no images).
- *         Map as HIGH-QUALITY images (full 4.5MB budget). Claude reads
- *         the work order line items first, then examines the map to
- *         match footage numbers and segments. Numbers must reconcile.
- *         64000 max_tokens (Opus 4.5 limit) for full extraction.
- * v2.8.1: Enhanced JSON repair for mid-key truncation.
- * v2.8.0: Upgraded to Opus 4.5 - better vision, 3x cheaper.
- * v2.7.0: Fluid Compute, full data, 800s timeout.
+ * v3.0.0: TILED MAP INPUT - Frontend now sends map as 8 high-res tiles
+ *         (legend + key map + 6 section tiles at 4x scale) instead of
+ *         1 low-res full-page image. System prompt updated to process
+ *         legend first, then scan each tile for handholes/footage/streets.
+ *         Tile labels passed via map_tile_labels array.
+ *         7x more pixel detail per section = readable footage numbers.
+ * v2.9.0: Split processing. WO as text, map as images.
+ * v2.8.0: Upgraded to Opus 4.5.
  * 
  * POST /api/pdf-import
  * Body: { 
  *   work_order_text,
- *   map_text, map_images[],
+ *   map_text, map_images[], map_tile_labels[],
  *   rate_card_id 
  * }
  * 
@@ -48,13 +48,13 @@ export default async function handler(req, res) {
   try {
     const { 
       work_order_text,
-      map_text, map_images,
+      map_text, map_images, map_tile_labels,
       rate_card_id 
     } = req.body;
 
-    // Map images get the full budget (no WO images to compete with)
     let mapImgs = map_images || [];
-    const MAX_MAP_IMAGES = 10;
+    const tileLabels = map_tile_labels || [];
+    const MAX_MAP_IMAGES = 16; // Allow more now since tiles are smaller
     if (mapImgs.length > MAX_MAP_IMAGES) {
       mapImgs = mapImgs.slice(0, MAX_MAP_IMAGES);
       console.log(`Map images capped at ${MAX_MAP_IMAGES} (was ${map_images.length})`);
@@ -63,12 +63,13 @@ export default async function handler(req, res) {
     const hasWOText = work_order_text && work_order_text.length > 30;
     const hasMapImages = mapImgs.length > 0;
     const hasMapText = map_text && map_text.length > 30;
+    const isTiled = tileLabels.length > 0;
 
     if (!hasWOText && !hasMapImages && !hasMapText) {
-      return res.status(400).json({ error: 'No extractable content. Need work order text and/or map images.' });
+      return res.status(400).json({ error: 'No extractable content.' });
     }
 
-    console.log(`Processing v2.9.0: WO text=${(work_order_text||'').length} chars, map images=${mapImgs.length}, map text=${(map_text||'').length} chars`);
+    console.log(`Processing v3.0.0: WO text=${(work_order_text||'').length} chars, map images=${mapImgs.length}${isTiled ? ' (TILED)' : ''}, map text=${(map_text||'').length} chars`);
 
     // Build message content array
     const contentBlocks = [];
@@ -76,28 +77,57 @@ export default async function handler(req, res) {
     // Main extraction prompt with WO text embedded
     contentBlocks.push({
       type: 'text',
-      text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasMapImages),
+      text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasMapImages, isTiled),
     });
 
-    // Map images (high resolution - this is the visual data)
+    // Map images - with tile labels if available
     if (hasMapImages) {
-      contentBlocks.push({
-        type: 'text',
-        text: `\n--- CONSTRUCTION MAP PAGES (${mapImgs.length} high-resolution images) ---\nThese are high-resolution renders of the construction map/engineering drawings.\n\nCRITICAL INSTRUCTIONS FOR MAP READING:\n1. Find EVERY handhole label (single letters like A, B, C AND numbered like A01, A02, B01, etc.)\n2. Read the EXACT footage number printed between each pair of connected handholes\n3. Note the handhole size shown in the legend or next to each label (15x20x12, 17x30x18, 30x48x24)\n4. Read street names along each route\n5. Identify ALL sections (A through F or beyond)\n6. Look for splice markers (TYCO-D diamonds, terminal box symbols)\n7. The footage numbers are small text along the fiber route lines - zoom in mentally on each segment\n8. DO NOT estimate or round footage - read the EXACT number printed on the map\n9. Some footage numbers may be small or at angles - take extra care to read each digit correctly`,
-      });
-      for (let i = 0; i < mapImgs.length; i++) {
+      if (isTiled) {
+        // TILED MODE: Label each tile so Claude knows what region it's looking at
         contentBlocks.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: 'image/jpeg',
-            data: mapImgs[i],
-          },
+          type: 'text',
+          text: `\n--- CONSTRUCTION MAP: ${mapImgs.length} HIGH-RESOLUTION TILES ---\n` +
+            `The map has been split into tiles for maximum readability.\n` +
+            `TILE ORDER: Legend first, then Key Map overview, then section tiles left-to-right, top-to-bottom.\n` +
+            `Each tile is a zoomed-in section. Read EVERY label, number, and symbol in each tile.\n` +
+            `Tiles may overlap at edges — use this to verify data across tile boundaries.\n`,
         });
+        for (let i = 0; i < mapImgs.length; i++) {
+          const label = tileLabels[i] || `Tile ${i + 1}`;
+          contentBlocks.push({
+            type: 'text',
+            text: `\n[${label}]:`,
+          });
+          contentBlocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg',
+              data: mapImgs[i],
+            },
+          });
+        }
+      } else {
+        // LEGACY MODE: Full page images
+        contentBlocks.push({
+          type: 'text',
+          text: `\n--- CONSTRUCTION MAP PAGES (${mapImgs.length} images) ---\n` +
+            `Read every handhole label, footage number, and street name.\n`,
+        });
+        for (let i = 0; i < mapImgs.length; i++) {
+          contentBlocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg',
+              data: mapImgs[i],
+            },
+          });
+        }
       }
     }
 
-    // Safety timeout at 750s (Vercel Fluid allows 800s)
+    // Safety timeout at 750s
     const controller = new AbortController();
     const safetyTimer = setTimeout(() => controller.abort(), 750000);
 
@@ -114,25 +144,14 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: 'claude-opus-4-5-20251101',
           max_tokens: 64000,
-          system: `You are a fiber optic construction data extraction specialist for LYT Communications. You extract structured data from construction maps and work orders.
-
-YOUR TASK: Read the work order line items (provided as text) and the construction map (provided as images). Extract every segment, every handhole, every footage number. The work order tells you WHAT was ordered. The map tells you WHERE it goes.
-
-CRITICAL RULES:
-- Read footage numbers EXACTLY as printed on the map. Do not estimate or round.
-- Every segment between two handholes has a footage number printed along the route line.
-- The work order total_value is the source of truth for the project total.
-- Splicing is NOT included in the work order - do NOT include splice billing in segment work_items.
-- Segment work_items should include: boring (UG1/UG23/UG24), pulling (UG4/UG28), and handhole installations (UG10/UG11/UG12/UG13/UG17/UG18/UG19/UG20/UG27) as applicable.
-- Match the work order line item quantities to the map segments where possible.
-- Your entire response must be a single valid JSON object. No text before or after. Start with { end with }.`,
+          system: buildSystemPrompt(isTiled),
           messages: [{ role: 'user', content: contentBlocks }],
         }),
       });
     } catch (fetchErr) {
       clearTimeout(safetyTimer);
       if (fetchErr.name === 'AbortError') {
-        return res.status(504).json({ error: 'AI processing timed out after 750s. Try uploading fewer pages.' });
+        return res.status(504).json({ error: 'AI processing timed out after 750s.' });
       }
       throw fetchErr;
     }
@@ -146,27 +165,23 @@ CRITICAL RULES:
 
     const data = await response.json();
     
-    // Extract text from all text blocks (handles thinking blocks, multi-block)
     let rawText = '';
     if (data.content && Array.isArray(data.content)) {
       rawText = data.content
         .filter(block => block.type === 'text')
         .map(block => block.text || '')
         .join('\n');
-    } else if (data.content?.[0]?.text) {
-      rawText = data.content[0].text;
     }
     
-    console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}, stop: ${data.stop_reason || 'unknown'}, usage: ${JSON.stringify(data.usage || {})}`);
+    console.log(`Response: ${data.content?.length || 0} blocks, text: ${rawText.length} chars, model: ${data.model}, stop: ${data.stop_reason}, usage: ${JSON.stringify(data.usage || {})}`);
     
     if (data.stop_reason === 'max_tokens') {
-      console.warn('Response truncated (hit max_tokens 64000). Will attempt JSON repair.');
+      console.warn('Response truncated at 64000 tokens. Will attempt JSON repair.');
     }
 
-    // Parse JSON with multiple fallback strategies
+    // Parse JSON
     let extracted = null;
     
-    // Strategy 1: Direct parse
     try {
       let cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       if (!cleaned.startsWith('{')) {
@@ -174,24 +189,22 @@ CRITICAL RULES:
         if (jsonMatch) cleaned = jsonMatch[0];
       }
       extracted = JSON.parse(cleaned);
-      console.log('JSON parsed successfully (direct)');
+      console.log('JSON parsed (direct)');
     } catch (e1) {
-      // Strategy 2: Brace extraction
       try {
         const braceStart = rawText.indexOf('{');
         const braceEnd = rawText.lastIndexOf('}');
         if (braceStart !== -1 && braceEnd > braceStart) {
           extracted = JSON.parse(rawText.substring(braceStart, braceEnd + 1));
-          console.log('JSON recovered via brace extraction');
+          console.log('JSON recovered (brace extraction)');
         }
       } catch (e2) {
-        // Strategy 3: Repair truncated JSON
         try {
           extracted = repairTruncatedJSON(rawText);
-          if (extracted) console.log('JSON recovered via repair');
+          if (extracted) console.log('JSON recovered (repair)');
         } catch (e3) {
           console.error('All JSON parse strategies failed');
-          console.error('Raw text preview:', rawText.substring(0, 1000));
+          console.error('Raw preview:', rawText.substring(0, 1000));
         }
       }
     }
@@ -218,162 +231,116 @@ CRITICAL RULES:
 }
 
 /**
- * Repair truncated JSON from max_tokens cutoff
+ * Build the system prompt - tile-aware version
  */
-function repairTruncatedJSON(rawText) {
-  let truncated = rawText.substring(rawText.indexOf('{'));
-  if (!truncated || truncated.length < 10) return null;
-  
-  // First, try to find the largest valid JSON object in the text
-  for (let i = truncated.length; i > 100; i--) {
-    if (truncated[i] === '}') {
-      try {
-        const parsed = JSON.parse(truncated.substring(0, i + 1));
-        console.log(`JSON repair: found valid JSON ending at char ${i + 1} of ${truncated.length}`);
-        return parsed;
-      } catch (e) {
-        // keep scanning backwards
-      }
-    }
+function buildSystemPrompt(isTiled) {
+  let prompt = `You are a fiber optic construction data extraction specialist for LYT Communications. You extract structured data from construction maps and work orders with 100% accuracy.
+
+YOUR TASK: Read the work order line items (text) and the construction map (images). Extract every segment, handhole, footage number, splice point, and street name.
+
+CRITICAL ACCURACY RULES:
+- Read footage numbers EXACTLY as printed. Do not estimate, round, or guess.
+- Every segment between two handholes has a footage number printed along the route line.
+- The work order total_value is the source of truth for the project total.
+- Splicing is NOT in the work order — extract splice points but do NOT include splice billing in segment work_items.
+- Your entire response must be a single valid JSON object. No text before or after.`;
+
+  if (isTiled) {
+    prompt += `
+
+MAP TILE PROCESSING INSTRUCTIONS:
+The construction map has been split into high-resolution tiles for accurate reading.
+1. LEGEND TILE: Read this FIRST. Learn all symbols, line colors, and their meanings.
+2. KEY MAP TILE: Shows the overview with section boundaries labeled.
+3. SECTION TILES (R1C1 through R2C3): These are the detailed map sections in a 3x2 grid.
+   - R1C1 = top-left, R1C2 = top-center, R1C3 = top-right
+   - R2C1 = bottom-left, R2C2 = bottom-center, R2C3 = bottom-right
+4. Each tile shows a zoomed-in portion. Carefully read ALL text in each tile:
+   - Handhole labels (single letters A,B,C = hubs, A01,A02,B01 = terminals)
+   - Footage numbers (small text along route lines between handholes)
+   - Street names (text along roads)
+   - Splice callout boxes (rectangular text boxes near handholes)
+   - Duct placement descriptions (PLACE X - 1.25" HDPE DUCTS...)
+5. Features at tile edges may appear in adjacent tiles — verify across boundaries.
+6. Do NOT skip any tile. Every tile may contain unique data.`;
   }
-  
-  // Aggressive repair: close open structures
-  let braces = 0, brackets = 0, inString = false, escape = false;
-  
-  for (let i = 0; i < truncated.length; i++) {
-    const ch = truncated[i];
-    if (escape) { escape = false; continue; }
-    if (ch === '\\') { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (ch === '{') braces++;
-    else if (ch === '}') braces--;
-    else if (ch === '[') brackets++;
-    else if (ch === ']') brackets--;
-  }
-  
-  if (braces === 0 && brackets === 0 && !inString) {
-    return JSON.parse(truncated);
-  }
-  
-  if (inString) truncated += '"';
-  
-  // Remove trailing partial values
-  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*"?[^",\]\}]*$/, '');
-  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*\[?[^\]]*$/, '');
-  truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
-  truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
-  truncated = truncated.replace(/,\s*$/, '');
-  
-  // Recount after cleanup
-  braces = 0; brackets = 0; inString = false; escape = false;
-  for (let i = 0; i < truncated.length; i++) {
-    const ch = truncated[i];
-    if (escape) { escape = false; continue; }
-    if (ch === '\\') { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (ch === '{') braces++;
-    else if (ch === '}') braces--;
-    else if (ch === '[') brackets++;
-    else if (ch === ']') brackets--;
-  }
-  
-  if (inString) truncated += '"';
-  for (let i = 0; i < brackets; i++) truncated += ']';
-  for (let i = 0; i < braces; i++) truncated += '}';
-  
-  console.log(`JSON repair: closed ${braces} braces, ${brackets} brackets`);
-  return JSON.parse(truncated);
+
+  return prompt;
 }
 
-function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasMapImages) {
-  let prompt = `TASK: Extract ALL construction project data by reading the work order text AND examining the construction map images.
+function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasMapImages, isTiled) {
+  let prompt = `TASK: Extract ALL construction project data from the work order text AND map images.
 
-STEP 1 - READ THE WORK ORDER: The work order text below contains the complete list of unit codes, quantities, rates, and totals. This is the billing source of truth.
-
-STEP 2 - READ THE CONSTRUCTION MAP: The map images show the physical layout - handhole locations, footage between handholes, street names, and section routing. Read EVERY footage number EXACTLY as printed.
-
-STEP 3 - RECONCILE: Match the map segments to the work order line items. The total footage from all segments on the map should correspond to the boring/pulling quantities in the work order.
+STEP 1 - READ THE WORK ORDER text below for billing line items.
+STEP 2 - READ THE MAP ${isTiled ? 'TILES' : 'IMAGES'} for physical layout, handholes, footage, streets.
+STEP 3 - RECONCILE: Total map footage should match work order boring/pulling quantities.
 
 RATE CARD: ${rateCardId || 'vexus-la-tx-2026'}
 
-BILLING RATES REFERENCE:
+BILLING RATES:
 Underground Boring:
 - UG1: Directional bore 1-4 ducts (1.25" ID) = $8.00/LF
 - UG23: Directional bore 5 ducts (1.25" ID) = $9.50/LF
 - UG24: Directional bore 6 ducts (1.25" ID) = $10.50/LF
-
 Cable Pulling:
 - UG4: Pull up to 144ct armored/micro cable = $0.55/LF
 - UG28: Place 288-432ct armored fiber in duct = $1.00/LF
-
-Handholes (installation cost - assign to the segment that ENDS at this handhole):
+Handholes:
 - UG10: 30x48x30 fiberglass/polycrete = $310.00/EA
 - UG11: 24x36x24 fiberglass/polycrete = $110.00/EA
 - UG12: Utility Box = $20.00/EA
-- UG13: Ground rod 5/8" x 8' = $40.00/EA
+- UG13: Ground rod 5/8"x8' = $40.00/EA
 - UG17: 17x30x18 HDPE handhole = $60.00/EA
 - UG18: 24x36x18 HDPE handhole = $125.00/EA
 - UG19: 30x48x18 HDPE handhole = $250.00/EA
 - UG20: Terminal Box = $40.00/EA
 - UG27: 30x48x24 HDPE handhole = $210.00/EA
 
-Splicing (NOT in work order - extract splice points but do NOT include splice billing):
-- Splice points are extracted for tracking only
-- Do NOT add FS1, FS2, FS3, FS4 to segment work_items
-
-HANDHOLE SIZE → TYPE MAPPING:
-- 15x20x12 = Terminal Box (TB)
-- 17x30x18 = HDPE Handhole (B)
-- 24x36x18 = HDPE Handhole
-- 24x36x24 = Fiberglass/Polycrete Handhole
-- 30x48x18 = HDPE Handhole
-- 30x48x24 = Large Handhole (LHH) - F1/TYCO-D butt splice location
-- 30x48x30 = Large Fiberglass Handhole
-
-SPLICE TYPE RULES (for splice_points array only):
-- 15x20x12 Terminal Box → 1x4 splice
-- 17x30x18 HDPE → typically 1x8 or 1x4
-- 30x48x24 Large Handhole → F1 butt splice (432 fibers, up to 8 trays)
+HANDHOLE SIZE → TYPE:
+- 15x20x12 = Terminal Box (TB) → 1x4 splice
+- 17x30x18 = HDPE Handhole (B) → 1x8 or 1x4
+- 30x48x24 = Large Handhole (LHH) → F1 butt splice
 
 SECTION NAMING:
-- Single letters (A, B, C, D, E, F) are hub/main handholes
-- Numbered (A01, A02, B01) are branch handholes from that hub
-- Segments connect: hub→branch (A→A01) or branch→branch (A01→A02)
-- Inter-section links connect hubs: A→B, B→C, D→E, E→F
+- Single letters (A,B,C,D,E,F) = hub/main handholes
+- Numbered (A01,A02,B01) = branch handholes from that hub
+- Segments connect: hub→branch (A→A01) or hub→hub (A→B)
 
-POSITION TYPE RULES:
-- end-of-line: The LAST handhole in a chain (no further connections from it)
+POSITION TYPE:
+- end-of-line: LAST handhole in chain (no onward connections)
 - mid-span: Has connections continuing through it
 
 `;
 
   if (workOrderText && workOrderText.length > 30) {
-    prompt += `\n========================================\nWORK ORDER TEXT (source of truth for billing):\n========================================\n${workOrderText}\n========================================\n\n`;
+    prompt += `\n========================================\nWORK ORDER TEXT (billing source of truth):\n========================================\n${workOrderText}\n========================================\n\n`;
   }
 
   if (mapText && mapText.length > 30) {
-    prompt += `\nCONSTRUCTION MAP TEXT (supplementary - images are primary for map data):\n${mapText}\n\n`;
+    prompt += `\nMAP EMBEDDED TEXT (supplementary — images are primary):\n${mapText}\n\n`;
   }
 
   if (hasMapImages) {
-    prompt += `\nThe construction map images follow this prompt. Examine EVERY page carefully:\n- Read every handhole label\n- Read every footage number between connected handholes (small numbers along route lines)\n- Note every street name\n- Identify every section (A, B, C, D, E, F, etc.)\n- Find all inter-section links (hub-to-hub segments)\n\n`;
+    if (isTiled) {
+      prompt += `\nThe map tiles follow. Process in order:\n1. Read the LEGEND tile to learn all symbols\n2. Check the KEY MAP for section layout\n3. Scan each section tile R1C1→R1C2→R1C3→R2C1→R2C2→R2C3\n4. For each tile, extract ALL handholes, footage numbers, streets, and splice callouts\n5. Cross-reference across tile boundaries for features that span edges\n\n`;
+    } else {
+      prompt += `\nMap images follow. Examine EVERY page for handholes, footage, streets.\n\n`;
+    }
   }
 
-  prompt += `REQUIRED JSON OUTPUT FORMAT:
+  prompt += `REQUIRED JSON OUTPUT:
 {
   "project": {
-    "customer": "string (from work order)",
-    "project_name": "string (from work order)",
-    "po_number": "string (from work order)",
-    "total_value": number (from work order - this is the ACTUAL project value),
+    "customer": "string",
+    "project_name": "string",
+    "po_number": "string",
+    "total_value": number,
     "start_date": "YYYY-MM-DD",
     "completion_date": "YYYY-MM-DD",
     "rate_card_id": "${rateCardId || 'vexus-la-tx-2026'}"
   },
   "work_order_line_items": [
-    { "code": "UG1", "description": "Directional bore 1-4 ducts", "qty": number, "uom": "LF", "rate": number, "total": number }
+    { "code": "UG1", "description": "...", "qty": number, "uom": "LF", "rate": number, "total": number }
   ],
   "segments": [
     {
@@ -412,15 +379,76 @@ POSITION TYPE RULES:
   "grand_total": number
 }
 
-IMPORTANT NOTES:
-1. "grand_total" should be the sum of all segment total_values. It will NOT match the work order total_value because splicing is separate.
-2. Include EVERY segment visible on the map - do not skip any.
-3. Read footage numbers EXACTLY from the map - do not estimate.
-4. Include handhole installation costs (UG10-UG27) in the segment work_items for the segment that TERMINATES at that handhole.
-5. splice_points do NOT have work_items - they are for tracking only.
-6. The work_order_line_items array captures the raw line items from the work order for reference.
+RULES:
+1. grand_total = sum of all segment total_values
+2. Include EVERY segment from the map
+3. Read footage EXACTLY — do not estimate
+4. Handhole install costs go in the segment work_items for the segment ENDING at that handhole
+5. splice_points have NO work_items
+6. work_order_line_items = raw lines from the work order for reference
+7. Do NOT include splice billing (FS1-FS4) in segment work_items
 
-Return ONLY the JSON object. No markdown, no explanation, no commentary.`;
+Return ONLY JSON. No markdown, no commentary.`;
 
   return prompt;
+}
+
+/**
+ * Repair truncated JSON from max_tokens cutoff
+ */
+function repairTruncatedJSON(rawText) {
+  let truncated = rawText.substring(rawText.indexOf('{'));
+  if (!truncated || truncated.length < 10) return null;
+  
+  for (let i = truncated.length; i > 100; i--) {
+    if (truncated[i] === '}') {
+      try {
+        return JSON.parse(truncated.substring(0, i + 1));
+      } catch (e) { /* keep scanning */ }
+    }
+  }
+  
+  let braces = 0, brackets = 0, inString = false, escape = false;
+  for (let i = 0; i < truncated.length; i++) {
+    const ch = truncated[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+  }
+  
+  if (braces === 0 && brackets === 0 && !inString) {
+    return JSON.parse(truncated);
+  }
+  
+  if (inString) truncated += '"';
+  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*"?[^",\]\}]*$/, '');
+  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*\[?[^\]]*$/, '');
+  truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
+  truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
+  truncated = truncated.replace(/,\s*$/, '');
+  
+  braces = 0; brackets = 0; inString = false; escape = false;
+  for (let i = 0; i < truncated.length; i++) {
+    const ch = truncated[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+  }
+  
+  if (inString) truncated += '"';
+  for (let i = 0; i < brackets; i++) truncated += ']';
+  for (let i = 0; i < braces; i++) truncated += '}';
+  
+  console.log(`JSON repair: closed ${braces} braces, ${brackets} brackets`);
+  return JSON.parse(truncated);
 }
