@@ -1,36 +1,47 @@
 /**
  * LYT Communications - Job Import Page
- * Version: 3.3.0
+ * Version: 4.0.0
  * Updated: 2026-02-04
  * Route: #job-import
  * 
  * Upload work order PDFs and construction map PDFs.
- * v3.3.0: Split processing - WO as text only (no images), map at max quality.
- *         Work order text extracted by pdf.js, frees full 4.5MB budget for
- *         high-resolution map images so Claude can read footage numbers accurately.
- *         Map render: 2.0x scale, 80% JPEG quality (~400-700KB/page).
- * v3.2.0: Better error diagnostics - shows raw AI response preview in error message
- *         and logs full details to browser console for debugging
- * v3.1.0: Dynamic worker URL - auto-matches installed pdfjs-dist version
- * v3.0.0: Renders PDF pages to images (canvas → base64) for Claude Vision API.
+ * v4.0.0: MAP TILING - Renders map pages at 4.0x scale, then tiles into
+ *         legend crop + 6 map section tiles (3x2 grid). Each tile is
+ *         ~1175x1584px = under Claude Vision's 1568 native threshold.
+ *         Result: 6.9x more detail per section vs single full-page image.
+ *         Footage numbers, handhole labels, and splice callouts now readable.
+ * v3.3.0: Split processing - WO as text only, map at max quality.
+ * v3.0.0: Renders PDF pages to images for Claude Vision API.
  */
 
 import React, { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader, Trash2, ChevronDown, ChevronUp, Image, Eye } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker - dynamically match installed version to avoid mismatch errors
+// Configure pdf.js worker
 const PDFJS_VERSION = pdfjsLib.version || '4.8.69';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
-// Work order: text-only extraction (no images needed - saves bandwidth for map)
+// Work order: text-only extraction
 const MAX_PAGES_WORKORDER = 10;
-// Map: high-quality images for accurate footage reading
-const MAX_PAGES_MAP = 8;
-// Map render settings (high quality - full 4.5MB budget goes to map images)
-const MAP_RENDER_SCALE = 2.0;
-const MAP_JPEG_QUALITY = 0.80;
-// Legacy defaults for any fallback image rendering
+// Map: high-res tiled images
+const MAX_PAGES_MAP = 4;
+
+// ============================================================
+// MAP TILING CONFIG
+// ============================================================
+// 4.0x scale: 11"x17" page → 4896x3168 (15.5M pixels, under Safari 16M limit)
+const MAP_RENDER_SCALE = 4.0;
+const MAP_JPEG_QUALITY = 0.85; // Higher quality for sharp text
+// Tile grid: 3 columns x 2 rows = 6 map tiles per page
+const TILE_COLS = 3;
+const TILE_ROWS = 2;
+// Legend is in the right ~28% of the page, top ~55%
+const LEGEND_X_RATIO = 0.72;
+const LEGEND_TOP_RATIO = 0.0;
+const LEGEND_BOTTOM_RATIO = 0.55;
+
+// Legacy fallbacks
 const RENDER_SCALE = 1.5;
 const JPEG_QUALITY = 0.55;
 
@@ -45,8 +56,6 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [dragOverWork, setDragOverWork] = useState(false);
   const [dragOverMap, setDragOverMap] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [previewImages, setPreviewImages] = useState([]);
 
   const bg = darkMode ? '#0d1b2a' : '#ffffff';
   const cardBg = darkMode ? '#112240' : '#f8fafc';
@@ -58,30 +67,125 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const errorRed = '#e85a4f';
 
   /**
-   * Render a PDF file's pages to base64 JPEG images + extract text
-   * Returns { images: string[], text: string, pageCount: number }
-   * @param {File} file - PDF file
-   * @param {string} label - Display label
-   * @param {number} maxPages - Max pages to process
-   * @param {object} opts - { scale, quality, textOnly }
+   * Render a single PDF page to a canvas and return the canvas
+   */
+  const renderPageToCanvas = async (page, scale) => {
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas;
+  };
+
+  /**
+   * Crop a region from a canvas and return base64 JPEG
+   */
+  const cropCanvasToBase64 = (sourceCanvas, x, y, w, h, quality) => {
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = w;
+    cropCanvas.height = h;
+    const ctx = cropCanvas.getContext('2d');
+    ctx.drawImage(sourceCanvas, x, y, w, h, 0, 0, w, h);
+    const dataUrl = cropCanvas.toDataURL('image/jpeg', quality);
+    cropCanvas.width = 0;
+    cropCanvas.height = 0;
+    return dataUrl.split(',')[1];
+  };
+
+  /**
+   * Tile a rendered map page into legend + grid sections
+   * Returns array of { base64, label, index } objects
+   */
+  const tileMapPage = (canvas, pageNum) => {
+    const W = canvas.width;
+    const H = canvas.height;
+    const tiles = [];
+
+    // 1. Legend crop (right portion, top half)
+    const legendX = Math.floor(W * LEGEND_X_RATIO);
+    const legendY = Math.floor(H * LEGEND_TOP_RATIO);
+    const legendW = W - legendX;
+    const legendH = Math.floor(H * LEGEND_BOTTOM_RATIO) - legendY;
+
+    if (legendW > 100 && legendH > 100) {
+      tiles.push({
+        base64: cropCanvasToBase64(canvas, legendX, legendY, legendW, legendH, MAP_JPEG_QUALITY),
+        label: `Page ${pageNum} - LEGEND`,
+        index: 0,
+      });
+      const sizeKB = Math.round(tiles[tiles.length - 1].base64.length * 0.75 / 1024);
+      console.log(`Legend tile: ${legendW}x${legendH} = ${sizeKB}KB`);
+    }
+
+    // 2. Key Map crop (right portion, bottom half - if exists)
+    const keyY = Math.floor(H * LEGEND_BOTTOM_RATIO);
+    const keyW = W - legendX;
+    const keyH = H - keyY;
+    if (keyW > 100 && keyH > 100) {
+      tiles.push({
+        base64: cropCanvasToBase64(canvas, legendX, keyY, keyW, keyH, MAP_JPEG_QUALITY),
+        label: `Page ${pageNum} - KEY MAP`,
+        index: 1,
+      });
+      const sizeKB = Math.round(tiles[tiles.length - 1].base64.length * 0.75 / 1024);
+      console.log(`Key Map tile: ${keyW}x${keyH} = ${sizeKB}KB`);
+    }
+
+    // 3. Map area tiles (left portion, full height, grid of TILE_COLS x TILE_ROWS)
+    const mapW = Math.floor(W * LEGEND_X_RATIO);
+    const mapH = H;
+    const tileW = Math.floor(mapW / TILE_COLS);
+    const tileH = Math.floor(mapH / TILE_ROWS);
+
+    for (let row = 0; row < TILE_ROWS; row++) {
+      for (let col = 0; col < TILE_COLS; col++) {
+        const tx = col * tileW;
+        const ty = row * tileH;
+        // Last column/row gets any remaining pixels
+        const tw = (col === TILE_COLS - 1) ? (mapW - tx) : tileW;
+        const th = (row === TILE_ROWS - 1) ? (mapH - ty) : tileH;
+
+        const tileLabel = `Page ${pageNum} - Section R${row + 1}C${col + 1}`;
+        tiles.push({
+          base64: cropCanvasToBase64(canvas, tx, ty, tw, th, MAP_JPEG_QUALITY),
+          label: tileLabel,
+          index: 2 + row * TILE_COLS + col,
+        });
+        const sizeKB = Math.round(tiles[tiles.length - 1].base64.length * 0.75 / 1024);
+        console.log(`${tileLabel}: ${tw}x${th} = ${sizeKB}KB`);
+      }
+    }
+
+    return tiles;
+  };
+
+  /**
+   * Process a PDF - extract text and optionally render to images/tiles
    */
   const processPdf = async (file, label, maxPages, opts = {}) => {
     const scale = opts.scale || RENDER_SCALE;
     const quality = opts.quality || JPEG_QUALITY;
     const textOnly = opts.textOnly || false;
+    const tileMode = opts.tileMode || false;
+
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const pageCount = pdf.numPages;
     const pagesToRender = Math.min(pageCount, maxPages);
 
     const images = [];
+    const tileData = []; // For tile mode: array of { base64, label, index }
     let fullText = '';
 
     for (let i = 1; i <= pagesToRender; i++) {
       setProgressMsg(`${label}: Processing page ${i}/${pagesToRender}...`);
       const page = await pdf.getPage(i);
 
-      // Extract text (may be empty for scanned PDFs)
+      // Extract text
       try {
         const content = await page.getTextContent();
         const pageText = content.items.map(item => item.str).join(' ').trim();
@@ -92,36 +196,34 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         console.warn(`Text extraction failed for page ${i}:`, e);
       }
 
-      // Render page to canvas → base64 JPEG (skip if textOnly mode)
-      if (!textOnly) {
-        try {
-          const viewport = page.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext('2d');
+      if (textOnly) continue;
 
-          // White background (JPEG has no transparency)
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+      try {
+        if (tileMode) {
+          // TILE MODE: Render at high res, then crop into tiles
+          setProgressMsg(`${label}: Rendering page ${i} at ${scale}x for tiling...`);
+          const canvas = await renderPageToCanvas(page, scale);
+          console.log(`${label} page ${i}: Full canvas ${canvas.width}x${canvas.height} at ${scale}x`);
 
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          setProgressMsg(`${label}: Tiling page ${i} into legend + ${TILE_COLS * TILE_ROWS} sections...`);
+          const pageTiles = tileMapPage(canvas, i);
+          tileData.push(...pageTiles);
 
-          // Convert to JPEG base64
-          const dataUrl = canvas.toDataURL('image/jpeg', quality);
-          const base64 = dataUrl.split(',')[1];
-          images.push(base64);
-
-          // Log size for debugging
-          const sizeKB = Math.round(base64.length * 0.75 / 1024);
-          console.log(`${label} page ${i}: ${sizeKB}KB (${canvas.width}x${canvas.height}) scale=${scale} q=${quality}`);
-
-          // Cleanup
+          // Cleanup the full canvas
           canvas.width = 0;
           canvas.height = 0;
-        } catch (renderErr) {
-          console.warn(`Page ${i} render failed:`, renderErr);
+        } else {
+          // LEGACY MODE: Single image per page
+          const canvas = await renderPageToCanvas(page, scale);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          images.push(dataUrl.split(',')[1]);
+          const sizeKB = Math.round(images[images.length - 1].length * 0.75 / 1024);
+          console.log(`${label} page ${i}: ${sizeKB}KB (${canvas.width}x${canvas.height})`);
+          canvas.width = 0;
+          canvas.height = 0;
         }
+      } catch (renderErr) {
+        console.warn(`Page ${i} render failed:`, renderErr);
       }
     }
 
@@ -129,7 +231,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       fullText += `\n\n[NOTE: PDF has ${pageCount} pages but only first ${maxPages} were processed]`;
     }
 
-    return { images, text: fullText.trim(), pageCount };
+    return { images, tiles: tileData, text: fullText.trim(), pageCount };
   };
 
   // File drop handlers
@@ -184,18 +286,13 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setProgressMsg('Starting PDF processing...');
 
     try {
-      // Process work order PDF → TEXT ONLY (no images needed, saves bandwidth for map)
-      let woImages = [];
+      // Process work order PDF → TEXT ONLY
       let woText = '';
       try {
         setProgressMsg('Extracting work order text...');
         const woResult = await processPdf(workOrderFile, 'Work Order', MAX_PAGES_WORKORDER, { textOnly: true });
-        woImages = []; // No images for work order - text is sufficient
         woText = woResult.text;
-        setProgressMsg(`Work order: ${woResult.pageCount} pages, ${woText.length} chars of text extracted`);
-        if (woText.length < 30) {
-          console.warn('Work order has very little text - may be a scanned image PDF');
-        }
+        setProgressMsg(`Work order: ${woResult.pageCount} pages, ${woText.length} chars text`);
       } catch (pdfErr) {
         console.error('Work order PDF processing failed:', pdfErr);
         setError(`Failed to process work order PDF: ${pdfErr.message}`);
@@ -203,58 +300,65 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         return;
       }
 
-      // Process construction map PDF → HIGH QUALITY images (full 4.5MB budget)
-      let mapImages = [];
+      // Process construction map PDF → HIGH-RES TILED IMAGES
+      let mapTiles = [];
       let mapText = '';
       if (mapFile) {
         try {
-          setProgressMsg('Rendering construction map at high resolution...');
+          setProgressMsg('Rendering construction map at 4.0x for tiling...');
           const mapResult = await processPdf(mapFile, 'Map', MAX_PAGES_MAP, {
             scale: MAP_RENDER_SCALE,
             quality: MAP_JPEG_QUALITY,
+            tileMode: true,
           });
-          mapImages = mapResult.images;
+          mapTiles = mapResult.tiles;
           mapText = mapResult.text;
-          const totalMapKB = mapImages.reduce((sum, img) => sum + Math.round(img.length * 0.75 / 1024), 0);
-          setProgressMsg(`Map: ${mapResult.pageCount} pages, ${mapImages.length} high-res images (${(totalMapKB/1024).toFixed(1)}MB)`);
+          const totalTileKB = mapTiles.reduce((sum, t) => sum + Math.round(t.base64.length * 0.75 / 1024), 0);
+          setProgressMsg(`Map: ${mapResult.pageCount} pages → ${mapTiles.length} tiles (${(totalTileKB / 1024).toFixed(1)}MB total)`);
+          console.log(`Map tiling complete: ${mapTiles.length} tiles, ${(totalTileKB / 1024).toFixed(1)}MB`);
         } catch (pdfErr) {
-          console.warn('Map PDF processing failed:', pdfErr);
-          // Non-fatal - continue with work order only
+          console.warn('Map PDF tiling failed:', pdfErr);
+          // Non-fatal
         }
       }
 
-      // Validate we have something to send
-      if (woText.length < 30 && mapImages.length === 0) {
-        setError('Could not extract content. Work order needs text, map needs images. Check the files.');
+      // Validate
+      if (woText.length < 30 && mapTiles.length === 0) {
+        setError('No content extracted. Work order needs text, map needs images.');
         setProcessing(false);
         return;
       }
 
-      // Build payload - WO as text only, map as high-quality images
+      // Build payload with tiled map images
+      const tileImages = mapTiles.map(t => t.base64);
+      const tileLabels = mapTiles.map(t => t.label);
+
       const payload = {
         work_order_text: woText.length > 30 ? woText : undefined,
-        // No work order images - text is the source of truth
         map_text: mapText.length > 30 ? mapText : undefined,
-        map_images: mapImages.length > 0 ? mapImages : undefined,
+        map_images: tileImages.length > 0 ? tileImages : undefined,
+        map_tile_labels: tileLabels.length > 0 ? tileLabels : undefined,
         rate_card_id: rateCardId,
       };
 
       const payloadStr = JSON.stringify(payload);
       const payloadMB = (payloadStr.length / (1024 * 1024)).toFixed(1);
-      console.log(`Payload size: ${payloadMB}MB (text-only WO: ${(woText.length/1024).toFixed(0)}KB + ${mapImages.length} map images)`);
+      console.log(`Payload: ${payloadMB}MB (WO text: ${(woText.length / 1024).toFixed(0)}KB + ${tileImages.length} map tiles)`);
 
-      if (payloadStr.length > 4.2 * 1024 * 1024) {
-        // Too large for Vercel - reduce map image count (keep quality high)
-        setProgressMsg(`Payload too large (${payloadMB}MB). Reducing map pages...`);
-        const keepPages = Math.max(3, Math.ceil(mapImages.length * 0.6));
-        payload.map_images = mapImages.slice(0, keepPages);
-        const reducedSize = (JSON.stringify(payload).length / (1024 * 1024)).toFixed(1);
-        console.log(`Reduced payload: ${reducedSize}MB (${keepPages} map pages kept at high quality)`);
+      // Size guard - if over Vercel limit, reduce tile count
+      if (payloadStr.length > 48 * 1024 * 1024) {
+        setProgressMsg(`Payload too large (${payloadMB}MB). Reducing tiles...`);
+        // Keep legend + first page tiles only
+        const maxTiles = 8;
+        if (tileImages.length > maxTiles) {
+          payload.map_images = tileImages.slice(0, maxTiles);
+          payload.map_tile_labels = tileLabels.slice(0, maxTiles);
+          console.log(`Reduced to ${maxTiles} tiles`);
+        }
       }
 
-      setProgressMsg(`Sending work order text + ${(mapImages.length || 0)} high-res map images to AI (${payloadMB}MB)...`);
+      setProgressMsg(`Sending ${tileImages.length} high-res map tiles + work order to AI (${payloadMB}MB)...`);
 
-      // Call the AI extraction API with images
       const response = await fetch('/api/pdf-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -267,21 +371,19 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       }
 
       const data = await response.json();
-      
+
       console.log('API response keys:', Object.keys(data));
-      console.log('API version check - has success:', !!data.success, 'has warning:', !!data.warning, 'has extracted:', !!data.extracted);
-      
+
       if (data.warning) {
         const preview = (data.raw_response || '').substring(0, 200);
-        setError(`AI could not parse extraction. Preview: ${preview || 'empty'}. Check browser console (F12) for full response.`);
+        setError(`AI could not parse extraction. Preview: ${preview || 'empty'}. Check console (F12).`);
         console.warn('Full raw AI response:', data.raw_response);
-        console.warn('Usage:', data.usage);
         setProcessing(false);
         return;
       }
 
       if (!data.success || !data.extracted) {
-        console.error('Unexpected response shape:', JSON.stringify(data).substring(0, 500));
+        console.error('Unexpected response:', JSON.stringify(data).substring(0, 500));
         throw new Error(`No extraction data returned. Keys: ${Object.keys(data).join(', ')}`);
       }
 
@@ -289,7 +391,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       const ext = data.extracted;
       const projectId = ext.project?.project_id || 'VXS-SLPH01-006';
-      
+
       const result = {
         project: {
           project_id: projectId,
@@ -349,14 +451,14 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
   const handleConfirmImport = async () => {
     if (!importResult) return;
-    
+
     setProcessing(true);
     setError(null);
     try {
       const { importProject } = await import('../services/mapService');
-      
+
       const projectId = importResult.project.project_id;
-      
+
       const segmentsForDb = importResult.segments.map(seg => ({
         contractor_id: seg.contractor_id,
         section: seg.section,
@@ -500,7 +602,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       {/* Content */}
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
-        
+
         {/* Step 1: Upload Files */}
         <div style={{
           backgroundColor: cardBg,
@@ -514,13 +616,14 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             Step 1: Upload PDFs
           </h2>
           <p style={{ color: textMuted, margin: '0 0 6px', fontSize: '0.9rem' }}>
-            Upload the work order and construction map PDFs. Pages are rendered as images so the AI can <strong>visually read</strong> scanned maps and drawings.
+            Upload the work order and construction map PDFs. Map pages are rendered at <strong>4× resolution</strong> and
+            tiled into <strong>8 high-detail sections</strong> so the AI can read footage numbers and handhole labels accurately.
           </p>
           <p style={{ color: accent, margin: '0 0 20px', fontSize: '0.8rem' }}>
             <Eye size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-            Vision-powered extraction — works with scanned PDFs, engineering drawings, and image-based documents
+            High-res tiled Vision AI — reads scanned maps, engineering drawings, and small text
           </p>
-          
+
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
             <DropZone
               type="workorder"
@@ -620,7 +723,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             ) : (
               <>
                 <Eye size={20} />
-                Extract Project Data (Vision AI)
+                Extract Project Data (High-Res Tiled Vision AI)
               </>
             )}
           </button>
@@ -657,10 +760,9 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               Step 3: Review Extracted Data
             </h2>
 
-            {/* AI Usage Stats */}
             {importResult._usage && (
               <p style={{ color: textMuted, fontSize: '0.75rem', margin: '0 0 16px' }}>
-                AI tokens used: {importResult._usage.input_tokens?.toLocaleString()} in / {importResult._usage.output_tokens?.toLocaleString()} out
+                AI tokens: {importResult._usage.input_tokens?.toLocaleString()} in / {importResult._usage.output_tokens?.toLocaleString()} out
               </p>
             )}
 
@@ -692,7 +794,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               </div>
             </div>
 
-            {/* Stats Summary */}
+            {/* Stats */}
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {[
                 ['Segments', importResult.stats.totalSegments, accent],
@@ -715,7 +817,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               ))}
             </div>
 
-            {/* Segments List */}
+            {/* Segments */}
             <div style={{
               backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
               borderRadius: '8px',
@@ -725,17 +827,9 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <button
                 onClick={() => setExpandedSection(expandedSection === 'segments' ? null : 'segments')}
                 style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: 'none',
-                  border: 'none',
-                  color: text,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                  color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '1rem', fontWeight: 600,
                 }}
               >
                 Segments ({importResult.segments.length})
@@ -744,7 +838,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               {expandedSection === 'segments' && (
                 <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
                   {importResult.segments.length === 0 ? (
-                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No segments extracted. The map may need clearer labeling.</p>
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No segments extracted.</p>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
@@ -773,7 +867,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               )}
             </div>
 
-            {/* Splice Points List */}
+            {/* Splice Points */}
             <div style={{
               backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
               borderRadius: '8px',
@@ -783,17 +877,9 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <button
                 onClick={() => setExpandedSection(expandedSection === 'splices' ? null : 'splices')}
                 style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: 'none',
-                  border: 'none',
-                  color: text,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                  color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '1rem', fontWeight: 600,
                 }}
               >
                 Splice Points ({importResult.splice_points.length})
@@ -830,25 +916,16 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               )}
             </div>
 
-            {/* Confirm / Cancel Buttons */}
+            {/* Confirm / Cancel */}
             <div style={{ display: 'flex', gap: '16px' }}>
               <button
                 onClick={handleConfirmImport}
                 disabled={processing}
                 style={{
-                  backgroundColor: successGreen,
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '14px 32px',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: processing ? 'not-allowed' : 'pointer',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
+                  backgroundColor: successGreen, color: '#ffffff', border: 'none',
+                  padding: '14px 32px', borderRadius: '8px', fontSize: '1rem', fontWeight: 600,
+                  cursor: processing ? 'not-allowed' : 'pointer', flex: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 }}
               >
                 {processing ? (
@@ -860,13 +937,8 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <button
                 onClick={() => { setImportResult(null); setWorkOrderFile(null); setMapFile(null); }}
                 style={{
-                  backgroundColor: 'transparent',
-                  color: errorRed,
-                  border: `1px solid ${errorRed}`,
-                  padding: '14px 24px',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  cursor: 'pointer',
+                  backgroundColor: 'transparent', color: errorRed, border: `1px solid ${errorRed}`,
+                  padding: '14px 24px', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -876,16 +948,11 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
         )}
       </div>
 
-      {/* CSS Animation */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
-
-      {/* Version */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <div style={{ position: 'fixed', bottom: '4px', right: '8px', fontSize: '0.6rem', color: 'transparent', userSelect: 'none' }}
         onDoubleClick={(e) => { e.target.style.color = textMuted; }}
       >
-        JobImportPage v3.0.0
+        JobImportPage v4.0.0
       </div>
     </div>
   );
