@@ -1,14 +1,15 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.2.0
+ * Version: 2.3.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Vision API.
  * 
+ * v2.3.0: Fixed JSON parsing - robust extraction handles preamble text, 
+ *         markdown fences, and explanatory text around the JSON.
+ *         Strengthened system prompt for strict JSON-only output.
  * v2.2.0: Fixed 504 timeout - increased maxDuration to 120s (Pro plan).
- *         Added smart image limiting (max 10 total) to keep Opus fast.
- *         Kept Claude Opus 4 for best accuracy on engineering drawings.
  * v2.1.0: Upgraded to Claude Opus 4 for superior vision accuracy.
  *         Falls back to text if images not provided.
  * 
@@ -125,7 +126,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-opus-4-20250514',
         max_tokens: 8192,
-        system: 'You are a fiber optic construction data extraction specialist. You can read construction maps, engineering drawings, and work orders. Extract structured JSON data accurately. Always return valid JSON. Never include markdown code fences or commentary outside the JSON.',
+        system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
         messages: [{ role: 'user', content: contentBlocks }],
       }),
     });
@@ -139,19 +140,44 @@ export default async function handler(req, res) {
     const data = await response.json();
     const rawText = data.content?.[0]?.text || '';
 
-    // Parse JSON from response
+    // Parse JSON from response - handle various output formats
     let extracted;
     try {
-      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Step 1: Strip markdown fences
+      let cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      // Step 2: If it doesn't start with {, try to find a JSON object in the text
+      if (!cleaned.startsWith('{')) {
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          cleaned = jsonMatch[0];
+        }
+      }
+      
       extracted = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('JSON parse error:', parseErr.message);
-      console.error('Raw text (first 500 chars):', rawText.substring(0, 500));
-      return res.status(200).json({
-        warning: 'Could not parse AI response as JSON',
-        raw_response: rawText,
-        usage: data.usage,
-      });
+      console.error('Raw text (first 1000 chars):', rawText.substring(0, 1000));
+      
+      // Last resort: try to find and extract the largest JSON object
+      try {
+        const braceStart = rawText.indexOf('{');
+        const braceEnd = rawText.lastIndexOf('}');
+        if (braceStart !== -1 && braceEnd > braceStart) {
+          extracted = JSON.parse(rawText.substring(braceStart, braceEnd + 1));
+          console.log('Recovered JSON via brace extraction');
+        }
+      } catch (e2) {
+        // Could not recover
+      }
+      
+      if (!extracted) {
+        return res.status(200).json({
+          warning: 'Could not parse AI response as JSON',
+          raw_response: rawText.substring(0, 5000),
+          usage: data.usage,
+        });
+      }
     }
 
     return res.status(200).json({
