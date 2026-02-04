@@ -1,25 +1,23 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.8.0
+ * Version: 2.9.0
  * Updated: 2026-02-04
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Opus 4.5 Vision API.
  * 
- * v2.8.0: Upgraded to Opus 4.5 - better vision, 3x cheaper, smarter.
- * v2.7.0: Full data - restored 10 images, 16384 max_tokens, 750s safety timeout.
- *         Fluid Compute (800s maxDuration) means no more 504s.
- *         Opus gets ALL the data and ALL the time it needs.
- * v2.6.0: Enabled Fluid Compute, reduced images to 6.
- * v2.5.0: JSON repair for truncated responses.
- * v2.4.0: Fixed thinking block handling.
- * v2.3.0: Robust JSON parsing.
- * v2.2.0: 120s timeout (insufficient).
- * v2.1.0: Upgraded to Opus 4.
+ * v2.9.0: MAJOR - Split processing. Work order as TEXT (no images).
+ *         Map as HIGH-QUALITY images (full 4.5MB budget). Claude reads
+ *         the work order line items first, then examines the map to
+ *         match footage numbers and segments. Numbers must reconcile.
+ *         65536 max_tokens for full extraction of large projects.
+ * v2.8.1: Enhanced JSON repair for mid-key truncation.
+ * v2.8.0: Upgraded to Opus 4.5 - better vision, 3x cheaper.
+ * v2.7.0: Fluid Compute, full data, 800s timeout.
  * 
  * POST /api/pdf-import
  * Body: { 
- *   work_order_text, work_order_images[], 
+ *   work_order_text,
  *   map_text, map_images[],
  *   rate_card_id 
  * }
@@ -49,63 +47,43 @@ export default async function handler(req, res) {
 
   try {
     const { 
-      work_order_text, work_order_images,
+      work_order_text,
       map_text, map_images,
       rate_card_id 
     } = req.body;
 
-    // Send all data - Fluid Compute gives us 800s, no need to cut corners
-    const MAX_TOTAL_IMAGES = 10;
-    let woImgs = work_order_images || [];
+    // Map images get the full budget (no WO images to compete with)
     let mapImgs = map_images || [];
-    
-    if (woImgs.length + mapImgs.length > MAX_TOTAL_IMAGES) {
-      // Prioritize map pages (construction data), then work order
-      const mapAlloc = Math.min(mapImgs.length, 7);
-      const woAlloc = Math.min(woImgs.length, MAX_TOTAL_IMAGES - mapAlloc);
-      woImgs = woImgs.slice(0, woAlloc);
-      mapImgs = mapImgs.slice(0, mapAlloc);
-      console.log(`Image limit: ${woAlloc} WO + ${mapAlloc} map = ${woAlloc + mapAlloc} total (was ${(work_order_images||[]).length + (map_images||[]).length})`);
+    const MAX_MAP_IMAGES = 10;
+    if (mapImgs.length > MAX_MAP_IMAGES) {
+      mapImgs = mapImgs.slice(0, MAX_MAP_IMAGES);
+      console.log(`Map images capped at ${MAX_MAP_IMAGES} (was ${map_images.length})`);
     }
 
-    const hasText = (work_order_text && work_order_text.length > 30) || (map_text && map_text.length > 30);
-    const hasImages = woImgs.length > 0 || mapImgs.length > 0;
+    const hasWOText = work_order_text && work_order_text.length > 30;
+    const hasMapImages = mapImgs.length > 0;
+    const hasMapText = map_text && map_text.length > 30;
 
-    if (!hasText && !hasImages) {
-      return res.status(400).json({ error: 'No extractable content. Upload a PDF with text or images.' });
+    if (!hasWOText && !hasMapImages && !hasMapText) {
+      return res.status(400).json({ error: 'No extractable content. Need work order text and/or map images.' });
     }
 
-    console.log(`Processing: ${woImgs.length} WO images + ${mapImgs.length} map images, text: WO=${(work_order_text||'').length} chars, map=${(map_text||'').length} chars`);
+    console.log(`Processing v2.9.0: WO text=${(work_order_text||'').length} chars, map images=${mapImgs.length}, map text=${(map_text||'').length} chars`);
 
     // Build message content array
     const contentBlocks = [];
 
+    // Main extraction prompt with WO text embedded
     contentBlocks.push({
       type: 'text',
-      text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasImages),
+      text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasMapImages),
     });
 
-    if (woImgs.length > 0) {
+    // Map images (high resolution - this is the visual data)
+    if (hasMapImages) {
       contentBlocks.push({
         type: 'text',
-        text: `\n--- WORK ORDER PDF PAGES (${woImgs.length} pages) ---\nExamine each page image below carefully for project details, PO numbers, unit codes, quantities, rates, dates.`,
-      });
-      for (let i = 0; i < woImgs.length; i++) {
-        contentBlocks.push({
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: 'image/jpeg',
-            data: woImgs[i],
-          },
-        });
-      }
-    }
-
-    if (mapImgs.length > 0) {
-      contentBlocks.push({
-        type: 'text',
-        text: `\n--- CONSTRUCTION MAP PDF PAGES (${mapImgs.length} pages) ---\nExamine each map page carefully. Look for:\n- Handhole labels (A, A01, A02, B, B01, etc.)\n- Footage numbers along fiber routes between handholes\n- Street names\n- Handhole sizes (15x20x12, 17x30x18, 30x48x24)\n- Splice/terminal markers (TYCO-D, 1x4, 1x8 symbols)\n- Section boundaries`,
+        text: `\n--- CONSTRUCTION MAP PAGES (${mapImgs.length} high-resolution images) ---\nThese are high-resolution renders of the construction map/engineering drawings.\n\nCRITICAL INSTRUCTIONS FOR MAP READING:\n1. Find EVERY handhole label (single letters like A, B, C AND numbered like A01, A02, B01, etc.)\n2. Read the EXACT footage number printed between each pair of connected handholes\n3. Note the handhole size shown in the legend or next to each label (15x20x12, 17x30x18, 30x48x24)\n4. Read street names along each route\n5. Identify ALL sections (A through F or beyond)\n6. Look for splice markers (TYCO-D diamonds, terminal box symbols)\n7. The footage numbers are small text along the fiber route lines - zoom in mentally on each segment\n8. DO NOT estimate or round footage - read the EXACT number printed on the map\n9. Some footage numbers may be small or at angles - take extra care to read each digit correctly`,
       });
       for (let i = 0; i < mapImgs.length; i++) {
         contentBlocks.push({
@@ -135,8 +113,19 @@ export default async function handler(req, res) {
         signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-opus-4-5-20251101',
-          max_tokens: 32768,
-          system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
+          max_tokens: 65536,
+          system: `You are a fiber optic construction data extraction specialist for LYT Communications. You extract structured data from construction maps and work orders.
+
+YOUR TASK: Read the work order line items (provided as text) and the construction map (provided as images). Extract every segment, every handhole, every footage number. The work order tells you WHAT was ordered. The map tells you WHERE it goes.
+
+CRITICAL RULES:
+- Read footage numbers EXACTLY as printed on the map. Do not estimate or round.
+- Every segment between two handholes has a footage number printed along the route line.
+- The work order total_value is the source of truth for the project total.
+- Splicing is NOT included in the work order - do NOT include splice billing in segment work_items.
+- Segment work_items should include: boring (UG1/UG23/UG24), pulling (UG4/UG28), and handhole installations (UG10/UG11/UG12/UG13/UG17/UG18/UG19/UG20/UG27) as applicable.
+- Match the work order line item quantities to the map segments where possible.
+- Your entire response must be a single valid JSON object. No text before or after. Start with { end with }.`,
           messages: [{ role: 'user', content: contentBlocks }],
         }),
       });
@@ -171,7 +160,7 @@ export default async function handler(req, res) {
     console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}, stop: ${data.stop_reason || 'unknown'}, usage: ${JSON.stringify(data.usage || {})}`);
     
     if (data.stop_reason === 'max_tokens') {
-      console.warn('Response truncated (hit max_tokens). Will attempt JSON repair.');
+      console.warn('Response truncated (hit max_tokens 65536). Will attempt JSON repair.');
     }
 
     // Parse JSON with multiple fallback strategies
@@ -230,29 +219,26 @@ export default async function handler(req, res) {
 
 /**
  * Repair truncated JSON from max_tokens cutoff
- * Handles: mid-string, mid-key, mid-value, unclosed arrays/objects
  */
 function repairTruncatedJSON(rawText) {
   let truncated = rawText.substring(rawText.indexOf('{'));
   if (!truncated || truncated.length < 10) return null;
   
   // First, try to find the largest valid JSON object in the text
-  let bestParse = null;
   for (let i = truncated.length; i > 100; i--) {
     if (truncated[i] === '}') {
       try {
-        bestParse = JSON.parse(truncated.substring(0, i + 1));
+        const parsed = JSON.parse(truncated.substring(0, i + 1));
         console.log(`JSON repair: found valid JSON ending at char ${i + 1} of ${truncated.length}`);
-        return bestParse;
+        return parsed;
       } catch (e) {
         // keep scanning backwards
       }
     }
   }
   
-  // If no valid subset found, try aggressive repair
+  // Aggressive repair: close open structures
   let braces = 0, brackets = 0, inString = false, escape = false;
-  let lastSafePos = 0;
   
   for (let i = 0; i < truncated.length; i++) {
     const ch = truncated[i];
@@ -261,22 +247,18 @@ function repairTruncatedJSON(rawText) {
     if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
     if (ch === '{') braces++;
-    else if (ch === '}') { braces--; if (braces === 0 && brackets === 0) lastSafePos = i; }
+    else if (ch === '}') braces--;
     else if (ch === '[') brackets++;
     else if (ch === ']') brackets--;
-    
-    // Track last position where we could safely truncate
-    if (ch === ',' && braces > 0 && brackets === 0) lastSafePos = i - 1;
   }
   
   if (braces === 0 && brackets === 0 && !inString) {
     return JSON.parse(truncated);
   }
   
-  // Close open string if we're mid-string
   if (inString) truncated += '"';
   
-  // Remove trailing partial values (multiple patterns)
+  // Remove trailing partial values
   truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*"?[^",\]\}]*$/, '');
   truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*\[?[^\]]*$/, '');
   truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
@@ -305,84 +287,111 @@ function repairTruncatedJSON(rawText) {
   return JSON.parse(truncated);
 }
 
-function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasImages) {
-  let prompt = `Extract structured project data from the following fiber optic construction documents. Return ONLY valid JSON with no other text.
+function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasMapImages) {
+  let prompt = `TASK: Extract ALL construction project data by reading the work order text AND examining the construction map images.
+
+STEP 1 - READ THE WORK ORDER: The work order text below contains the complete list of unit codes, quantities, rates, and totals. This is the billing source of truth.
+
+STEP 2 - READ THE CONSTRUCTION MAP: The map images show the physical layout - handhole locations, footage between handholes, street names, and section routing. Read EVERY footage number EXACTLY as printed.
+
+STEP 3 - RECONCILE: Match the map segments to the work order line items. The total footage from all segments on the map should correspond to the boring/pulling quantities in the work order.
 
 RATE CARD: ${rateCardId || 'vexus-la-tx-2026'}
 
-BILLING RATES (Vexus LA/TX 2026):
-- UG1: Directional bore 1-4 ducts = $8.00/LF
-- UG23: Directional bore 5 ducts = $9.50/LF
-- UG24: Directional bore 6 ducts = $10.50/LF
-- UG4: Pull up to 144ct cable = $0.55/LF
-- UG28: Place 288-432ct fiber = $1.00/LF
-- FS1: Fusion splice 1 fiber = $16.50/EA
-- FS2: Ring cut (mid-span) = $275.00/EA
-- FS3: Test fiber = $6.60/EA
-- FS4: ReEnter/Install Enclosure (end-of-line) = $137.50/EA
-- UG10: 30x48x30 handhole = $310.00/EA
-- UG11: 24x36x24 handhole = $110.00/EA
-- UG17: 17x30x18 HDPE = $60.00/EA
+BILLING RATES REFERENCE:
+Underground Boring:
+- UG1: Directional bore 1-4 ducts (1.25" ID) = $8.00/LF
+- UG23: Directional bore 5 ducts (1.25" ID) = $9.50/LF
+- UG24: Directional bore 6 ducts (1.25" ID) = $10.50/LF
+
+Cable Pulling:
+- UG4: Pull up to 144ct armored/micro cable = $0.55/LF
+- UG28: Place 288-432ct armored fiber in duct = $1.00/LF
+
+Handholes (installation cost - assign to the segment that ENDS at this handhole):
+- UG10: 30x48x30 fiberglass/polycrete = $310.00/EA
+- UG11: 24x36x24 fiberglass/polycrete = $110.00/EA
+- UG12: Utility Box = $20.00/EA
+- UG13: Ground rod 5/8" x 8' = $40.00/EA
+- UG17: 17x30x18 HDPE handhole = $60.00/EA
+- UG18: 24x36x18 HDPE handhole = $125.00/EA
+- UG19: 30x48x18 HDPE handhole = $250.00/EA
 - UG20: Terminal Box = $40.00/EA
-- UG27: 30x48x24 HDPE = $210.00/EA
+- UG27: 30x48x24 HDPE handhole = $210.00/EA
 
-HANDHOLE TYPES:
-- 15x20x12 = Terminal Box (TB) - typically 1x4 splice location
-- 17x30x18 = HDPE Handhole (B) - medium, may have 1x4 or 1x8
+Splicing (NOT in work order - extract splice points but do NOT include splice billing):
+- Splice points are extracted for tracking only
+- Do NOT add FS1, FS2, FS3, FS4 to segment work_items
+
+HANDHOLE SIZE → TYPE MAPPING:
+- 15x20x12 = Terminal Box (TB)
+- 17x30x18 = HDPE Handhole (B)
+- 24x36x18 = HDPE Handhole
+- 24x36x24 = Fiberglass/Polycrete Handhole
+- 30x48x18 = HDPE Handhole
 - 30x48x24 = Large Handhole (LHH) - F1/TYCO-D butt splice location
+- 30x48x30 = Large Fiberglass Handhole
 
-SPLICE TYPES:
-- 1x4 terminal: 2 fibers, 1 tray (mid-span uses FS2 ring cut, end-of-line uses FS4)
-- 1x8 splitter: 2 fibers, 1 tray
-- F1 butt splice: 432 fibers, up to 8 trays (always uses FS4)
-- TYCO-D: Same as F1
+SPLICE TYPE RULES (for splice_points array only):
+- 15x20x12 Terminal Box → 1x4 splice
+- 17x30x18 HDPE → typically 1x8 or 1x4
+- 30x48x24 Large Handhole → F1 butt splice (432 fibers, up to 8 trays)
 
 SECTION NAMING:
 - Single letters (A, B, C, D, E, F) are hub/main handholes
 - Numbered (A01, A02, B01) are branch handholes from that hub
-- Segments connect hub to branch or branch to branch
+- Segments connect: hub→branch (A→A01) or branch→branch (A01→A02)
+- Inter-section links connect hubs: A→B, B→C, D→E, E→F
+
+POSITION TYPE RULES:
+- end-of-line: The LAST handhole in a chain (no further connections from it)
+- mid-span: Has connections continuing through it
 
 `;
 
-  if (hasImages) {
-    prompt += `\nIMPORTANT: I am providing page images from the PDFs below. Please examine them carefully to extract all data visually. Construction maps are engineering drawings - look for handhole labels, footage numbers between nodes, street names, and splice markers.\n`;
-  }
-
   if (workOrderText && workOrderText.length > 30) {
-    prompt += `\nWORK ORDER TEXT:\n${workOrderText}\n`;
+    prompt += `\n========================================\nWORK ORDER TEXT (source of truth for billing):\n========================================\n${workOrderText}\n========================================\n\n`;
   }
 
   if (mapText && mapText.length > 30) {
-    prompt += `\nCONSTRUCTION MAP TEXT:\n${mapText}\n`;
+    prompt += `\nCONSTRUCTION MAP TEXT (supplementary - images are primary for map data):\n${mapText}\n\n`;
   }
 
-  prompt += `
-REQUIRED JSON OUTPUT FORMAT:
+  if (hasMapImages) {
+    prompt += `\nThe construction map images follow this prompt. Examine EVERY page carefully:\n- Read every handhole label\n- Read every footage number between connected handholes (small numbers along route lines)\n- Note every street name\n- Identify every section (A, B, C, D, E, F, etc.)\n- Find all inter-section links (hub-to-hub segments)\n\n`;
+  }
+
+  prompt += `REQUIRED JSON OUTPUT FORMAT:
 {
   "project": {
-    "customer": "string",
-    "project_name": "string",
-    "po_number": "string",
-    "total_value": number,
+    "customer": "string (from work order)",
+    "project_name": "string (from work order)",
+    "po_number": "string (from work order)",
+    "total_value": number (from work order - this is the ACTUAL project value),
     "start_date": "YYYY-MM-DD",
     "completion_date": "YYYY-MM-DD",
-    "rate_card_id": "vexus-la-tx-2026"
+    "rate_card_id": "${rateCardId || 'vexus-la-tx-2026'}"
   },
+  "work_order_line_items": [
+    { "code": "UG1", "description": "Directional bore 1-4 ducts", "qty": number, "uom": "LF", "rate": number, "total": number }
+  ],
   "segments": [
     {
       "contractor_id": "A→A01",
       "section": "A",
       "from_handhole": "A",
       "to_handhole": "A01",
-      "footage": 148,
       "from_hh_size": "17x30x18",
       "to_hh_size": "15x20x12",
+      "footage": 148,
       "street": "W Parish Rd",
       "work_items": [
-        { "code": "UG1", "qty": 148, "rate": 8.00, "total": 1184.00 },
-        { "code": "UG4", "qty": 148, "rate": 0.55, "total": 81.40 }
+        { "code": "UG1", "qty": 148, "rate": 8.00, "total": 1184.00, "desc": "Directional bore" },
+        { "code": "UG4", "qty": 148, "rate": 0.55, "total": 81.40, "desc": "Pull cable" },
+        { "code": "UG20", "qty": 1, "rate": 40.00, "total": 40.00, "desc": "Terminal Box (A01)" },
+        { "code": "UG13", "qty": 1, "rate": 40.00, "total": 40.00, "desc": "Ground rod" }
       ],
-      "total_value": 1265.40
+      "total_value": 1345.40
     }
   ],
   "splice_points": [
@@ -393,23 +402,25 @@ REQUIRED JSON OUTPUT FORMAT:
       "splice_type": "1x4",
       "position_type": "mid-span",
       "fiber_count": 2,
-      "tray_count": 1,
-      "work_items": [
-        { "code": "FS2", "qty": 1, "rate": 275.00, "total": 275.00 },
-        { "code": "FS1", "qty": 2, "rate": 16.50, "total": 33.00 },
-        { "code": "FS3", "qty": 8, "rate": 6.60, "total": 52.80 }
-      ],
-      "total_value": 360.80
+      "tray_count": 1
     }
   ],
-  "sections": ["A", "B", "C"],
+  "sections": ["A", "B", "C", "D", "E", "F"],
   "total_footage": number,
   "total_segments": number,
   "total_splice_points": number,
   "grand_total": number
 }
 
-Return ONLY the JSON object, no markdown, no explanation.`;
+IMPORTANT NOTES:
+1. "grand_total" should be the sum of all segment total_values. It will NOT match the work order total_value because splicing is separate.
+2. Include EVERY segment visible on the map - do not skip any.
+3. Read footage numbers EXACTLY from the map - do not estimate.
+4. Include handhole installation costs (UG10-UG27) in the segment work_items for the segment that TERMINATES at that handhole.
+5. splice_points do NOT have work_items - they are for tracking only.
+6. The work_order_line_items array captures the raw line items from the work order for reference.
+
+Return ONLY the JSON object. No markdown, no explanation, no commentary.`;
 
   return prompt;
 }
