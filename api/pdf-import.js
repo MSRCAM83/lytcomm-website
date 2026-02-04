@@ -10,7 +10,7 @@
  *         Map as HIGH-QUALITY images (full 4.5MB budget). Claude reads
  *         the work order line items first, then examines the map to
  *         match footage numbers and segments. Numbers must reconcile.
- *         65536 max_tokens for full extraction of large projects.
+ *         64000 max_tokens (Opus 4.5 limit) for full extraction.
  * v2.8.1: Enhanced JSON repair for mid-key truncation.
  * v2.8.0: Upgraded to Opus 4.5 - better vision, 3x cheaper.
  * v2.7.0: Fluid Compute, full data, 800s timeout.
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
         signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-opus-4-5-20251101',
-          max_tokens: 65536,
+          max_tokens: 64000,
           system: `You are a fiber optic construction data extraction specialist for LYT Communications. You extract structured data from construction maps and work orders.
 
 YOUR TASK: Read the work order line items (provided as text) and the construction map (provided as images). Extract every segment, every handhole, every footage number. The work order tells you WHAT was ordered. The map tells you WHERE it goes.
@@ -160,7 +160,7 @@ CRITICAL RULES:
     console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}, stop: ${data.stop_reason || 'unknown'}, usage: ${JSON.stringify(data.usage || {})}`);
     
     if (data.stop_reason === 'max_tokens') {
-      console.warn('Response truncated (hit max_tokens 65536). Will attempt JSON repair.');
+      console.warn('Response truncated (hit max_tokens 64000). Will attempt JSON repair.');
     }
 
     // Parse JSON with multiple fallback strategies
