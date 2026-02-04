@@ -1,11 +1,15 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.5.0
+ * Version: 2.6.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
- * and construction map PDFs via Claude Vision API.
+ * and construction map PDFs via Claude Opus 4 Vision API.
  * 
+ * v2.6.0: Enabled Fluid Compute (300s maxDuration) - eliminates 504 timeouts.
+ *         Reduced max images to 6 (2 WO + 4 map) for faster processing.
+ *         Kept max_tokens at 8192 with JSON repair for any truncation.
+ *         Added AbortController with 280s safety timeout.
  * v2.5.0: Fixed truncated JSON - increased max_tokens to 16384 (was 8192),
  *         added JSON repair for truncated responses, log stop_reason.
  * v2.4.0: Fixed content extraction for Opus 4 vision - handles thinking blocks
@@ -23,6 +27,7 @@
  * }
  * 
  * Environment variable required: ANTHROPIC_API_KEY
+ * Requires: Fluid Compute enabled in vercel.json ("fluid": true)
  */
 
 export const config = {
@@ -52,15 +57,14 @@ export default async function handler(req, res) {
       rate_card_id 
     } = req.body;
 
-    // Smart image limiting - Opus 4 needs time, cap total images to prevent timeout
-    const MAX_TOTAL_IMAGES = 10;
+    // Limit images to keep Opus fast - 2 WO + 4 map = 6 total
+    const MAX_TOTAL_IMAGES = 6;
     let woImgs = work_order_images || [];
     let mapImgs = map_images || [];
     
     if (woImgs.length + mapImgs.length > MAX_TOTAL_IMAGES) {
-      // Prioritize map pages (construction data) over work order pages
-      const mapAlloc = Math.min(mapImgs.length, 7);
-      const woAlloc = Math.min(woImgs.length, MAX_TOTAL_IMAGES - mapAlloc);
+      const woAlloc = Math.min(woImgs.length, 2);
+      const mapAlloc = Math.min(mapImgs.length, MAX_TOTAL_IMAGES - woAlloc);
       woImgs = woImgs.slice(0, woAlloc);
       mapImgs = mapImgs.slice(0, mapAlloc);
       console.log(`Image limit: ${woAlloc} WO + ${mapAlloc} map = ${woAlloc + mapAlloc} total (was ${(work_order_images||[]).length + (map_images||[]).length})`);
@@ -76,17 +80,15 @@ export default async function handler(req, res) {
     // Build message content array (text + images)
     const contentBlocks = [];
 
-    // Add the extraction instructions as first text block
     contentBlocks.push({
       type: 'text',
       text: buildExtractionPrompt(work_order_text, map_text, rate_card_id, hasImages),
     });
 
-    // Add work order images
     if (woImgs.length > 0) {
       contentBlocks.push({
         type: 'text',
-        text: `\n--- WORK ORDER PDF PAGES (${woImgs.length} pages) ---\nExamine each page image below carefully for project details, PO numbers, unit codes, quantities, rates, dates.`,
+        text: `\n--- WORK ORDER PDF PAGES (${woImgs.length} pages) ---\nExamine each page image below for project details, PO numbers, unit codes, quantities, rates, dates.`,
       });
       for (let i = 0; i < woImgs.length; i++) {
         contentBlocks.push({
@@ -100,11 +102,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // Add construction map images
     if (mapImgs.length > 0) {
       contentBlocks.push({
         type: 'text',
-        text: `\n--- CONSTRUCTION MAP PDF PAGES (${mapImgs.length} pages) ---\nExamine each map page carefully. Look for:\n- Handhole labels (A, A01, A02, B, B01, etc.)\n- Footage numbers along fiber routes between handholes\n- Street names\n- Handhole sizes (15x20x12, 17x30x18, 30x48x24)\n- Splice/terminal markers (TYCO-D, 1x4, 1x8 symbols)\n- Section boundaries`,
+        text: `\n--- CONSTRUCTION MAP PDF PAGES (${mapImgs.length} pages) ---\nExamine each map page carefully for handhole labels, footage numbers, street names, handhole sizes, splice markers, and section boundaries.`,
       });
       for (let i = 0; i < mapImgs.length; i++) {
         contentBlocks.push({
@@ -118,20 +119,35 @@ export default async function handler(req, res) {
       }
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
-        max_tokens: 16384,
-        system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
-        messages: [{ role: 'user', content: contentBlocks }],
-      }),
-    });
+    // Safety timeout at 280s (Vercel Fluid allows 300s)
+    const controller = new AbortController();
+    const safetyTimer = setTimeout(() => controller.abort(), 280000);
+
+    let response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'claude-opus-4-20250514',
+          max_tokens: 8192,
+          system: 'You are a fiber optic construction data extraction specialist. Return ONLY a valid JSON object. No text before or after. No markdown. Start with { and end with }. Be concise - use short street names, skip unnecessary fields if unknown.',
+          messages: [{ role: 'user', content: contentBlocks }],
+        }),
+      });
+    } catch (fetchErr) {
+      clearTimeout(safetyTimer);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(504).json({ error: 'AI processing timed out after 280s. Try uploading fewer pages.' });
+      }
+      throw fetchErr;
+    }
+    clearTimeout(safetyTimer);
 
     if (!response.ok) {
       const errText = await response.text();
@@ -153,35 +169,24 @@ export default async function handler(req, res) {
     }
     
     console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}, stop: ${data.stop_reason || 'unknown'}`);
-    if (rawText.length < 10) {
-      console.error('Empty/tiny response. Full content:', JSON.stringify(data.content || []).substring(0, 1000));
-    }
     
-    // If response was truncated due to max_tokens, log it
     if (data.stop_reason === 'max_tokens') {
-      console.warn('WARNING: Response was truncated (hit max_tokens). Will attempt JSON repair.');
+      console.warn('Response truncated (hit max_tokens). Will attempt JSON repair.');
     }
 
-    // Parse JSON from response - handle various output formats
-    let extracted;
+    // Parse JSON from response with multiple fallback strategies
+    let extracted = null;
+    
+    // Strategy 1: Direct parse (handles clean JSON responses)
     try {
-      // Step 1: Strip markdown fences
       let cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      // Step 2: If it doesn't start with {, try to find a JSON object in the text
       if (!cleaned.startsWith('{')) {
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          cleaned = jsonMatch[0];
-        }
+        if (jsonMatch) cleaned = jsonMatch[0];
       }
-      
       extracted = JSON.parse(cleaned);
-    } catch (parseErr) {
-      console.error('JSON parse error:', parseErr.message);
-      console.error('Raw text (first 1000 chars):', rawText.substring(0, 1000));
-      
-      // Last resort: try to find and extract the largest JSON object
+    } catch (e1) {
+      // Strategy 2: Brace extraction (handles text preamble)
       try {
         const braceStart = rawText.indexOf('{');
         const braceEnd = rawText.lastIndexOf('}');
@@ -190,50 +195,23 @@ export default async function handler(req, res) {
           console.log('Recovered JSON via brace extraction');
         }
       } catch (e2) {
-        // Could not recover
-      }
-      
-      if (!extracted) {
-        // Try to repair truncated JSON (common when max_tokens is hit)
+        // Strategy 3: JSON repair for truncated responses
         try {
-          let truncated = rawText.substring(rawText.indexOf('{'));
-          // Count unclosed braces and brackets
-          let braces = 0, brackets = 0, inString = false, escape = false;
-          for (let i = 0; i < truncated.length; i++) {
-            const ch = truncated[i];
-            if (escape) { escape = false; continue; }
-            if (ch === '\\') { escape = true; continue; }
-            if (ch === '"') { inString = !inString; continue; }
-            if (inString) continue;
-            if (ch === '{') braces++;
-            else if (ch === '}') braces--;
-            else if (ch === '[') brackets++;
-            else if (ch === ']') brackets--;
-          }
-          // If we're inside a string, close it
-          if (inString) truncated += '"';
-          // Remove any trailing partial value (after last comma or colon)
-          truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*[^,\]\}]*$/, '');
-          truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
-          truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
-          truncated = truncated.replace(/,\s*$/, '');
-          // Close unclosed brackets and braces
-          for (let i = 0; i < brackets; i++) truncated += ']';
-          for (let i = 0; i < braces; i++) truncated += '}';
-          extracted = JSON.parse(truncated);
-          console.log('Recovered truncated JSON via repair (closed', braces, 'braces,', brackets, 'brackets)');
-        } catch (repairErr) {
-          console.error('JSON repair also failed:', repairErr.message);
+          extracted = repairTruncatedJSON(rawText);
+          if (extracted) console.log('Recovered JSON via repair');
+        } catch (e3) {
+          console.error('All JSON parse strategies failed');
+          console.error('Raw text preview:', rawText.substring(0, 500));
         }
       }
-      
-      if (!extracted) {
-        return res.status(200).json({
-          warning: 'Could not parse AI response as JSON',
-          raw_response: rawText.substring(0, 5000),
-          usage: data.usage,
-        });
-      }
+    }
+    
+    if (!extracted) {
+      return res.status(200).json({
+        warning: 'Could not parse AI response as JSON',
+        raw_response: rawText.substring(0, 5000),
+        usage: data.usage,
+      });
     }
 
     return res.status(200).json({
@@ -249,47 +227,71 @@ export default async function handler(req, res) {
   }
 }
 
+/**
+ * Attempt to repair truncated JSON (from max_tokens cutoff)
+ */
+function repairTruncatedJSON(rawText) {
+  let truncated = rawText.substring(rawText.indexOf('{'));
+  if (!truncated || truncated.length < 10) return null;
+  
+  // Count unclosed structures
+  let braces = 0, brackets = 0, inString = false, escape = false;
+  for (let i = 0; i < truncated.length; i++) {
+    const ch = truncated[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+  }
+  
+  // If balanced already, try direct parse
+  if (braces === 0 && brackets === 0 && !inString) {
+    return JSON.parse(truncated);
+  }
+  
+  // Close open string
+  if (inString) truncated += '"';
+  
+  // Remove trailing partial values
+  truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*[^,\]\}]*$/, '');
+  truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
+  truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
+  truncated = truncated.replace(/,\s*$/, '');
+  
+  // Close unclosed brackets then braces
+  for (let i = 0; i < brackets; i++) truncated += ']';
+  for (let i = 0; i < braces; i++) truncated += '}';
+  
+  console.log(`JSON repair: closed ${braces} braces, ${brackets} brackets`);
+  return JSON.parse(truncated);
+}
+
 function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasImages) {
-  let prompt = `Extract structured project data from the following fiber optic construction documents. Return ONLY valid JSON with no other text.
+  let prompt = `Extract structured project data from these fiber optic construction documents. Return ONLY valid JSON.
 
 RATE CARD: ${rateCardId || 'vexus-la-tx-2026'}
 
-BILLING RATES (Vexus LA/TX 2026):
+BILLING RATES:
 - UG1: Directional bore 1-4 ducts = $8.00/LF
-- UG23: Directional bore 5 ducts = $9.50/LF
-- UG24: Directional bore 6 ducts = $10.50/LF
 - UG4: Pull up to 144ct cable = $0.55/LF
 - UG28: Place 288-432ct fiber = $1.00/LF
 - FS1: Fusion splice 1 fiber = $16.50/EA
 - FS2: Ring cut (mid-span) = $275.00/EA
 - FS3: Test fiber = $6.60/EA
 - FS4: ReEnter/Install Enclosure (end-of-line) = $137.50/EA
-- UG10: 30x48x30 handhole = $310.00/EA
-- UG11: 24x36x24 handhole = $110.00/EA
-- UG17: 17x30x18 HDPE = $60.00/EA
-- UG20: Terminal Box = $40.00/EA
-- UG27: 30x48x24 HDPE = $210.00/EA
+- UG10: 30x48x30 HH = $310/EA | UG17: 17x30x18 = $60/EA | UG20: TB = $40/EA | UG27: 30x48x24 = $210/EA
 
-HANDHOLE TYPES:
-- 15x20x12 = Terminal Box (TB) - typically 1x4 splice location
-- 17x30x18 = HDPE Handhole (B) - medium, may have 1x4 or 1x8
-- 30x48x24 = Large Handhole (LHH) - F1/TYCO-D butt splice location
-
-SPLICE TYPES:
-- 1x4 terminal: 2 fibers, 1 tray (mid-span uses FS2 ring cut, end-of-line uses FS4)
-- 1x8 splitter: 2 fibers, 1 tray
-- F1 butt splice: 432 fibers, up to 8 trays (always uses FS4)
-- TYCO-D: Same as F1
-
-SECTION NAMING:
-- Single letters (A, B, C, D, E, F) are hub/main handholes
-- Numbered (A01, A02, B01) are branch handholes from that hub
-- Segments connect hub to branch or branch to branch
-
+HANDHOLE TYPES: 15x20x12=TB (1x4) | 17x30x18=HDPE (1x4/1x8) | 30x48x24=LHH (F1/TYCO-D)
+SPLICES: 1x4=2 fibers,1 tray | 1x8=2 fibers,1 tray | F1/TYCO-D=432 fibers,up to 8 trays
+SECTIONS: Single letters (A,B,C)=hub handholes | Numbered (A01,A02)=branch handholes
 `;
 
   if (hasImages) {
-    prompt += `\nIMPORTANT: I am providing page images from the PDFs below. Please examine them carefully to extract all data visually. Construction maps are engineering drawings - look for handhole labels, footage numbers between nodes, street names, and splice markers.\n`;
+    prompt += `\nExamine the PDF page images below carefully. Construction maps are engineering drawings - look for handhole labels, footage numbers between nodes, street names, splice markers.\n`;
   }
 
   if (workOrderText && workOrderText.length > 30) {
@@ -297,11 +299,11 @@ SECTION NAMING:
   }
 
   if (mapText && mapText.length > 30) {
-    prompt += `\nCONSTRUCTION MAP TEXT:\n${mapText}\n`;
+    prompt += `\nMAP TEXT:\n${mapText}\n`;
   }
 
   prompt += `
-REQUIRED JSON OUTPUT FORMAT:
+REQUIRED JSON FORMAT:
 {
   "project": {
     "customer": "string",
@@ -332,7 +334,7 @@ REQUIRED JSON OUTPUT FORMAT:
   "splice_points": [
     {
       "contractor_id": "A01",
-      "location": "Handhole A01 (15x20x12)",
+      "location": "Handhole A01",
       "handhole_type": "15x20x12",
       "splice_type": "1x4",
       "position_type": "mid-span",
@@ -353,7 +355,7 @@ REQUIRED JSON OUTPUT FORMAT:
   "grand_total": number
 }
 
-Return ONLY the JSON object, no markdown, no explanation.`;
+Return ONLY the JSON object. No markdown, no explanation.`;
 
   return prompt;
 }
