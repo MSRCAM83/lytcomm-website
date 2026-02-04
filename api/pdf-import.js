@@ -1,13 +1,15 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.1.0
+ * Version: 2.2.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Vision API.
  * 
- * v2.1.0: Upgraded to Claude Opus 4 for superior vision accuracy on
- *         scanned construction maps and engineering drawings.
+ * v2.2.0: Fixed 504 timeout - increased maxDuration to 120s (Pro plan).
+ *         Added smart image limiting (max 10 total) to keep Opus fast.
+ *         Kept Claude Opus 4 for best accuracy on engineering drawings.
+ * v2.1.0: Upgraded to Claude Opus 4 for superior vision accuracy.
  *         Falls back to text if images not provided.
  * 
  * POST /api/pdf-import
@@ -47,8 +49,22 @@ export default async function handler(req, res) {
       rate_card_id 
     } = req.body;
 
+    // Smart image limiting - Opus 4 needs time, cap total images to prevent timeout
+    const MAX_TOTAL_IMAGES = 10;
+    let woImgs = work_order_images || [];
+    let mapImgs = map_images || [];
+    
+    if (woImgs.length + mapImgs.length > MAX_TOTAL_IMAGES) {
+      // Prioritize map pages (construction data) over work order pages
+      const mapAlloc = Math.min(mapImgs.length, 7);
+      const woAlloc = Math.min(woImgs.length, MAX_TOTAL_IMAGES - mapAlloc);
+      woImgs = woImgs.slice(0, woAlloc);
+      mapImgs = mapImgs.slice(0, mapAlloc);
+      console.log(`Image limit: ${woAlloc} WO + ${mapAlloc} map = ${woAlloc + mapAlloc} total (was ${(work_order_images||[]).length + (map_images||[]).length})`);
+    }
+
     const hasText = (work_order_text && work_order_text.length > 30) || (map_text && map_text.length > 30);
-    const hasImages = (work_order_images && work_order_images.length > 0) || (map_images && map_images.length > 0);
+    const hasImages = woImgs.length > 0 || mapImgs.length > 0;
 
     if (!hasText && !hasImages) {
       return res.status(400).json({ error: 'No extractable content. Upload a PDF with text or images.' });
@@ -64,36 +80,36 @@ export default async function handler(req, res) {
     });
 
     // Add work order images
-    if (work_order_images && work_order_images.length > 0) {
+    if (woImgs.length > 0) {
       contentBlocks.push({
         type: 'text',
-        text: `\n--- WORK ORDER PDF PAGES (${work_order_images.length} pages) ---\nExamine each page image below carefully for project details, PO numbers, unit codes, quantities, rates, dates.`,
+        text: `\n--- WORK ORDER PDF PAGES (${woImgs.length} pages) ---\nExamine each page image below carefully for project details, PO numbers, unit codes, quantities, rates, dates.`,
       });
-      for (let i = 0; i < work_order_images.length; i++) {
+      for (let i = 0; i < woImgs.length; i++) {
         contentBlocks.push({
           type: 'image',
           source: {
             type: 'base64',
             media_type: 'image/jpeg',
-            data: work_order_images[i],
+            data: woImgs[i],
           },
         });
       }
     }
 
     // Add construction map images
-    if (map_images && map_images.length > 0) {
+    if (mapImgs.length > 0) {
       contentBlocks.push({
         type: 'text',
-        text: `\n--- CONSTRUCTION MAP PDF PAGES (${map_images.length} pages) ---\nExamine each map page carefully. Look for:\n- Handhole labels (A, A01, A02, B, B01, etc.)\n- Footage numbers along fiber routes between handholes\n- Street names\n- Handhole sizes (15x20x12, 17x30x18, 30x48x24)\n- Splice/terminal markers (TYCO-D, 1x4, 1x8 symbols)\n- Section boundaries`,
+        text: `\n--- CONSTRUCTION MAP PDF PAGES (${mapImgs.length} pages) ---\nExamine each map page carefully. Look for:\n- Handhole labels (A, A01, A02, B, B01, etc.)\n- Footage numbers along fiber routes between handholes\n- Street names\n- Handhole sizes (15x20x12, 17x30x18, 30x48x24)\n- Splice/terminal markers (TYCO-D, 1x4, 1x8 symbols)\n- Section boundaries`,
       });
-      for (let i = 0; i < map_images.length; i++) {
+      for (let i = 0; i < mapImgs.length; i++) {
         contentBlocks.push({
           type: 'image',
           source: {
             type: 'base64',
             media_type: 'image/jpeg',
-            data: map_images[i],
+            data: mapImgs[i],
           },
         });
       }
