@@ -1,11 +1,13 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 2.4.0
+ * Version: 2.5.0
  * Updated: 2026-02-03
  * 
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Vision API.
  * 
+ * v2.5.0: Fixed truncated JSON - increased max_tokens to 16384 (was 8192),
+ *         added JSON repair for truncated responses, log stop_reason.
  * v2.4.0: Fixed content extraction for Opus 4 vision - handles thinking blocks
  *         and multi-block responses. Only text blocks are now used for JSON.
  * v2.3.0: Fixed JSON parsing - robust extraction handles preamble text.
@@ -125,7 +127,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-opus-4-20250514',
-        max_tokens: 8192,
+        max_tokens: 16384,
         system: 'You are a fiber optic construction data extraction specialist. You extract structured data from construction maps, engineering drawings, and work orders. CRITICAL: Your entire response must be a single valid JSON object. Do not include ANY text before or after the JSON. No greetings, no explanations, no markdown fences, no commentary. Start your response with { and end with }.',
         messages: [{ role: 'user', content: contentBlocks }],
       }),
@@ -150,9 +152,14 @@ export default async function handler(req, res) {
       rawText = data.content[0].text;
     }
     
-    console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}`);
+    console.log(`Response: ${data.content?.length || 0} blocks, text length: ${rawText.length}, model: ${data.model || 'unknown'}, stop: ${data.stop_reason || 'unknown'}`);
     if (rawText.length < 10) {
       console.error('Empty/tiny response. Full content:', JSON.stringify(data.content || []).substring(0, 1000));
+    }
+    
+    // If response was truncated due to max_tokens, log it
+    if (data.stop_reason === 'max_tokens') {
+      console.warn('WARNING: Response was truncated (hit max_tokens). Will attempt JSON repair.');
     }
 
     // Parse JSON from response - handle various output formats
@@ -184,6 +191,40 @@ export default async function handler(req, res) {
         }
       } catch (e2) {
         // Could not recover
+      }
+      
+      if (!extracted) {
+        // Try to repair truncated JSON (common when max_tokens is hit)
+        try {
+          let truncated = rawText.substring(rawText.indexOf('{'));
+          // Count unclosed braces and brackets
+          let braces = 0, brackets = 0, inString = false, escape = false;
+          for (let i = 0; i < truncated.length; i++) {
+            const ch = truncated[i];
+            if (escape) { escape = false; continue; }
+            if (ch === '\\') { escape = true; continue; }
+            if (ch === '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (ch === '{') braces++;
+            else if (ch === '}') braces--;
+            else if (ch === '[') brackets++;
+            else if (ch === ']') brackets--;
+          }
+          // If we're inside a string, close it
+          if (inString) truncated += '"';
+          // Remove any trailing partial value (after last comma or colon)
+          truncated = truncated.replace(/,\s*"[^"]*"?\s*:?\s*[^,\]\}]*$/, '');
+          truncated = truncated.replace(/,\s*\{[^\}]*$/, '');
+          truncated = truncated.replace(/,\s*\[[^\]]*$/, '');
+          truncated = truncated.replace(/,\s*$/, '');
+          // Close unclosed brackets and braces
+          for (let i = 0; i < brackets; i++) truncated += ']';
+          for (let i = 0; i < braces; i++) truncated += '}';
+          extracted = JSON.parse(truncated);
+          console.log('Recovered truncated JSON via repair (closed', braces, 'braces,', brackets, 'brackets)');
+        } catch (repairErr) {
+          console.error('JSON repair also failed:', repairErr.message);
+        }
       }
       
       if (!extracted) {
