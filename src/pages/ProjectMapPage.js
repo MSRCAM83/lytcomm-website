@@ -1,19 +1,22 @@
 /**
  * LYT Communications - Project Map Page
- * Version: 3.0.0
+ * Version: 4.0.0
  * Created: 2026-02-02
- * Updated: 2026-02-03
+ * Updated: 2026-02-04
  * Route: #project-map
- * 
+ *
  * Interactive map-based project management view using Leaflet/OpenStreetMap.
  * Displays construction segments as polylines with color-coded status,
- * handhole markers with popups, and segment detail panels.
- * 
+ * handhole markers, flowerpot markers, and splice point markers with PM status.
+ *
  * Features:
  * - Leaflet map with satellite/street toggle (no API key needed)
  * - Color-coded polyline segments (boring/pulling/splicing status)
- * - Clickable handhole markers with popups
+ * - Clickable handhole markers (sized by type)
+ * - Clickable flowerpot markers (utility boxes - UG12)
+ * - Clickable splice point markers with PM status indicators
  * - Segment detail side panel with workflow tabs
+ * - Splice point detail panel with PM readings
  * - Section/status/phase filters
  * - List view fallback
  * - Photo upload to Google Drive
@@ -24,28 +27,19 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 // eslint-disable-next-line no-unused-vars
-import { ArrowLeft, Map, List, Search, AlertCircle, MapPin, Ruler, Users, Zap, X, ChevronDown, ChevronUp, Filter, Layers, Camera, CheckCircle, Clock, AlertTriangle, Navigation, Wrench, Cable } from 'lucide-react';
+import { ArrowLeft, Map, List, Search, AlertCircle, MapPin, Ruler, Users, Zap, X, ChevronDown, ChevronUp, Filter, Layers, Camera, CheckCircle, Clock, AlertTriangle, Navigation, Wrench, Cable, Flower2, Activity, Radio, Eye } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
-import { STATUS_COLORS, PHOTO_REQUIREMENTS } from '../config/mapConfig';
+import { STATUS_COLORS, PHOTO_REQUIREMENTS, PM_THRESHOLDS, PM_STATUS, evaluatePMReading, GOOGLE_MAPS_API_KEY } from '../config/mapConfig';
 import BoringTracker from '../components/Workflow/BoringTracker';
 import PullingTracker from '../components/Workflow/PullingTracker';
 import SplicingTracker from '../components/Workflow/SplicingTracker';
 // eslint-disable-next-line no-unused-vars
-import { loadFullProject, isDemoMode, updateSegmentField, logAction } from '../services/mapService';
+import { loadFullProject, isDemoMode, updateSegmentField, updateSpliceField, logAction } from '../services/mapService';
 import { uploadPhotoBatch } from '../services/photoUploadService';
 import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix Leaflet default marker icons (webpack issue)
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
+import { GoogleMap, useJsApiLoader, Polyline, Marker, OverlayView } from '@react-google-maps/api';
 
 // Helper: get status color
 function getStatusColor(status) {
@@ -72,152 +66,287 @@ function StatusIcon({ status, size }) {
 }
 
 // ===== GOOGLE MAPS COMPONENT =====
-function ProjectLeafletMap({ segments, selectedSegment, onSelectSegment, filterPhase, darkMode }) {
-  const mapContainerRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const layersRef = useRef([]);
+const mapContainerStyle = { width: '100%', height: '100%' };
+const defaultCenter = { lat: 30.2366, lng: -93.3776 }; // Sulphur LA
 
-  // Initialize Leaflet map
-  useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
+function ProjectGoogleMap({ segments, splicePoints, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, filterPhase, darkMode, showFlowerpots, showSplicePoints }) {
+  const [map, setMap] = useState(null);
+  const [mapType, setMapType] = useState('roadmap');
 
-    const map = L.map(mapContainerRef.current, {
-      center: [30.2366, -93.3776], // Sulphur LA default
-      zoom: 15,
-      zoomControl: true,
-    });
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+  });
 
-    // Street layer
-    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19,
-    });
-
-    // Satellite layer
-    const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '© Esri',
-      maxZoom: 19,
-    });
-
-    // Add street layer by default
-    streetLayer.addTo(map);
-
-    // Layer control
-    L.control.layers({
-      'Street': streetLayer,
-      'Satellite': satLayer,
-    }).addTo(map);
-
-    mapInstanceRef.current = map;
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-    };
-  }, []);
-
-  // Draw segments and markers
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    // Clear old layers
-    layersRef.current.forEach(l => map.removeLayer(l));
-    layersRef.current = [];
-
-    if (!segments || segments.length === 0) return;
-
-    const boundsArr = [];
-    const handholes = new window.Map();
-
+  // Calculate bounds from all points
+  const bounds = useMemo(() => {
+    if (!segments || segments.length === 0) return null;
+    const points = [];
     segments.forEach(seg => {
+      if (seg.gps_start_lat && seg.gps_start_lng) points.push({ lat: parseFloat(seg.gps_start_lat), lng: parseFloat(seg.gps_start_lng) });
+      if (seg.gps_end_lat && seg.gps_end_lng) points.push({ lat: parseFloat(seg.gps_end_lat), lng: parseFloat(seg.gps_end_lng) });
+    });
+    if (showFlowerpots && flowerpots) {
+      flowerpots.forEach(fp => {
+        if (fp.gps_lat && fp.gps_lng) points.push({ lat: parseFloat(fp.gps_lat), lng: parseFloat(fp.gps_lng) });
+      });
+    }
+    if (showSplicePoints && splicePoints) {
+      splicePoints.forEach(sp => {
+        if (sp.gps_lat && sp.gps_lng) points.push({ lat: parseFloat(sp.gps_lat), lng: parseFloat(sp.gps_lng) });
+      });
+    }
+    return points;
+  }, [segments, splicePoints, flowerpots, showFlowerpots, showSplicePoints]);
+
+  // Fit bounds when map loads
+  const onLoad = useCallback((mapInstance) => {
+    setMap(mapInstance);
+    if (bounds && bounds.length > 0 && window.google) {
+      const googleBounds = new window.google.maps.LatLngBounds();
+      bounds.forEach(p => googleBounds.extend(p));
+      mapInstance.fitBounds(googleBounds, 50);
+    }
+  }, [bounds]);
+
+  // Collect handholes from segments
+  const handholes = useMemo(() => {
+    const hh = new window.Map();
+    segments.forEach(seg => {
+      const fromLabel = seg.from_handhole || seg.contractor_id?.split('→')[0] || '?';
+      const toLabel = seg.to_handhole || seg.contractor_id?.split('→')[1] || '?';
       const startLat = parseFloat(seg.gps_start_lat);
       const startLng = parseFloat(seg.gps_start_lng);
       const endLat = parseFloat(seg.gps_end_lat);
       const endLng = parseFloat(seg.gps_end_lng);
 
-      if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) return;
-
-      // Status color
-      const statusField = filterPhase === 'pulling' ? seg.pulling_status : filterPhase === 'splicing' ? (seg.splicing_status || 'Not Started') : seg.boring_status;
-      const color = statusField === 'QC Approved' ? '#4CAF50' :
-                    statusField === 'Complete' ? '#4CAF50' :
-                    statusField === 'In Progress' ? '#FFB800' :
-                    statusField === 'Issue' ? '#FF9800' :
-                    statusField === 'Blocked' ? '#9E9E9E' : '#FF4444';
-
-      // Draw polyline
-      const line = L.polyline([[startLat, startLng], [endLat, endLng]], {
-        color: color,
-        weight: 5,
-        opacity: selectedSegment === seg.segment_id ? 1.0 : 0.8,
-      }).addTo(map);
-
-      line.bindTooltip(`${seg.contractor_id} • ${seg.footage} LF`, { direction: 'center', className: 'seg-tooltip' });
-      line.on('click', () => onSelectSegment(seg.segment_id));
-      layersRef.current.push(line);
-
-      boundsArr.push([startLat, startLng], [endLat, endLng]);
-
-      // Collect handholes
-      const fromKey = `${startLat},${startLng}`;
-      const toKey = `${endLat},${endLng}`;
-      if (!handholes.has(fromKey)) handholes.set(fromKey, { lat: startLat, lng: startLng, label: seg.from_handhole || seg.contractor_id?.split('→')[0] || '?' });
-      if (!handholes.has(toKey)) handholes.set(toKey, { lat: endLat, lng: endLng, label: seg.to_handhole || seg.contractor_id?.split('→')[1] || '?' });
-    });
-
-    // Add handhole markers
-    handholes.forEach((hh) => {
-      const isLarge = (hh.label || '').includes('30x48');
-      const isMedium = (hh.label || '').includes('17x30');
-      const radius = isLarge ? 8 : isMedium ? 6 : 5;
-      const fillColor = isLarge ? '#2196F3' : isMedium ? '#FFB800' : '#4CAF50';
-
-      const circle = L.circleMarker([hh.lat, hh.lng], {
-        radius: radius,
-        color: '#fff',
-        weight: 2,
-        fillColor: fillColor,
-        fillOpacity: 1,
-      }).addTo(map);
-
-      circle.bindTooltip(hh.label, { permanent: false, direction: 'top', offset: [0, -8] });
-      layersRef.current.push(circle);
-    });
-
-    // Fit bounds
-    if (boundsArr.length > 0) {
-      try {
-        map.fitBounds(boundsArr, { padding: [40, 40], maxZoom: 17 });
-      } catch (e) {
-        console.warn('fitBounds error:', e);
+      if (!isNaN(startLat) && !isNaN(startLng) && (fromLabel.includes('x') || fromLabel.match(/^[A-Z]\d*$/))) {
+        const key = `${startLat},${startLng}`;
+        if (!hh.has(key)) hh.set(key, { lat: startLat, lng: startLng, label: fromLabel });
       }
-    }
-  }, [segments, selectedSegment, onSelectSegment, filterPhase]);
+      if (!isNaN(endLat) && !isNaN(endLng) && (toLabel.includes('x') || toLabel.match(/^[A-Z]\d*$/))) {
+        const key = `${endLat},${endLng}`;
+        if (!hh.has(key)) hh.set(key, { lat: endLat, lng: endLng, label: toLabel });
+      }
+    });
+    return Array.from(hh.values());
+  }, [segments]);
+
+  // Get status color
+  const getSegmentColor = (seg) => {
+    const status = filterPhase === 'pulling' ? seg.pulling_status : filterPhase === 'splicing' ? (seg.splicing_status || 'Not Started') : seg.boring_status;
+    if (status === 'QC Approved' || status === 'Complete') return '#4CAF50';
+    if (status === 'In Progress') return '#FFB800';
+    if (status === 'Issue') return '#FF9800';
+    if (status === 'Blocked') return '#9E9E9E';
+    return '#FF4444';
+  };
+
+  // Get PM status color for splice points
+  const getPMStatusColor = (sp) => {
+    if (sp.splice_type !== '1x4' || !sp.pm_readings) return '#9E9E9E';
+    try {
+      const readings = typeof sp.pm_readings === 'string' ? JSON.parse(sp.pm_readings) : sp.pm_readings;
+      if (readings.some(r => r.status === 'fail')) return '#F44336';
+      if (readings.some(r => r.status === 'warning')) return '#FF9800';
+      if (readings.every(r => r.status === 'pass')) return '#4CAF50';
+    } catch (e) { /* ignore */ }
+    return '#9E9E9E';
+  };
+
+  if (loadError) return <div style={{ padding: 20, color: '#f44336' }}>Error loading Google Maps</div>;
+  if (!isLoaded) return <div style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>Loading map...</div>;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-      {/* Legend */}
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={defaultCenter}
+        zoom={15}
+        onLoad={onLoad}
+        mapTypeId={mapType}
+        options={{
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          styles: darkMode ? [
+            { elementType: 'geometry', stylers: [{ color: '#212121' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c2c2c' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
+          ] : [],
+        }}
+      >
+        {/* Segment Polylines */}
+        {segments.map(seg => {
+          const startLat = parseFloat(seg.gps_start_lat);
+          const startLng = parseFloat(seg.gps_start_lng);
+          const endLat = parseFloat(seg.gps_end_lat);
+          const endLng = parseFloat(seg.gps_end_lng);
+          if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) return null;
+
+          const isSelected = selectedSegment && (selectedSegment.segment_id === seg.segment_id || selectedSegment === seg.segment_id);
+          return (
+            <Polyline
+              key={seg.segment_id}
+              path={[{ lat: startLat, lng: startLng }, { lat: endLat, lng: endLng }]}
+              options={{
+                strokeColor: getSegmentColor(seg),
+                strokeWeight: isSelected ? 8 : 5,
+                strokeOpacity: isSelected ? 1.0 : 0.8,
+                clickable: true,
+              }}
+              onClick={() => onSelectSegment(seg)}
+            />
+          );
+        })}
+
+        {/* Handhole Markers */}
+        {handholes.map((hh, idx) => {
+          const isLarge = (hh.label || '').includes('30x48');
+          const isMedium = (hh.label || '').includes('17x30') || (hh.label || '').includes('24x36');
+          const color = isLarge ? '#2196F3' : isMedium ? '#FFB800' : '#4CAF50';
+          const size = isLarge ? 14 : isMedium ? 11 : 8;
+
+          return (
+            <OverlayView key={`hh-${idx}`} position={{ lat: hh.lat, lng: hh.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div title={hh.label} style={{
+                width: size, height: size, background: color, borderRadius: '50%',
+                border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                transform: 'translate(-50%, -50%)', cursor: 'pointer',
+              }} />
+            </OverlayView>
+          );
+        })}
+
+        {/* Flowerpot Markers */}
+        {showFlowerpots && flowerpots && flowerpots.map((fp, idx) => {
+          const lat = parseFloat(fp.gps_lat);
+          const lng = parseFloat(fp.gps_lng);
+          if (isNaN(lat) || isNaN(lng)) return null;
+          return (
+            <OverlayView key={`fp-${idx}`} position={{ lat, lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div title={fp.label || 'Flowerpot'} style={{
+                width: 10, height: 10, background: '#9C27B0',
+                border: '2px solid #fff', transform: 'translate(-50%, -50%) rotate(45deg)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)', cursor: 'pointer',
+              }} />
+            </OverlayView>
+          );
+        })}
+
+        {/* Splice Point Markers */}
+        {showSplicePoints && splicePoints && splicePoints.map((sp, idx) => {
+          const lat = parseFloat(sp.gps_lat);
+          const lng = parseFloat(sp.gps_lng);
+          if (isNaN(lat) || isNaN(lng)) return null;
+
+          const spliceType = sp.splice_type || '1x4';
+          const typeLabel = spliceType === '1x4' ? '1×4' : spliceType === '1x8' ? '1×8' : spliceType === '2x8' ? '2×8' : spliceType === 'F1' ? 'F1' : spliceType;
+          const bgColor = spliceType === '1x4' ? '#E91E63' : spliceType === '2x8' ? '#3F51B5' : spliceType === 'F1' ? '#009688' : '#607D8B';
+          const isSelected = selectedSplice && (selectedSplice.splice_id === sp.splice_id || selectedSplice === sp.splice_id);
+          const pmColor = getPMStatusColor(sp);
+
+          return (
+            <OverlayView key={`sp-${idx}`} position={{ lat, lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div onClick={() => onSelectSplice && onSelectSplice(sp)} style={{
+                position: 'relative', padding: '2px 6px', background: bgColor,
+                border: `2px solid ${isSelected ? '#FFD700' : '#fff'}`, borderRadius: 4,
+                fontSize: 10, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)', cursor: 'pointer',
+                transform: 'translate(-50%, -50%)',
+              }}>
+                {typeLabel}
+                {spliceType === '1x4' && (
+                  <div style={{
+                    position: 'absolute', top: -4, right: -4,
+                    width: 8, height: 8, background: pmColor,
+                    border: '1px solid #fff', borderRadius: '50%',
+                  }} />
+                )}
+              </div>
+            </OverlayView>
+          );
+        })}
+      </GoogleMap>
+
+      {/* Map Type Toggle */}
       <div style={{
-        position: 'absolute', bottom: 10, left: 10, padding: '8px 12px', borderRadius: 8,
-        background: darkMode ? 'rgba(17,34,64,0.9)' : 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(8px)', fontSize: 11, zIndex: 1000,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4, zIndex: 1000,
       }}>
-        <div style={{ fontWeight: 700, marginBottom: 4, color: darkMode ? '#fff' : '#1e293b' }}>Status Legend</div>
-        {[
-          ['Not Started', '#FF4444'],
-          ['In Progress', '#FFB800'],
-          ['Complete', '#4CAF50'],
-          ['QC Approved', '#4CAF50'],
-          ['Issue', '#FF9800'],
-        ].map(([label, color]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <div style={{ width: 20, height: 3, background: color, borderRadius: 2 }} />
-            <span style={{ color: darkMode ? '#8892b0' : '#64748b' }}>{label}</span>
+        <button onClick={() => setMapType('roadmap')} style={{
+          padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          background: mapType === 'roadmap' ? '#0077B6' : (darkMode ? '#112240' : '#fff'),
+          color: mapType === 'roadmap' ? '#fff' : (darkMode ? '#8892b0' : '#64748b'),
+          border: `1px solid ${darkMode ? '#1e3a5f' : '#e2e8f0'}`, borderRadius: '4px 0 0 4px',
+        }}>Street</button>
+        <button onClick={() => setMapType('satellite')} style={{
+          padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          background: mapType === 'satellite' ? '#0077B6' : (darkMode ? '#112240' : '#fff'),
+          color: mapType === 'satellite' ? '#fff' : (darkMode ? '#8892b0' : '#64748b'),
+          border: `1px solid ${darkMode ? '#1e3a5f' : '#e2e8f0'}`, borderRadius: '0 4px 4px 0',
+        }}>Satellite</button>
+      </div>
+
+      {/* Enhanced Legend */}
+      <div style={{
+        position: 'absolute', bottom: 10, left: 10, padding: '10px 14px', borderRadius: 8,
+        background: darkMode ? 'rgba(17,34,64,0.95)' : 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(8px)', fontSize: 11, zIndex: 1000,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)', maxWidth: 180,
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: darkMode ? '#fff' : '#1e293b' }}>Legend</div>
+
+        {/* Segment Status */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: darkMode ? '#8892b0' : '#64748b', marginBottom: 3 }}>Segment Status</div>
+          {[
+            ['Not Started', '#FF4444'],
+            ['In Progress', '#FFB800'],
+            ['Complete/QC', '#4CAF50'],
+            ['Issue', '#FF9800'],
+          ].map(([label, color]) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <div style={{ width: 16, height: 3, background: color, borderRadius: 2 }} />
+              <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Markers */}
+        <div style={{ borderTop: `1px solid ${darkMode ? '#1e3a5f' : '#e2e8f0'}`, paddingTop: 6 }}>
+          <div style={{ fontSize: 10, color: darkMode ? '#8892b0' : '#64748b', marginBottom: 3 }}>Markers</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <div style={{ width: 10, height: 10, background: '#2196F3', borderRadius: '50%', border: '1px solid #fff' }} />
+            <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Large HH</span>
           </div>
-        ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <div style={{ width: 8, height: 8, background: '#FFB800', borderRadius: '50%', border: '1px solid #fff' }} />
+            <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Medium HH</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <div style={{ width: 6, height: 6, background: '#4CAF50', borderRadius: '50%', border: '1px solid #fff' }} />
+            <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Terminal Box</span>
+          </div>
+          {showFlowerpots && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <div style={{ width: 8, height: 8, background: '#9C27B0', transform: 'rotate(45deg)', border: '1px solid #fff' }} />
+              <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Flowerpot</span>
+            </div>
+          )}
+          {showSplicePoints && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div style={{ padding: '1px 3px', background: '#E91E63', borderRadius: 2, color: '#fff', fontSize: 8, fontWeight: 700 }}>1×4</div>
+                <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Splice (PM)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div style={{ padding: '1px 3px', background: '#3F51B5', borderRadius: 2, color: '#fff', fontSize: 8, fontWeight: 700 }}>2×8</div>
+                <span style={{ color: darkMode ? '#8892b0' : '#64748b', fontSize: 10 }}>Hub Splice</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -728,6 +857,330 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
   );
 }
 
+// ===== SPLICE POINT DETAIL PANEL =====
+function SplicePointDetailPanel({ splicePoint, darkMode, onClose, user, onSpliceUpdate }) {
+  const [pmReadings, setPmReadings] = useState([]);
+  const [editingReading, setEditingReading] = useState(null);
+  const [inputValue, setInputValue] = useState('');
+
+  // Parse PM readings on load
+  useEffect(() => {
+    if (!splicePoint) return;
+    if (splicePoint.splice_type === '1x4') {
+      // Initialize or parse existing PM readings
+      let readings = [];
+      if (splicePoint.pm_readings) {
+        try {
+          readings = typeof splicePoint.pm_readings === 'string'
+            ? JSON.parse(splicePoint.pm_readings)
+            : splicePoint.pm_readings;
+        } catch (e) { readings = []; }
+      }
+      // Ensure we have all 8 readings for 1x4
+      const ports = ['SA1P1', 'SA1P2', 'SA1P3', 'SA1P4', 'SB1P5', 'SB1P6', 'SB1P7', 'SB1P8'];
+      const fullReadings = ports.map(port => {
+        const existing = readings.find(r => r.port === port);
+        return existing || { port, value_dBm: null, status: 'pending', timestamp: null };
+      });
+      setPmReadings(fullReadings);
+    }
+  }, [splicePoint]);
+
+  if (!splicePoint) return null;
+
+  const cardBg = darkMode ? '#112240' : '#f8fafc';
+  const borderColor = darkMode ? '#1e3a5f' : '#e2e8f0';
+  const text = darkMode ? '#ffffff' : '#1e293b';
+  const textMuted = darkMode ? '#8892b0' : '#64748b';
+  const accent = darkMode ? '#c850c0' : '#0077B6';
+
+  const spliceType = splicePoint.splice_type || '1x4';
+  const is1x4 = spliceType === '1x4';
+  const photoReqs = PHOTO_REQUIREMENTS[spliceType] || PHOTO_REQUIREMENTS['1x4'];
+
+  // PM reading status color
+  const getPMColor = (status) => {
+    switch (status) {
+      case 'pass': return '#4CAF50';
+      case 'warning': return '#FF9800';
+      case 'fail': return '#F44336';
+      case 'no_light': return '#2196F3';
+      default: return '#9E9E9E';
+    }
+  };
+
+  // Handle PM value input
+  const handlePMInput = async (port, value) => {
+    const numValue = parseFloat(value);
+    let status = 'pending';
+
+    if (value === 'no_light' || value === 'NL') {
+      status = 'no_light';
+    } else if (!isNaN(numValue)) {
+      status = evaluatePMReading(numValue);
+    }
+
+    const updatedReadings = pmReadings.map(r =>
+      r.port === port
+        ? { ...r, value_dBm: isNaN(numValue) ? null : numValue, status, timestamp: new Date().toISOString() }
+        : r
+    );
+    setPmReadings(updatedReadings);
+    setEditingReading(null);
+    setInputValue('');
+
+    // Save to database
+    if (onSpliceUpdate) {
+      await onSpliceUpdate(splicePoint.splice_id, 'pm_readings', JSON.stringify(updatedReadings));
+    }
+  };
+
+  // Count PM stats
+  const pmStats = pmReadings.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      background: darkMode ? '#0d1b2a' : '#ffffff',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '12px 16px', borderBottom: `1px solid ${borderColor}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700,
+              background: spliceType === '1x4' ? '#E91E63' : spliceType === '2x8' ? '#3F51B5' : '#009688',
+              color: '#fff',
+            }}>
+              {spliceType}
+            </div>
+            <span style={{ fontSize: 17, fontWeight: 700, color: text }}>
+              {splicePoint.contractor_id || splicePoint.location || 'Splice Point'}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: textMuted }}>{splicePoint.splice_id}</div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 4 }}>
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '14px 16px' }}>
+        {/* Location Info */}
+        <div style={{ background: cardBg, borderRadius: 10, padding: 14, marginBottom: 12, border: `1px solid ${borderColor}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <MapPin size={15} color={accent} />
+            <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Location</span>
+          </div>
+          <div style={{ fontSize: 12, color: textMuted, lineHeight: 1.7 }}>
+            <div><strong style={{ color: text }}>Handhole:</strong> {splicePoint.location || splicePoint.handhole_type || '—'}</div>
+            <div><strong style={{ color: text }}>Position:</strong> {splicePoint.position_type || '—'}</div>
+            <div><strong style={{ color: text }}>Status:</strong> {splicePoint.status || 'Not Started'}</div>
+          </div>
+        </div>
+
+        {/* Photo Requirements */}
+        <div style={{ background: cardBg, borderRadius: 10, padding: 14, marginBottom: 12, border: `1px solid ${borderColor}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Camera size={15} color={accent} />
+            <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Photo Requirements</span>
+          </div>
+          <div style={{ fontSize: 12, color: textMuted }}>
+            <div style={{ marginBottom: 4 }}>
+              <strong style={{ color: text }}>Enclosure:</strong> {photoReqs?.enclosureCount || 7} photos
+            </div>
+            {is1x4 && (
+              <div style={{ marginBottom: 4 }}>
+                <strong style={{ color: text }}>PM Photos:</strong> {photoReqs?.pmPhotoCount || 2} (1 per splitter)
+              </div>
+            )}
+            <div style={{ fontWeight: 600, color: accent }}>
+              Total: {photoReqs?.totalPhotos || (is1x4 ? 9 : 8)} photos required
+            </div>
+          </div>
+        </div>
+
+        {/* PM Readings (1x4 only) */}
+        {is1x4 && (
+          <div style={{ background: cardBg, borderRadius: 10, padding: 14, border: `1px solid ${borderColor}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Activity size={15} color={accent} />
+                <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Power Meter Readings</span>
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {pmStats.pass > 0 && <span style={{ padding: '2px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600, background: '#4CAF5020', color: '#4CAF50' }}>{pmStats.pass} Pass</span>}
+                {pmStats.warning > 0 && <span style={{ padding: '2px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600, background: '#FF980020', color: '#FF9800' }}>{pmStats.warning} Warn</span>}
+                {pmStats.fail > 0 && <span style={{ padding: '2px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600, background: '#F4433620', color: '#F44336' }}>{pmStats.fail} Fail</span>}
+              </div>
+            </div>
+
+            {/* Thresholds Reference */}
+            <div style={{ fontSize: 10, color: textMuted, marginBottom: 10, padding: '6px 8px', background: darkMode ? '#0a1628' : '#f1f5f9', borderRadius: 6 }}>
+              <strong>Thresholds:</strong> Pass: -8 to -25 dBm | Warning: -25 to -28 dBm | Fail: &lt;-28 or &gt;-8 dBm
+            </div>
+
+            {/* Splitter A */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: text, marginBottom: 6 }}>Splitter A</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {pmReadings.slice(0, 4).map(reading => (
+                  <div key={reading.port} style={{
+                    background: darkMode ? '#0a1628' : '#fff',
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 6, padding: 8, textAlign: 'center',
+                    borderLeft: `3px solid ${getPMColor(reading.status)}`,
+                  }}>
+                    <div style={{ fontSize: 10, color: textMuted, marginBottom: 2 }}>{reading.port}</div>
+                    {editingReading === reading.port ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={inputValue}
+                        onChange={e => setInputValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handlePMInput(reading.port, inputValue);
+                          if (e.key === 'Escape') { setEditingReading(null); setInputValue(''); }
+                        }}
+                        onBlur={() => { setEditingReading(null); setInputValue(''); }}
+                        placeholder="-20.5"
+                        style={{
+                          width: '100%', padding: '2px 4px', fontSize: 12, textAlign: 'center',
+                          border: `1px solid ${accent}`, borderRadius: 4, outline: 'none',
+                          background: darkMode ? '#112240' : '#fff', color: text,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => { setEditingReading(reading.port); setInputValue(reading.value_dBm?.toString() || ''); }}
+                        style={{
+                          fontSize: 14, fontWeight: 700, color: getPMColor(reading.status),
+                          cursor: 'pointer', minHeight: 20,
+                        }}
+                      >
+                        {reading.status === 'no_light' ? 'NL' : reading.value_dBm !== null ? `${reading.value_dBm}` : '—'}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: getPMColor(reading.status), marginTop: 2 }}>
+                      {reading.status === 'pending' ? 'Tap to enter' : reading.status.toUpperCase()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Splitter B */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: text, marginBottom: 6 }}>Splitter B</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {pmReadings.slice(4, 8).map(reading => (
+                  <div key={reading.port} style={{
+                    background: darkMode ? '#0a1628' : '#fff',
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 6, padding: 8, textAlign: 'center',
+                    borderLeft: `3px solid ${getPMColor(reading.status)}`,
+                  }}>
+                    <div style={{ fontSize: 10, color: textMuted, marginBottom: 2 }}>{reading.port}</div>
+                    {editingReading === reading.port ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={inputValue}
+                        onChange={e => setInputValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handlePMInput(reading.port, inputValue);
+                          if (e.key === 'Escape') { setEditingReading(null); setInputValue(''); }
+                        }}
+                        onBlur={() => { setEditingReading(null); setInputValue(''); }}
+                        placeholder="-20.5"
+                        style={{
+                          width: '100%', padding: '2px 4px', fontSize: 12, textAlign: 'center',
+                          border: `1px solid ${accent}`, borderRadius: 4, outline: 'none',
+                          background: darkMode ? '#112240' : '#fff', color: text,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => { setEditingReading(reading.port); setInputValue(reading.value_dBm?.toString() || ''); }}
+                        style={{
+                          fontSize: 14, fontWeight: 700, color: getPMColor(reading.status),
+                          cursor: 'pointer', minHeight: 20,
+                        }}
+                      >
+                        {reading.status === 'no_light' ? 'NL' : reading.value_dBm !== null ? `${reading.value_dBm}` : '—'}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: getPMColor(reading.status), marginTop: 2 }}>
+                      {reading.status === 'pending' ? 'Tap to enter' : reading.status.toUpperCase()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* No Light Button */}
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <button
+                onClick={() => {
+                  const pendingPort = pmReadings.find(r => r.status === 'pending')?.port;
+                  if (pendingPort) handlePMInput(pendingPort, 'no_light');
+                }}
+                style={{
+                  padding: '6px 16px', fontSize: 11, fontWeight: 600,
+                  background: '#2196F320', color: '#2196F3', border: '1px solid #2196F3',
+                  borderRadius: 6, cursor: 'pointer',
+                }}
+              >
+                Mark Next as "No Light" (Fiber not lit)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Non-1x4 info */}
+        {!is1x4 && (
+          <div style={{ background: cardBg, borderRadius: 10, padding: 14, border: `1px solid ${borderColor}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Radio size={15} color={accent} />
+              <span style={{ fontWeight: 600, color: text, fontSize: 13 }}>Splice Info</span>
+            </div>
+            <div style={{ fontSize: 12, color: textMuted }}>
+              {spliceType === '2x8' && (
+                <div style={{ padding: '8px 12px', background: '#3F51B520', borderRadius: 6, color: '#3F51B5' }}>
+                  <strong>Hub Location (2x8)</strong><br />
+                  No PM testing required. 8 enclosure photos needed.
+                </div>
+              )}
+              {spliceType === 'F1' && (
+                <div style={{ padding: '8px 12px', background: '#00968820', borderRadius: 6, color: '#009688' }}>
+                  <strong>F1 Splice ({splicePoint.fiber_count || 432} fiber)</strong><br />
+                  {splicePoint.tray_count || 8} trays. Photos: 5 base + 1 per tray.
+                </div>
+              )}
+              {spliceType === 'TYCO-D' && (
+                <div style={{ padding: '8px 12px', background: '#60748b20', borderRadius: 6, color: '#607D8B' }}>
+                  <strong>TYCO-D Splice</strong><br />
+                  9 splices. Photos: 5 base + 1 per tray.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Version tag */}
+      <div style={{ padding: '4px 16px', fontSize: 9, color: 'transparent', textAlign: 'right', userSelect: 'none', flexShrink: 0 }}>SplicePanel v1.0.0</div>
+    </div>
+  );
+}
+
 // ===== MAIN COMPONENT =====
 function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId }) {
   const [viewMode, setViewMode] = useState('map');
@@ -736,11 +1189,18 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
   const [filterPhase, setFilterPhase] = useState('boring');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSegment, setSelectedSegment] = useState(null);
+  const [selectedSplice, setSelectedSplice] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Layer visibility toggles
+  const [showFlowerpots, setShowFlowerpots] = useState(true);
+  const [showSplicePoints, setShowSplicePoints] = useState(true);
+
   // Dynamic data state
   const [allSegments, setAllSegments] = useState([]);
+  const [splicePoints, setSplicePoints] = useState([]);
+  const [flowerpots, setFlowerpots] = useState([]);
   const [projectInfo, setProjectInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState('loading');
@@ -763,6 +1223,10 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
         const data = await loadFullProject(projectId || 'VXS-SLPH01-006');
         if (!cancelled) {
           setAllSegments(data.segments);
+          setSplicePoints(data.splicePoints || []);
+          // Use flowerpots from data or extract from segments as fallback
+          const fps = (data.flowerpots && data.flowerpots.length > 0) ? data.flowerpots : extractFlowerpots(data.segments);
+          setFlowerpots(fps);
           setProjectInfo(data.project);
           setDataSource(data.isDemo ? 'demo' : 'live');
           setLastRefresh(new Date());
@@ -782,7 +1246,29 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
     }, 30000);
 
     return () => { cancelled = true; if (refreshInterval) clearInterval(refreshInterval); };
-  }, []);
+  }, [projectId]);
+
+  // Helper to extract flowerpots from segments (endpoints that look like flowerpots)
+  function extractFlowerpots(segments) {
+    const fps = [];
+    const seen = new Set();
+    segments.forEach(seg => {
+      // Check if from/to contains "FP" or is a flowerpot designation
+      [
+        { label: seg.from_handhole, lat: seg.gps_start_lat, lng: seg.gps_start_lng },
+        { label: seg.to_handhole, lat: seg.gps_end_lat, lng: seg.gps_end_lng },
+      ].forEach(point => {
+        if (point.label && (point.label.includes('FP') || point.label.includes('Flowerpot') || point.label.includes('UB'))) {
+          const key = `${point.lat},${point.lng}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            fps.push({ id: point.label, label: point.label, gps_lat: point.lat, gps_lng: point.lng });
+          }
+        }
+      });
+    });
+    return fps;
+  }
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -834,12 +1320,45 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
     const inProgress = visibleSegments.filter(s => s[phaseKey] === 'In Progress').length;
     const issues = visibleSegments.filter(s => s[phaseKey] === 'Issue').length;
     const notStarted = visibleSegments.filter(s => s[phaseKey] === 'Not Started').length;
-    return { totalFootage, approved, complete, inProgress, issues, notStarted, total: visibleSegments.length };
-  }, [visibleSegments, filterPhase]);
+
+    // Splice point stats
+    const spliceCount = splicePoints.length;
+    const splice1x4 = splicePoints.filter(sp => sp.splice_type === '1x4').length;
+    const splice2x8 = splicePoints.filter(sp => sp.splice_type === '2x8' || sp.splice_type === '1x8').length;
+
+    return {
+      totalFootage, approved, complete, inProgress, issues, notStarted,
+      total: visibleSegments.length,
+      spliceCount, splice1x4, splice2x8,
+      flowerpotCount: flowerpots.length,
+    };
+  }, [visibleSegments, filterPhase, splicePoints, flowerpots]);
 
   const handleSelectSegment = useCallback((seg) => {
+    setSelectedSplice(null); // Clear splice selection when segment is selected
     setSelectedSegment(prev => prev && prev.segment_id === seg.segment_id ? null : seg);
   }, []);
+
+  const handleSelectSplice = useCallback((sp) => {
+    setSelectedSegment(null); // Clear segment selection when splice is selected
+    setSelectedSplice(prev => prev && prev.splice_id === sp.splice_id ? null : sp);
+  }, []);
+
+  const handleSpliceUpdate = async (spliceId, field, value) => {
+    console.log(`[ProjectMap] Splice update: ${spliceId}.${field}`);
+    const ok = await updateSpliceField(spliceId, field, value);
+    if (ok) {
+      // Update local state
+      setSplicePoints(prev => prev.map(sp =>
+        sp.splice_id === spliceId ? { ...sp, [field]: value } : sp
+      ));
+      if (selectedSplice && selectedSplice.splice_id === spliceId) {
+        setSelectedSplice(prev => ({ ...prev, [field]: value }));
+      }
+      console.log(`[ProjectMap] ✅ Splice updated: ${spliceId}.${field}`);
+    }
+    return ok;
+  };
 
   const sections = [...new Set(visibleSegments.map(s => s.section))].sort();
 
@@ -950,6 +1469,24 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
               background: darkMode ? '#112240' : '#fff', color: text, outline: 'none',
             }} />
           </div>
+
+          {/* Layer Toggles */}
+          <div style={{ display: 'flex', gap: 4, borderLeft: `1px solid ${borderColor}`, paddingLeft: 10 }}>
+            <button onClick={() => setShowFlowerpots(!showFlowerpots)} style={{
+              padding: '4px 10px', borderRadius: 16, border: `1px solid ${showFlowerpots ? '#9C27B0' : borderColor}`,
+              cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+              background: showFlowerpots ? '#9C27B020' : 'transparent', color: showFlowerpots ? '#9C27B0' : textMuted,
+            }}>
+              <Flower2 size={12} /> FP
+            </button>
+            <button onClick={() => setShowSplicePoints(!showSplicePoints)} style={{
+              padding: '4px 10px', borderRadius: 16, border: `1px solid ${showSplicePoints ? '#E91E63' : borderColor}`,
+              cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+              background: showSplicePoints ? '#E91E6320' : 'transparent', color: showSplicePoints ? '#E91E63' : textMuted,
+            }}>
+              <Zap size={12} /> Splice
+            </button>
+          </div>
         </div>
       )}
 
@@ -960,13 +1497,19 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
         background: darkMode ? '#0f1f38' : '#f1f5f9',
       }}>
         {[
-          { label: 'Total', value: stats.total, color: text },
+          { label: 'Segments', value: stats.total, color: text },
           { label: 'Footage', value: `${stats.totalFootage.toLocaleString()} LF`, color: accent },
           { label: 'QC Approved', value: stats.approved, color: STATUS_COLORS.QC_APPROVED },
           { label: 'Complete', value: stats.complete, color: STATUS_COLORS.COMPLETE },
           { label: 'In Progress', value: stats.inProgress, color: STATUS_COLORS.IN_PROGRESS },
           { label: 'Issues', value: stats.issues, color: STATUS_COLORS.ISSUE },
-          { label: 'Not Started', value: stats.notStarted, color: STATUS_COLORS.NOT_STARTED },
+          ...(showSplicePoints ? [
+            { label: '1×4 Splices', value: stats.splice1x4, color: '#E91E63' },
+            { label: 'Hubs', value: stats.splice2x8, color: '#3F51B5' },
+          ] : []),
+          ...(showFlowerpots && stats.flowerpotCount > 0 ? [
+            { label: 'Flowerpots', value: stats.flowerpotCount, color: '#9C27B0' },
+          ] : []),
         ].map(stat => (
           <div key={stat.label} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
             <span style={{ fontSize: 16, fontWeight: 800, color: stat.color }}>{stat.value}</span>
@@ -981,12 +1524,18 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
         <div style={{ flex: 1, position: 'relative' }}>
           {viewMode === 'map' ? (
             <div style={{ position: 'relative', height: '100%' }}>
-              <ProjectLeafletMap
+              <ProjectGoogleMap
                 segments={filteredSegments}
+                splicePoints={splicePoints}
+                flowerpots={flowerpots}
                 selectedSegment={selectedSegment}
+                selectedSplice={selectedSplice}
                 onSelectSegment={handleSelectSegment}
+                onSelectSplice={handleSelectSplice}
                 filterPhase={filterPhase}
                 darkMode={darkMode}
+                showFlowerpots={showFlowerpots}
+                showSplicePoints={showSplicePoints}
               />
               {/* Crew GPS Tracker - visible to all logged-in users */}
               {user && (
@@ -1048,21 +1597,26 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
           )}
         </div>
 
-        {/* Detail Panel - Desktop */}
-        {selectedSegment && !isMobile && (
+        {/* Detail Panel - Desktop (Segment or Splice) */}
+        {(selectedSegment || selectedSplice) && !isMobile && (
           <div style={{
             width: 360, borderLeft: `1px solid ${borderColor}`,
             flexShrink: 0, overflow: 'hidden',
           }}>
-            <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
+            {selectedSegment && (
+              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
+            )}
+            {selectedSplice && (
+              <SplicePointDetailPanel splicePoint={selectedSplice} darkMode={darkMode} onClose={() => setSelectedSplice(null)} user={user} onSpliceUpdate={handleSpliceUpdate} />
+            )}
           </div>
         )}
 
-        {/* Detail Panel - Mobile Bottom Sheet */}
-        {selectedSegment && isMobile && (
+        {/* Detail Panel - Mobile Bottom Sheet (Segment or Splice) */}
+        {(selectedSegment || selectedSplice) && isMobile && (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            maxHeight: '60vh', borderTop: `1px solid ${borderColor}`,
+            maxHeight: '70vh', borderTop: `1px solid ${borderColor}`,
             borderRadius: '16px 16px 0 0', overflow: 'hidden',
             boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
             background: darkMode ? '#0d1b2a' : '#ffffff',
@@ -1072,15 +1626,20 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
             <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
               <div style={{ width: 40, height: 4, borderRadius: 2, background: borderColor }} />
             </div>
-            <div style={{ overflow: 'auto', maxHeight: 'calc(60vh - 20px)' }}>
-              <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
+            <div style={{ overflow: 'auto', maxHeight: 'calc(70vh - 20px)' }}>
+              {selectedSegment && (
+                <SegmentDetailPanel segment={selectedSegment} darkMode={darkMode} onClose={() => setSelectedSegment(null)} isAdmin={isAdmin} user={user} onSegmentUpdate={(segId, field, value) => { setAllSegments(prev => prev.map(s => s.segment_id === segId ? { ...s, [field]: value } : s)); setSelectedSegment(prev => prev && prev.segment_id === segId ? { ...prev, [field]: value } : prev); }} />
+              )}
+              {selectedSplice && (
+                <SplicePointDetailPanel splicePoint={selectedSplice} darkMode={darkMode} onClose={() => setSelectedSplice(null)} user={user} onSpliceUpdate={handleSpliceUpdate} />
+              )}
             </div>
           </div>
-        )}}
+        )}
       </div>
 
       {/* Hidden version */}
-      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v2.6.0</div>
+      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v4.0.0</div>
     </div>
   );
 }

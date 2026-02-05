@@ -53,13 +53,35 @@ const DEMO_SEGMENTS = [
 ];
 
 const DEMO_SPLICE_POINTS = [
-  { splice_id: 'VXS-SLPH01-006-SPL-A01', project_id: 'VXS-SLPH01-006', contractor_id: 'A01', location: 'Handhole A01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2370, gps_lng: -93.3780 },
+  { splice_id: 'VXS-SLPH01-006-SPL-A01', project_id: 'VXS-SLPH01-006', contractor_id: 'A01', location: 'Handhole A01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2370, gps_lng: -93.3780, pm_readings: JSON.stringify([
+    { port: 'SA1P1', value_dBm: -18.5, status: 'pass', timestamp: '2026-02-03T10:00:00Z' },
+    { port: 'SA1P2', value_dBm: -22.1, status: 'pass', timestamp: '2026-02-03T10:01:00Z' },
+    { port: 'SA1P3', value_dBm: null, status: 'pending' },
+    { port: 'SA1P4', value_dBm: null, status: 'pending' },
+    { port: 'SB1P5', value_dBm: -26.8, status: 'warning', timestamp: '2026-02-03T10:02:00Z' },
+    { port: 'SB1P6', value_dBm: null, status: 'pending' },
+    { port: 'SB1P7', value_dBm: null, status: 'pending' },
+    { port: 'SB1P8', value_dBm: null, status: 'pending' },
+  ]) },
   { splice_id: 'VXS-SLPH01-006-SPL-A02', project_id: 'VXS-SLPH01-006', contractor_id: 'A02', location: 'Handhole A02 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2375, gps_lng: -93.3788 },
   { splice_id: 'VXS-SLPH01-006-SPL-A05', project_id: 'VXS-SLPH01-006', contractor_id: 'A05', location: 'Handhole A05 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2394, gps_lng: -93.3808 },
-  { splice_id: 'VXS-SLPH01-006-SPL-B', project_id: 'VXS-SLPH01-006', contractor_id: 'B', location: 'Handhole B (30x48x24)', handhole_type: '30x48x24 LHH', splice_type: 'F1', position_type: 'mid-span', fiber_count: 432, tray_count: 8, status: 'Not Started', gps_lat: 30.2350, gps_lng: -93.3760 },
-  { splice_id: 'VXS-SLPH01-006-SPL-B01', project_id: 'VXS-SLPH01-006', contractor_id: 'B01', location: 'Handhole B01 (17x30x18)', handhole_type: '17x30x18 B', splice_type: '1x8', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2340, gps_lng: -93.3745 },
+  { splice_id: 'VXS-SLPH01-006-SPL-B', project_id: 'VXS-SLPH01-006', contractor_id: 'B', location: 'Handhole B (30x48x24)', handhole_type: '30x48x24 LHH', splice_type: '2x8', position_type: 'mid-span', fiber_count: 48, tray_count: 2, status: 'Not Started', gps_lat: 30.2350, gps_lng: -93.3760 },
+  { splice_id: 'VXS-SLPH01-006-SPL-B01', project_id: 'VXS-SLPH01-006', contractor_id: 'B01', location: 'Handhole B01 (17x30x18)', handhole_type: '17x30x18 B', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2340, gps_lng: -93.3745 },
   { splice_id: 'VXS-SLPH01-006-SPL-C01', project_id: 'VXS-SLPH01-006', contractor_id: 'C01', location: 'Handhole C01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2410, gps_lng: -93.3762 },
   { splice_id: 'VXS-SLPH01-006-SPL-D01', project_id: 'VXS-SLPH01-006', contractor_id: 'D01', location: 'Handhole D01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2352, gps_lng: -93.3812 },
+];
+
+const DEMO_FLOWERPOTS = [
+  { id: 'VXS-SLPH01-006-FP-001', project_id: 'VXS-SLPH01-006', label: 'FP-001', code: 'UG12', gps_lat: 30.2368, gps_lng: -93.3777 },
+  { id: 'VXS-SLPH01-006-FP-002', project_id: 'VXS-SLPH01-006', label: 'FP-002', code: 'UG12', gps_lat: 30.2372, gps_lng: -93.3784 },
+  { id: 'VXS-SLPH01-006-FP-003', project_id: 'VXS-SLPH01-006', label: 'FP-003', code: 'UG12', gps_lat: 30.2377, gps_lng: -93.3792 },
+  { id: 'VXS-SLPH01-006-FP-004', project_id: 'VXS-SLPH01-006', label: 'FP-004', code: 'UG12', gps_lat: 30.2382, gps_lng: -93.3799 },
+  { id: 'VXS-SLPH01-006-FP-005', project_id: 'VXS-SLPH01-006', label: 'FP-005', code: 'UG12', gps_lat: 30.2389, gps_lng: -93.3805 },
+  { id: 'VXS-SLPH01-006-FP-006', project_id: 'VXS-SLPH01-006', label: 'FP-006', code: 'UG12', gps_lat: 30.2345, gps_lng: -93.3752 },
+  { id: 'VXS-SLPH01-006-FP-007', project_id: 'VXS-SLPH01-006', label: 'FP-007', code: 'UG12', gps_lat: 30.2336, gps_lng: -93.3738 },
+  { id: 'VXS-SLPH01-006-FP-008', project_id: 'VXS-SLPH01-006', label: 'FP-008', code: 'UG12', gps_lat: 30.2405, gps_lng: -93.3756 },
+  { id: 'VXS-SLPH01-006-FP-009', project_id: 'VXS-SLPH01-006', label: 'FP-009', code: 'UG12', gps_lat: 30.2414, gps_lng: -93.3767 },
+  { id: 'VXS-SLPH01-006-FP-010', project_id: 'VXS-SLPH01-006', label: 'FP-010', code: 'UG12', gps_lat: 30.2348, gps_lng: -93.3806 },
 ];
 
 // ===== GATEWAY HELPERS =====
@@ -211,6 +233,19 @@ export async function loadSplicePoints(projectId) {
   }
 }
 
+export async function loadFlowerpots(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return DEMO_FLOWERPOTS;
+  try {
+    // Flowerpots may be stored in a dedicated sheet or extracted from segments
+    // For now, return demo data - in production, read from FLOWERPOTS sheet
+    return DEMO_FLOWERPOTS.filter(fp => !projectId || fp.project_id === projectId);
+  } catch (err) {
+    console.error('[mapService] loadFlowerpots failed:', err);
+    return DEMO_FLOWERPOTS;
+  }
+}
+
 export async function loadAssignments(projectId) {
   const online = await checkDbConnection();
   if (!online) return [];
@@ -252,7 +287,7 @@ export async function loadIssues(projectId) {
 
 /**
  * Load all data for a project in one call.
- * Returns { project, segments, splicePoints, assignments, isDemo }
+ * Returns { project, segments, splicePoints, flowerpots, assignments, isDemo }
  */
 export async function loadFullProject(projectId) {
   const online = await checkDbConnection();
@@ -260,16 +295,18 @@ export async function loadFullProject(projectId) {
   if (isDemo) console.log('[mapService] Demo mode - using built-in data');
   else console.log('[mapService] LIVE mode - loading from Google Sheets');
 
-  const [projects, segments, splicePoints, assignments] = await Promise.all([
+  const [projects, segments, splicePoints, flowerpots, assignments] = await Promise.all([
     loadProjects(projectId),
     loadSegments(projectId),
     loadSplicePoints(projectId),
+    loadFlowerpots(projectId),
     loadAssignments(projectId),
   ]);
   return {
     project: projects[0] || DEMO_PROJECT,
     segments,
     splicePoints,
+    flowerpots,
     assignments,
     isDemo,
   };
@@ -618,4 +655,4 @@ export async function importProject(projectData, segmentsData, splicePointsData,
 
 export { DB };
 
-// v3.1.0
+// v3.2.0 - Added flowerpots support
