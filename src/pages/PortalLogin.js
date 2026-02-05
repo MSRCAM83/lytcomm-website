@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, Eye, EyeOff } from 'lucide-react';
-import { colors, LYT_INFO } from '../config/constants';
+import { colors, LYT_INFO, URLS } from '../config/constants';
 
 function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode }) {
   const [email, setEmail] = useState('');
@@ -10,48 +10,68 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode }) {
   const [loading, setLoading] = useState(false);
 
   // Dynamic colors based on theme
-  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';     // Purple vs Teal
-  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';   // Orange vs Green
-  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';       // Error red
+  const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
+  const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
+  const accentError = darkMode ? '#ff6b6b' : '#e85a4f';
 
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
   const textColor = darkMode ? '#ffffff' : colors.dark;
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
 
-  // Demo accounts for testing
-  const demoAccounts = [
-    { email: 'matt@lytcomm.com', password: 'Empire083#', role: 'admin', name: 'Matt Campbell' },
-    { email: 'demo.employee@lytcomm.com', password: 'demo123', role: 'employee', name: 'Demo Employee' },
-    { email: 'demo.contractor@lytcomm.com', password: 'demo123', role: 'contractor', name: 'Demo Contractor', company: 'Demo Contracting LLC' },
-  ];
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Call the real portal API for authentication
+      const response = await fetch(URLS.portalScript, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'login',
+          email: email.toLowerCase().trim(),
+          password: password,
+        }),
+      });
 
-    // Check credentials
-    const user = demoAccounts.find(
-      acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
-    );
+      const text = await response.text();
+      let result;
 
-    if (user) {
-      setLoggedInUser(user);
-      
-      // Route based on role
-      if (user.role === 'admin') {
-        setCurrentPage('admin-dashboard');
-      } else if (user.role === 'employee') {
-        setCurrentPage('employee-dashboard');
-      } else if (user.role === 'contractor') {
-        setCurrentPage('contractor-dashboard');
+      // Handle Google Apps Script redirect
+      if (text.includes('<HTML>')) {
+        const match = text.match(/HREF="([^"]+)"/);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const redirectResponse = await fetch(redirectUrl);
+          const redirectText = await redirectResponse.text();
+          result = JSON.parse(redirectText);
+        }
+      } else {
+        result = JSON.parse(text);
       }
-    } else {
-      setError('Invalid email or password. Please try again.');
+
+      if (result.success && result.user) {
+        setLoggedInUser(result.user);
+
+        // Route based on role
+        const role = (result.user.role || '').toLowerCase();
+        if (role === 'admin') {
+          setCurrentPage('admin-dashboard');
+        } else if (role === 'employee') {
+          setCurrentPage('employee-dashboard');
+        } else if (role === 'contractor') {
+          setCurrentPage('contractor-dashboard');
+        } else {
+          setCurrentPage('employee-dashboard');
+        }
+      } else {
+        setError(result.error || 'Invalid email or password.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect to server. Please try again.');
     }
 
     setLoading(false);
@@ -115,7 +135,7 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="you@company.com"
                   required
                   style={inputStyle}
                 />
@@ -197,9 +217,9 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode }) {
                   width: '100%',
                   padding: '12px',
                   backgroundColor: 'transparent',
-                  border: `1px solid ${accentError}`,
+                  border: `1px solid ${accentSecondary}`,
                   borderRadius: '8px',
-                  color: accentError,
+                  color: accentSecondary,
                   fontSize: '0.9rem',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -207,18 +227,6 @@ function PortalLogin({ setCurrentPage, setLoggedInUser, darkMode }) {
               >
                 Start Onboarding
               </button>
-            </div>
-          </div>
-
-          {/* Demo Accounts Notice */}
-          <div style={{ marginTop: '24px', padding: '16px', backgroundColor: `${accentPrimary}10`, borderRadius: '8px', border: `1px solid ${accentPrimary}30` }}>
-            <p style={{ color: textColor, fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>
-              Demo Accounts:
-            </p>
-            <div style={{ fontSize: '0.8rem', color: mutedColor }}>
-              <p>• Admin: matt@lytcomm.com</p>
-              <p>• Employee: demo.employee@lytcomm.com (demo123)</p>
-              <p>• Contractor: demo.contractor@lytcomm.com (demo123)</p>
             </div>
           </div>
         </div>

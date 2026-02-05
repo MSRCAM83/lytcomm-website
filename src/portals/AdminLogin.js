@@ -25,11 +25,11 @@ const AdminLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
     const adminEmails = LYT_INFO.adminEmails;
     const user = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.role === 'admin');
 
-    if (user && password === 'admin123' && adminEmails.includes(email.toLowerCase())) {
+    if (user && password === '********' && adminEmails.includes(email.toLowerCase())) {
       setLoggedInUser(user);
       setCurrentPage('admin-dashboard');
     } else {
-      setError('Invalid credentials or insufficient permissions. Try: matt@lytcomm.com / admin123');
+      setError('Invalid credentials or insufficient permissions. Try: matt@lytcomm.com / ********');
     }
 
     setLoading(false);
@@ -163,7 +163,7 @@ const AdminLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </p>
               <p style={{ fontSize: '0.85rem', color: colors.gray }}>
                 Email: matt@lytcomm.com<br />
-                Password: admin123
+                Password: ********
               </p>
             </div>
           </div>

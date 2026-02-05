@@ -23,11 +23,11 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
 
     const contractor = mockContractors.find((c) => c.email.toLowerCase() === email.toLowerCase());
 
-    if (contractor && password === 'demo123') {
+    if (contractor && password === '********') {
       setLoggedInUser({ ...contractor, type: 'contractor' });
       setCurrentPage('contractor-dashboard');
     } else {
-      setError('Invalid email or password. Try demo: tom@abcdrilling.com / demo123');
+      setError('Invalid email or password. Try demo: tom@abcdrilling.com / ********');
     }
 
     setLoading(false);
@@ -161,7 +161,7 @@ const ContractorLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </p>
               <p style={{ fontSize: '0.85rem', color: colors.gray }}>
                 Email: tom@abcdrilling.com<br />
-                Password: demo123
+                Password: ********
               </p>
             </div>
 

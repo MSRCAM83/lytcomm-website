@@ -122,54 +122,14 @@ export const skillOptions = [
   'Traffic Control',
 ];
 
-export const mockUsers = [
-  { id: 1, name: 'Matt Campbell', email: 'matt@lytcomm.com', role: 'admin', phone: '555-0100', avatar: 'MC' },
-  { id: 2, name: 'Mason Roy', email: 'mason@lytcomm.com', role: 'admin', phone: '555-0101', avatar: 'MR' },
-  { id: 3, name: 'Donnie Smith', email: 'donnie@lytcomm.com', role: 'supervisor', phone: '555-0102', avatar: 'DS' },
-  { id: 4, name: 'John Rivera', email: 'john@lytcomm.com', role: 'technician', phone: '555-0103', avatar: 'JR' },
-  { id: 5, name: 'Sarah Chen', email: 'sarah@lytcomm.com', role: 'technician', phone: '555-0104', avatar: 'SC' },
-];
-
-export const mockProjects = [
-  { id: 1, name: 'Downtown Fiber Expansion', client: 'City of Webster', status: 'active', progress: 65, crew: [4, 5], startDate: '2024-12-01', endDate: '2025-02-28' },
-  { id: 2, name: 'Bayshore Business Park', client: 'Bayshore Properties LLC', status: 'active', progress: 30, crew: [4], startDate: '2024-12-15', endDate: '2025-03-15' },
-  { id: 3, name: 'Harbor Medical Center', client: 'UTMB Health', status: 'pending', progress: 0, crew: [], startDate: '2025-01-10', endDate: '2025-04-30' },
-  { id: 4, name: 'Clear Lake Residential', client: 'KB Homes', status: 'completed', progress: 100, crew: [4, 5], startDate: '2024-10-01', endDate: '2024-12-20' },
-];
-
-export const mockContractors = [
-  { id: 1, company: 'ABC Drilling LLC', contact: 'Tom Wilson', email: 'tom@abcdrilling.com', phone: '555-1001', status: 'active', skills: ['HDD Drilling', 'Underground Construction'] },
-  { id: 2, company: 'Precision Splice Co', contact: 'Maria Garcia', email: 'maria@precisionsplice.com', phone: '555-1002', status: 'active', skills: ['Fiber Splicing', 'OTDR Testing'] },
-  { id: 3, company: 'SkyHigh Aerial', contact: 'James Lee', email: 'james@skyhighaerial.com', phone: '555-1003', status: 'pending', skills: ['Aerial Construction', 'Pole Climbing', 'Bucket Truck Operation'] },
-];
-
-export const mockTimeEntries = [
-  { id: 1, userId: 4, date: '2025-01-15', clockIn: '07:00', clockOut: '16:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
-  { id: 2, userId: 4, date: '2025-01-16', clockIn: '07:00', clockOut: '17:00', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
-  { id: 3, userId: 4, date: '2025-01-17', clockIn: '07:00', clockOut: null, breakTime: 0, project: 'Bayshore Business Park', status: 'active' },
-  { id: 4, userId: 5, date: '2025-01-15', clockIn: '06:30', clockOut: '15:30', breakTime: 30, project: 'Downtown Fiber Expansion', status: 'approved' },
-  { id: 5, userId: 5, date: '2025-01-16', clockIn: '06:30', clockOut: '16:00', breakTime: 45, project: 'Downtown Fiber Expansion', status: 'pending' },
-];
-
-export const mockInvoices = [
-  { id: 1, contractorId: 1, project: 'Downtown Fiber Expansion', amount: 15000, date: '2025-01-10', status: 'paid', dueDate: '2025-01-25' },
-  { id: 2, contractorId: 2, project: 'Downtown Fiber Expansion', amount: 8500, date: '2025-01-12', status: 'pending', dueDate: '2025-01-27' },
-  { id: 3, contractorId: 1, project: 'Bayshore Business Park', amount: 12000, date: '2025-01-15', status: 'submitted', dueDate: '2025-01-30' },
-];
-
-export const mockFiles = [
-  { id: 1, name: 'Safety Manual 2025.pdf', folder: 'Safety', size: '2.4 MB', date: '2025-01-01', type: 'pdf' },
-  { id: 2, name: 'OTDR Testing Procedures.pdf', folder: 'SOPs', size: '1.1 MB', date: '2024-12-15', type: 'pdf' },
-  { id: 3, name: 'Daily Inspection Checklist.pdf', folder: 'Forms', size: '245 KB', date: '2024-12-01', type: 'pdf' },
-  { id: 4, name: 'Project Specs - Downtown.pdf', folder: 'Projects', size: '5.2 MB', date: '2024-12-10', type: 'pdf' },
-  { id: 5, name: 'Equipment Inventory.xlsx', folder: 'Admin', size: '890 KB', date: '2025-01-05', type: 'xlsx' },
-];
-
-export const mockAnnouncements = [
-  { id: 1, title: 'Safety Meeting', content: 'Mandatory safety meeting this Friday at 7 AM.', date: '2025-01-15', priority: 'high' },
-  { id: 2, title: 'New Project Kickoff', content: 'Harbor Medical Center project starting Jan 20th.', date: '2025-01-14', priority: 'normal' },
-  { id: 3, title: 'Holiday Schedule', content: 'Office closed Monday Jan 20th for MLK Day.', date: '2025-01-10', priority: 'normal' },
-];
+// Empty - no mock data. All data comes from database.
+export const mockUsers = [];
+export const mockProjects = [];
+export const mockContractors = [];
+export const mockTimeEntries = [];
+export const mockInvoices = [];
+export const mockFiles = [];
+export const mockAnnouncements = [];
 
 
 // Gateway configuration (for portal components)

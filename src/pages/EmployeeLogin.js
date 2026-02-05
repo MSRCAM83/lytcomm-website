@@ -29,11 +29,11 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
     // Demo login - check against mock users
     const user = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
 
-    if (user && password === 'demo123') {
+    if (user && password === '********') {
       setLoggedInUser(user);
       setCurrentPage('employee-dashboard');
     } else {
-      setError('Invalid email or password. Try demo: matt@lytcomm.com / demo123');
+      setError('Invalid email or password. Try demo: matt@lytcomm.com / ********');
     }
 
     setLoading(false);
@@ -176,7 +176,7 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </p>
               <p style={{ fontSize: '0.85rem', color: colors.gray }}>
                 Email: matt@lytcomm.com<br />
-                Password: demo123
+                Password: ********
               </p>
             </div>
 
