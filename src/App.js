@@ -52,6 +52,9 @@ import DailyProductionReport from './pages/DailyProductionReport';
 // Phase 9 - Field Assist Chat
 import FieldAssist from './components/Chat/FieldAssist';
 
+// Error Boundary for catching render errors
+import ErrorBoundary from './components/ErrorBoundary';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [darkMode, setDarkMode] = useState(true);
@@ -227,9 +230,9 @@ function App() {
       case 'nda-sign':
         return <NDASignPage setCurrentPage={handleNavClick} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'job-import':
-        return <JobImportPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+        return <ErrorBoundary><JobImportPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} /></ErrorBoundary>;
       case 'project-map':
-        return <ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} projectId={selectedProjectId} />;
+        return <ErrorBoundary><ProjectMapPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} projectId={selectedProjectId} /></ErrorBoundary>;
       case 'admin-projects':
         return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} />;
       case 'daily-report':
