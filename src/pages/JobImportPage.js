@@ -504,43 +504,26 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       const projectId = importResult.project.project_id;
 
-      const segmentsForDb = importResult.segments.map(seg => ({
-        contractor_id: seg.contractor_id,
-        section: seg.section,
-        from_handhole: seg.from_handhole,
-        to_handhole: seg.to_handhole,
-        footage: seg.footage,
-        street: seg.street,
-      }));
-
-      const splicesForDb = importResult.splice_points.map(sp => ({
-        contractor_id: sp.contractor_id,
-        location: sp.location,
-        handhole_type: sp.handhole_type,
-        splice_type: sp.splice_type,
-        position_type: sp.position_type,
-        fiber_count: sp.fiber_count,
-        tray_count: sp.tray_count || 1,
-      }));
-
-      const result = await importProject(
-        importResult.project,
-        segmentsForDb,
-        splicesForDb,
-        projectId
-      );
+      // Pass the FULL extraction data to importProject
+      // This includes: project, handholes, flowerpots, ground_rods, segments, splice_points
+      const result = await importProject(importResult, projectId);
 
       if (result.success) {
+        const c = result.counts;
         const msg = `Project imported successfully!\n\n` +
           `✅ Project: ${projectId}\n` +
-          `✅ Segments: ${result.counts.segments}\n` +
-          `✅ Splice Points: ${result.counts.splicePoints}\n\n` +
+          `✅ Handholes: ${c.handholes || 0}\n` +
+          `✅ Flowerpots: ${c.flowerpots || 0}\n` +
+          `✅ Ground Rods: ${c.groundRods || 0}\n` +
+          `✅ Segments: ${c.segments || 0}\n` +
+          `✅ Splice Points: ${c.splicePoints || 0}\n\n` +
           `Redirecting to project map...`;
         alert(msg);
         if (setCurrentPage) setCurrentPage('project-map');
       } else {
         const errMsg = result.errors ? result.errors.join('\n') : 'Unknown error';
-        setError(`Partial import - some items failed:\n${errMsg}\n\nWritten: ${result.counts.segments} segments, ${result.counts.splicePoints} splices`);
+        const c = result.counts || {};
+        setError(`Partial import - some items failed:\n${errMsg}\n\nWritten: ${c.handholes || 0} HH, ${c.flowerpots || 0} FP, ${c.groundRods || 0} GR, ${c.segments || 0} SEG, ${c.splicePoints || 0} SP`);
       }
     } catch (err) {
       setError(`Save failed: ${err.message}`);

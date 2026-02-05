@@ -69,7 +69,7 @@ function StatusIcon({ status, size }) {
 const mapContainerStyle = { width: '100%', height: '100%' };
 const defaultCenter = { lat: 30.2366, lng: -93.3776 }; // Sulphur LA
 
-function ProjectGoogleMap({ segments, splicePoints, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, filterPhase, darkMode, showFlowerpots, showSplicePoints }) {
+function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, onSelectHandhole, filterPhase, darkMode, showFlowerpots, showSplicePoints, showHandholes }) {
   const [map, setMap] = useState(null);
   const [mapType, setMapType] = useState('roadmap');
 
@@ -108,8 +108,20 @@ function ProjectGoogleMap({ segments, splicePoints, flowerpots, selectedSegment,
     }
   }, [bounds]);
 
-  // Collect handholes from segments
-  const handholes = useMemo(() => {
+  // Use handholes from props (loaded from DB with unique IDs)
+  // Fall back to deriving from segments if no handholes provided
+  const handholesData = useMemo(() => {
+    if (handholes && handholes.length > 0) {
+      return handholes.map(hh => ({
+        id: hh.id,
+        lat: parseFloat(hh.gps_lat),
+        lng: parseFloat(hh.gps_lng),
+        label: hh.label || hh.id,
+        type: hh.type || '',
+        code: hh.code || 'UG20',
+      })).filter(hh => !isNaN(hh.lat) && !isNaN(hh.lng));
+    }
+    // Fallback: derive from segments
     const hh = new window.Map();
     segments.forEach(seg => {
       const fromLabel = seg.from_handhole || seg.contractor_id?.split('→')[0] || '?';
@@ -121,15 +133,15 @@ function ProjectGoogleMap({ segments, splicePoints, flowerpots, selectedSegment,
 
       if (!isNaN(startLat) && !isNaN(startLng) && (fromLabel.includes('x') || fromLabel.match(/^[A-Z]\d*$/))) {
         const key = `${startLat},${startLng}`;
-        if (!hh.has(key)) hh.set(key, { lat: startLat, lng: startLng, label: fromLabel });
+        if (!hh.has(key)) hh.set(key, { lat: startLat, lng: startLng, label: fromLabel, type: '', code: '' });
       }
       if (!isNaN(endLat) && !isNaN(endLng) && (toLabel.includes('x') || toLabel.match(/^[A-Z]\d*$/))) {
         const key = `${endLat},${endLng}`;
-        if (!hh.has(key)) hh.set(key, { lat: endLat, lng: endLng, label: toLabel });
+        if (!hh.has(key)) hh.set(key, { lat: endLat, lng: endLng, label: toLabel, type: '', code: '' });
       }
     });
     return Array.from(hh.values());
-  }, [segments]);
+  }, [handholes, segments]);
 
   // Get status color
   const getSegmentColor = (seg) => {
@@ -202,19 +214,24 @@ function ProjectGoogleMap({ segments, splicePoints, flowerpots, selectedSegment,
         })}
 
         {/* Handhole Markers */}
-        {handholes.map((hh, idx) => {
-          const isLarge = (hh.label || '').includes('30x48');
-          const isMedium = (hh.label || '').includes('17x30') || (hh.label || '').includes('24x36');
+        {showHandholes && handholesData.map((hh, idx) => {
+          const isLarge = (hh.type || hh.label || '').includes('30x48');
+          const isMedium = (hh.type || hh.label || '').includes('17x30') || (hh.type || hh.label || '').includes('24x36');
           const color = isLarge ? '#2196F3' : isMedium ? '#FFB800' : '#4CAF50';
           const size = isLarge ? 14 : isMedium ? 11 : 8;
+          const tooltipText = hh.id ? `${hh.label} (${hh.id})` : hh.label;
 
           return (
-            <OverlayView key={`hh-${idx}`} position={{ lat: hh.lat, lng: hh.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-              <div title={hh.label} style={{
-                width: size, height: size, background: color, borderRadius: '50%',
-                border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                transform: 'translate(-50%, -50%)', cursor: 'pointer',
-              }} />
+            <OverlayView key={`hh-${hh.id || idx}`} position={{ lat: hh.lat, lng: hh.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div
+                title={tooltipText}
+                onClick={() => onSelectHandhole && onSelectHandhole(hh)}
+                style={{
+                  width: size, height: size, background: color, borderRadius: '50%',
+                  border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  transform: 'translate(-50%, -50%)', cursor: 'pointer',
+                }}
+              />
             </OverlayView>
           );
         })}
@@ -1196,11 +1213,14 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
   // Layer visibility toggles
   const [showFlowerpots, setShowFlowerpots] = useState(true);
   const [showSplicePoints, setShowSplicePoints] = useState(true);
+  const [showHandholes, setShowHandholes] = useState(true);
 
-  // Dynamic data state
+  // Dynamic data state - ALL billable items
   const [allSegments, setAllSegments] = useState([]);
   const [splicePoints, setSplicePoints] = useState([]);
+  const [handholes, setHandholes] = useState([]);
   const [flowerpots, setFlowerpots] = useState([]);
+  const [groundRods, setGroundRods] = useState([]);
   const [projectInfo, setProjectInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState('loading');
@@ -1224,13 +1244,14 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
         if (!cancelled) {
           setAllSegments(data.segments);
           setSplicePoints(data.splicePoints || []);
-          // Use flowerpots from data or extract from segments as fallback
-          const fps = (data.flowerpots && data.flowerpots.length > 0) ? data.flowerpots : extractFlowerpots(data.segments);
-          setFlowerpots(fps);
+          setHandholes(data.handholes || []);
+          setFlowerpots(data.flowerpots || []);
+          setGroundRods(data.groundRods || []);
           setProjectInfo(data.project);
           setDataSource(data.isDemo ? 'demo' : 'live');
           setLastRefresh(new Date());
           if (!silent) setLoading(false);
+          console.log(`[ProjectMap] Loaded: ${data.segments.length} seg, ${(data.handholes || []).length} HH, ${(data.flowerpots || []).length} FP, ${(data.splicePoints || []).length} SP`);
         }
       } catch (err) {
         console.error('[ProjectMapPage] Data load failed:', err);
@@ -1247,28 +1268,6 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
 
     return () => { cancelled = true; if (refreshInterval) clearInterval(refreshInterval); };
   }, [projectId]);
-
-  // Helper to extract flowerpots from segments (endpoints that look like flowerpots)
-  function extractFlowerpots(segments) {
-    const fps = [];
-    const seen = new Set();
-    segments.forEach(seg => {
-      // Check if from/to contains "FP" or is a flowerpot designation
-      [
-        { label: seg.from_handhole, lat: seg.gps_start_lat, lng: seg.gps_start_lng },
-        { label: seg.to_handhole, lat: seg.gps_end_lat, lng: seg.gps_end_lng },
-      ].forEach(point => {
-        if (point.label && (point.label.includes('FP') || point.label.includes('Flowerpot') || point.label.includes('UB'))) {
-          const key = `${point.lat},${point.lng}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            fps.push({ id: point.label, label: point.label, gps_lat: point.lat, gps_lng: point.lng });
-          }
-        }
-      });
-    });
-    return fps;
-  }
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -1321,18 +1320,20 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
     const issues = visibleSegments.filter(s => s[phaseKey] === 'Issue').length;
     const notStarted = visibleSegments.filter(s => s[phaseKey] === 'Not Started').length;
 
-    // Splice point stats
-    const spliceCount = splicePoints.length;
+    // ALL billable item counts
+    const handholesCount = handholes.length;
+    const flowerpotCount = flowerpots.length;
+    const groundRodCount = groundRods.length;
     const splice1x4 = splicePoints.filter(sp => sp.splice_type === '1x4').length;
     const splice2x8 = splicePoints.filter(sp => sp.splice_type === '2x8' || sp.splice_type === '1x8').length;
 
     return {
       totalFootage, approved, complete, inProgress, issues, notStarted,
       total: visibleSegments.length,
-      spliceCount, splice1x4, splice2x8,
-      flowerpotCount: flowerpots.length,
+      handholesCount, flowerpotCount, groundRodCount,
+      splice1x4, splice2x8,
     };
-  }, [visibleSegments, filterPhase, splicePoints, flowerpots]);
+  }, [visibleSegments, filterPhase, splicePoints, handholes, flowerpots, groundRods]);
 
   const handleSelectSegment = useCallback((seg) => {
     setSelectedSplice(null); // Clear splice selection when segment is selected
@@ -1472,6 +1473,13 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
 
           {/* Layer Toggles */}
           <div style={{ display: 'flex', gap: 4, borderLeft: `1px solid ${borderColor}`, paddingLeft: 10 }}>
+            <button onClick={() => setShowHandholes(!showHandholes)} style={{
+              padding: '4px 10px', borderRadius: 16, border: `1px solid ${showHandholes ? '#2196F3' : borderColor}`,
+              cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+              background: showHandholes ? '#2196F320' : 'transparent', color: showHandholes ? '#2196F3' : textMuted,
+            }}>
+              <MapPin size={12} /> HH
+            </button>
             <button onClick={() => setShowFlowerpots(!showFlowerpots)} style={{
               padding: '4px 10px', borderRadius: 16, border: `1px solid ${showFlowerpots ? '#9C27B0' : borderColor}`,
               cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
@@ -1502,13 +1510,18 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
           { label: 'QC Approved', value: stats.approved, color: STATUS_COLORS.QC_APPROVED },
           { label: 'Complete', value: stats.complete, color: STATUS_COLORS.COMPLETE },
           { label: 'In Progress', value: stats.inProgress, color: STATUS_COLORS.IN_PROGRESS },
-          { label: 'Issues', value: stats.issues, color: STATUS_COLORS.ISSUE },
-          ...(showSplicePoints ? [
-            { label: '1×4 Splices', value: stats.splice1x4, color: '#E91E63' },
-            { label: 'Hubs', value: stats.splice2x8, color: '#3F51B5' },
+          ...(showHandholes && stats.handholesCount > 0 ? [
+            { label: 'Handholes', value: stats.handholesCount, color: '#2196F3' },
           ] : []),
           ...(showFlowerpots && stats.flowerpotCount > 0 ? [
             { label: 'Flowerpots', value: stats.flowerpotCount, color: '#9C27B0' },
+          ] : []),
+          ...(stats.groundRodCount > 0 ? [
+            { label: 'Ground Rods', value: stats.groundRodCount, color: '#795548' },
+          ] : []),
+          ...(showSplicePoints ? [
+            { label: '1×4 Splices', value: stats.splice1x4, color: '#E91E63' },
+            { label: 'Hubs', value: stats.splice2x8, color: '#3F51B5' },
           ] : []),
         ].map(stat => (
           <div key={stat.label} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
@@ -1527,15 +1540,18 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
               <ProjectGoogleMap
                 segments={filteredSegments}
                 splicePoints={splicePoints}
+                handholes={handholes}
                 flowerpots={flowerpots}
                 selectedSegment={selectedSegment}
                 selectedSplice={selectedSplice}
                 onSelectSegment={handleSelectSegment}
                 onSelectSplice={handleSelectSplice}
+                onSelectHandhole={(hh) => console.log('Handhole selected:', hh)}
                 filterPhase={filterPhase}
                 darkMode={darkMode}
                 showFlowerpots={showFlowerpots}
                 showSplicePoints={showSplicePoints}
+                showHandholes={showHandholes}
               />
               {/* Crew GPS Tracker - visible to all logged-in users */}
               {user && (
@@ -1639,7 +1655,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
       </div>
 
       {/* Hidden version */}
-      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v4.0.0</div>
+      <div onClick={(e) => { if (e.detail === 3) setShowVersion(!showVersion); }} style={{ position: 'fixed', bottom: 4, right: 8, fontSize: 9, color: showVersion ? (darkMode ? '#fff' : '#333') : 'transparent', opacity: showVersion ? 0.5 : 1, userSelect: 'none', cursor: 'default' }}>ProjectMapPage v4.1.0</div>
     </div>
   );
 }

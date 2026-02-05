@@ -22,6 +22,9 @@ const DB = {
   PROJECTS:     '1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70',
   SEGMENTS:     '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg',
   SPLICE_POINTS:'1lFMlmlyTgbtGkxB0zhJNoa7M2RFH5bd25VPLh_xdCFU',
+  HANDHOLES:    '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses Handholes tab in Segments sheet
+  FLOWERPOTS:   '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses Flowerpots tab in Segments sheet
+  GROUND_RODS:  '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses GroundRods tab in Segments sheet
   ASSIGNMENTS:  '1g2Ml8PFsN0HZA_chLqje2OTnYAZXDPVMZ1trRmKN-qY',
   RATE_CARDS:   '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   USERS:        '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
@@ -72,16 +75,54 @@ const DEMO_SPLICE_POINTS = [
 ];
 
 const DEMO_FLOWERPOTS = [
-  { id: 'VXS-SLPH01-006-FP-001', project_id: 'VXS-SLPH01-006', label: 'FP-001', code: 'UG12', gps_lat: 30.2368, gps_lng: -93.3777 },
-  { id: 'VXS-SLPH01-006-FP-002', project_id: 'VXS-SLPH01-006', label: 'FP-002', code: 'UG12', gps_lat: 30.2372, gps_lng: -93.3784 },
-  { id: 'VXS-SLPH01-006-FP-003', project_id: 'VXS-SLPH01-006', label: 'FP-003', code: 'UG12', gps_lat: 30.2377, gps_lng: -93.3792 },
-  { id: 'VXS-SLPH01-006-FP-004', project_id: 'VXS-SLPH01-006', label: 'FP-004', code: 'UG12', gps_lat: 30.2382, gps_lng: -93.3799 },
-  { id: 'VXS-SLPH01-006-FP-005', project_id: 'VXS-SLPH01-006', label: 'FP-005', code: 'UG12', gps_lat: 30.2389, gps_lng: -93.3805 },
-  { id: 'VXS-SLPH01-006-FP-006', project_id: 'VXS-SLPH01-006', label: 'FP-006', code: 'UG12', gps_lat: 30.2345, gps_lng: -93.3752 },
-  { id: 'VXS-SLPH01-006-FP-007', project_id: 'VXS-SLPH01-006', label: 'FP-007', code: 'UG12', gps_lat: 30.2336, gps_lng: -93.3738 },
-  { id: 'VXS-SLPH01-006-FP-008', project_id: 'VXS-SLPH01-006', label: 'FP-008', code: 'UG12', gps_lat: 30.2405, gps_lng: -93.3756 },
-  { id: 'VXS-SLPH01-006-FP-009', project_id: 'VXS-SLPH01-006', label: 'FP-009', code: 'UG12', gps_lat: 30.2414, gps_lng: -93.3767 },
-  { id: 'VXS-SLPH01-006-FP-010', project_id: 'VXS-SLPH01-006', label: 'FP-010', code: 'UG12', gps_lat: 30.2348, gps_lng: -93.3806 },
+  { id: 'VXS-SLPH01-006-FP-001', project_id: 'VXS-SLPH01-006', label: 'FP-001', code: 'UG12', qty: 1, gps_lat: 30.2368, gps_lng: -93.3777 },
+  { id: 'VXS-SLPH01-006-FP-002', project_id: 'VXS-SLPH01-006', label: 'FP-002', code: 'UG12', qty: 1, gps_lat: 30.2372, gps_lng: -93.3784 },
+  { id: 'VXS-SLPH01-006-FP-003', project_id: 'VXS-SLPH01-006', label: 'FP-003', code: 'UG12', qty: 1, gps_lat: 30.2377, gps_lng: -93.3792 },
+  { id: 'VXS-SLPH01-006-FP-004', project_id: 'VXS-SLPH01-006', label: 'FP-004', code: 'UG12', qty: 1, gps_lat: 30.2382, gps_lng: -93.3799 },
+  { id: 'VXS-SLPH01-006-FP-005', project_id: 'VXS-SLPH01-006', label: 'FP-005', code: 'UG12', qty: 1, gps_lat: 30.2389, gps_lng: -93.3805 },
+  { id: 'VXS-SLPH01-006-FP-006', project_id: 'VXS-SLPH01-006', label: 'FP-006', code: 'UG12', qty: 1, gps_lat: 30.2345, gps_lng: -93.3752 },
+  { id: 'VXS-SLPH01-006-FP-007', project_id: 'VXS-SLPH01-006', label: 'FP-007', code: 'UG12', qty: 1, gps_lat: 30.2336, gps_lng: -93.3738 },
+  { id: 'VXS-SLPH01-006-FP-008', project_id: 'VXS-SLPH01-006', label: 'FP-008', code: 'UG12', qty: 1, gps_lat: 30.2405, gps_lng: -93.3756 },
+  { id: 'VXS-SLPH01-006-FP-009', project_id: 'VXS-SLPH01-006', label: 'FP-009', code: 'UG12', qty: 1, gps_lat: 30.2414, gps_lng: -93.3767 },
+  { id: 'VXS-SLPH01-006-FP-010', project_id: 'VXS-SLPH01-006', label: 'FP-010', code: 'UG12', qty: 1, gps_lat: 30.2348, gps_lng: -93.3806 },
+];
+
+const DEMO_HANDHOLES = [
+  { id: 'VXS-SLPH01-006-HH-001', project_id: 'VXS-SLPH01-006', label: 'A', type: '17x30x18', code: 'UG17', qty: 1, section: 'A', gps_lat: 30.2366, gps_lng: -93.3774 },
+  { id: 'VXS-SLPH01-006-HH-002', project_id: 'VXS-SLPH01-006', label: 'A01', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2370, gps_lng: -93.3780 },
+  { id: 'VXS-SLPH01-006-HH-003', project_id: 'VXS-SLPH01-006', label: 'A02', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2375, gps_lng: -93.3788 },
+  { id: 'VXS-SLPH01-006-HH-004', project_id: 'VXS-SLPH01-006', label: 'A03', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2380, gps_lng: -93.3796 },
+  { id: 'VXS-SLPH01-006-HH-005', project_id: 'VXS-SLPH01-006', label: 'A04', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2387, gps_lng: -93.3802 },
+  { id: 'VXS-SLPH01-006-HH-006', project_id: 'VXS-SLPH01-006', label: 'A05', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2394, gps_lng: -93.3808 },
+  { id: 'VXS-SLPH01-006-HH-007', project_id: 'VXS-SLPH01-006', label: 'B', type: '30x48x24', code: 'UG27', qty: 1, section: 'B', gps_lat: 30.2350, gps_lng: -93.3760 },
+  { id: 'VXS-SLPH01-006-HH-008', project_id: 'VXS-SLPH01-006', label: 'B01', type: '17x30x18', code: 'UG17', qty: 1, section: 'B', gps_lat: 30.2340, gps_lng: -93.3745 },
+  { id: 'VXS-SLPH01-006-HH-009', project_id: 'VXS-SLPH01-006', label: 'B02', type: '15x20x12', code: 'UG20', qty: 1, section: 'B', gps_lat: 30.2332, gps_lng: -93.3732 },
+  { id: 'VXS-SLPH01-006-HH-010', project_id: 'VXS-SLPH01-006', label: 'B03', type: '15x20x12', code: 'UG20', qty: 1, section: 'B', gps_lat: 30.2328, gps_lng: -93.3720 },
+  { id: 'VXS-SLPH01-006-HH-011', project_id: 'VXS-SLPH01-006', label: 'C', type: '17x30x18', code: 'UG17', qty: 1, section: 'C', gps_lat: 30.2400, gps_lng: -93.3750 },
+  { id: 'VXS-SLPH01-006-HH-012', project_id: 'VXS-SLPH01-006', label: 'C01', type: '15x20x12', code: 'UG20', qty: 1, section: 'C', gps_lat: 30.2410, gps_lng: -93.3762 },
+  { id: 'VXS-SLPH01-006-HH-013', project_id: 'VXS-SLPH01-006', label: 'C02', type: '15x20x12', code: 'UG20', qty: 1, section: 'C', gps_lat: 30.2418, gps_lng: -93.3772 },
+  { id: 'VXS-SLPH01-006-HH-014', project_id: 'VXS-SLPH01-006', label: 'D', type: '17x30x18', code: 'UG17', qty: 1, section: 'D', gps_lat: 30.2345, gps_lng: -93.3800 },
+  { id: 'VXS-SLPH01-006-HH-015', project_id: 'VXS-SLPH01-006', label: 'D01', type: '15x20x12', code: 'UG20', qty: 1, section: 'D', gps_lat: 30.2352, gps_lng: -93.3812 },
+  { id: 'VXS-SLPH01-006-HH-016', project_id: 'VXS-SLPH01-006', label: 'D02', type: '15x20x12', code: 'UG20', qty: 1, section: 'D', gps_lat: 30.2360, gps_lng: -93.3824 },
+];
+
+const DEMO_GROUND_RODS = [
+  { id: 'VXS-SLPH01-006-GR-001', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-001' },
+  { id: 'VXS-SLPH01-006-GR-002', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-002' },
+  { id: 'VXS-SLPH01-006-GR-003', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-003' },
+  { id: 'VXS-SLPH01-006-GR-004', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-004' },
+  { id: 'VXS-SLPH01-006-GR-005', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-005' },
+  { id: 'VXS-SLPH01-006-GR-006', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-006' },
+  { id: 'VXS-SLPH01-006-GR-007', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-007' },
+  { id: 'VXS-SLPH01-006-GR-008', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-008' },
+  { id: 'VXS-SLPH01-006-GR-009', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-009' },
+  { id: 'VXS-SLPH01-006-GR-010', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-010' },
+  { id: 'VXS-SLPH01-006-GR-011', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-011' },
+  { id: 'VXS-SLPH01-006-GR-012', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-012' },
+  { id: 'VXS-SLPH01-006-GR-013', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-013' },
+  { id: 'VXS-SLPH01-006-GR-014', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-014' },
+  { id: 'VXS-SLPH01-006-GR-015', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-015' },
+  { id: 'VXS-SLPH01-006-GR-016', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-016' },
 ];
 
 // ===== GATEWAY HELPERS =====
@@ -235,14 +276,40 @@ export async function loadSplicePoints(projectId) {
 
 export async function loadFlowerpots(projectId) {
   const online = await checkDbConnection();
-  if (!online) return DEMO_FLOWERPOTS;
+  if (!online) return DEMO_FLOWERPOTS.filter(fp => !projectId || fp.project_id === projectId);
   try {
-    // Flowerpots may be stored in a dedicated sheet or extracted from segments
-    // For now, return demo data - in production, read from FLOWERPOTS sheet
-    return DEMO_FLOWERPOTS.filter(fp => !projectId || fp.project_id === projectId);
+    const rows = await readSheet(DB.FLOWERPOTS, 'Flowerpots!A1:J5000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
   } catch (err) {
     console.error('[mapService] loadFlowerpots failed:', err);
-    return DEMO_FLOWERPOTS;
+    return DEMO_FLOWERPOTS.filter(fp => !projectId || fp.project_id === projectId);
+  }
+}
+
+export async function loadHandholes(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return DEMO_HANDHOLES.filter(hh => !projectId || hh.project_id === projectId);
+  try {
+    const rows = await readSheet(DB.HANDHOLES, 'Handholes!A1:L5000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadHandholes failed:', err);
+    return DEMO_HANDHOLES.filter(hh => !projectId || hh.project_id === projectId);
+  }
+}
+
+export async function loadGroundRods(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return DEMO_GROUND_RODS.filter(gr => !projectId || gr.project_id === projectId);
+  try {
+    const rows = await readSheet(DB.GROUND_RODS, 'GroundRods!A1:F5000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadGroundRods failed:', err);
+    return DEMO_GROUND_RODS.filter(gr => !projectId || gr.project_id === projectId);
   }
 }
 
@@ -287,7 +354,7 @@ export async function loadIssues(projectId) {
 
 /**
  * Load all data for a project in one call.
- * Returns { project, segments, splicePoints, flowerpots, assignments, isDemo }
+ * Returns ALL billable items: { project, segments, splicePoints, handholes, flowerpots, groundRods, assignments, isDemo }
  */
 export async function loadFullProject(projectId) {
   const online = await checkDbConnection();
@@ -295,18 +362,22 @@ export async function loadFullProject(projectId) {
   if (isDemo) console.log('[mapService] Demo mode - using built-in data');
   else console.log('[mapService] LIVE mode - loading from Google Sheets');
 
-  const [projects, segments, splicePoints, flowerpots, assignments] = await Promise.all([
+  const [projects, segments, splicePoints, handholes, flowerpots, groundRods, assignments] = await Promise.all([
     loadProjects(projectId),
     loadSegments(projectId),
     loadSplicePoints(projectId),
+    loadHandholes(projectId),
     loadFlowerpots(projectId),
+    loadGroundRods(projectId),
     loadAssignments(projectId),
   ]);
   return {
     project: projects[0] || DEMO_PROJECT,
     segments,
     splicePoints,
+    handholes,
     flowerpots,
+    groundRods,
     assignments,
     isDemo,
   };
@@ -540,18 +611,26 @@ export async function bulkAssignSegments(segmentIds, workType, contractorName, p
 }
 
 /**
- * Import a full project (project + segments + splice points) from AI extraction.
- * Batch-writes all data to Google Sheets via Gateway.
+ * Import a full project with ALL billable items from AI extraction.
+ * Writes: project, handholes, flowerpots, ground_rods, segments, splice_points
  * Returns { success, counts, errors }
  */
-export async function importProject(projectData, segmentsData, splicePointsData, projectId) {
+export async function importProject(extractionData, projectId) {
   const online = await checkDbConnection();
   if (!online) return { success: false, error: 'Database offline' };
 
   const errors = [];
-  let projectWritten = false;
-  let segmentsWritten = 0;
-  let splicesWritten = 0;
+  const counts = { project: 0, handholes: 0, flowerpots: 0, groundRods: 0, segments: 0, splicePoints: 0 };
+
+  // Extract data from the extraction result
+  const projectData = extractionData.project || extractionData;
+  const handholes = extractionData.handholes || [];
+  const flowerpots = extractionData.flowerpots || [];
+  const groundRods = extractionData.ground_rods || [];
+  const segments = extractionData.segments || [];
+  const splicePoints = extractionData.splice_points || [];
+
+  console.log(`[importProject] Importing: ${handholes.length} HH, ${flowerpots.length} FP, ${groundRods.length} GR, ${segments.length} SEG, ${splicePoints.length} SP`);
 
   // 1. Write project row
   try {
@@ -571,88 +650,177 @@ export async function importProject(projectData, segmentsData, splicePointsData,
       projectData.created_by || 'matt@lytcomm.com',
     ]];
     const ok = await appendRow(DB.PROJECTS, projRow);
-    if (ok) projectWritten = true;
+    if (ok) counts.project = 1;
     else errors.push('Failed to write project row');
   } catch (err) {
     errors.push(`Project write error: ${err.message}`);
   }
 
-  // 2. Write segment rows
-  for (const seg of (segmentsData || [])) {
+  // 2. Write handhole rows
+  for (const hh of handholes) {
     try {
-      const segmentId = `${projectId}-${seg.section || 'X'}-${(seg.to_handhole || seg.contractor_id || '').replace(/[^A-Za-z0-9]/g, '')}`;
       const row = [[
-        segmentId,                                  // segment_id
-        projectId,                                  // project_id
-        seg.contractor_id || '',                    // contractor_id
-        seg.section || '',                          // section
-        seg.from_handhole || '',                    // from_handhole
-        seg.to_handhole || '',                      // to_handhole
-        seg.footage || 0,                           // footage
-        seg.street || '',                           // street
-        seg.gps_start_lat || '',                    // gps_start_lat
-        seg.gps_start_lng || '',                    // gps_start_lng
-        seg.gps_end_lat || '',                      // gps_end_lat
-        seg.gps_end_lng || '',                      // gps_end_lng
-        'Not Started',                              // boring_status
-        '', '', '', '', '', '', '', '',             // boring fields (assigned_to through notes)
-        'Not Started',                              // pulling_status
-        '', '', '', '', '', '', '', '',             // pulling fields
+        hh.id || `${projectId}-HH-${counts.handholes + 1}`,
+        projectId,
+        hh.label || '',
+        hh.type || '',
+        hh.code || 'UG20',
+        hh.qty || 1,
+        hh.section || '',
+        hh.gps_lat || '',
+        hh.gps_lng || '',
+        'Not Started',
+        new Date().toISOString(),
+      ]];
+      const ok = await appendRow(DB.HANDHOLES, row);
+      if (ok) counts.handholes++;
+      else errors.push(`Failed to write handhole ${hh.label || hh.id}`);
+    } catch (err) {
+      errors.push(`Handhole ${hh.label}: ${err.message}`);
+    }
+  }
+
+  // 3. Write flowerpot rows
+  for (const fp of flowerpots) {
+    try {
+      const row = [[
+        fp.id || `${projectId}-FP-${counts.flowerpots + 1}`,
+        projectId,
+        fp.label || '',
+        fp.code || 'UG12',
+        fp.qty || 1,
+        fp.gps_lat || '',
+        fp.gps_lng || '',
+        'Not Started',
+        new Date().toISOString(),
+      ]];
+      const ok = await appendRow(DB.FLOWERPOTS, row);
+      if (ok) counts.flowerpots++;
+      else errors.push(`Failed to write flowerpot ${fp.label || fp.id}`);
+    } catch (err) {
+      errors.push(`Flowerpot ${fp.label}: ${err.message}`);
+    }
+  }
+
+  // 4. Write ground rod rows
+  for (const gr of groundRods) {
+    try {
+      const row = [[
+        gr.id || `${projectId}-GR-${counts.groundRods + 1}`,
+        projectId,
+        gr.code || 'UG13',
+        gr.qty || 1,
+        gr.handhole_id || '',
+        new Date().toISOString(),
+      ]];
+      const ok = await appendRow(DB.GROUND_RODS, row);
+      if (ok) counts.groundRods++;
+      else errors.push(`Failed to write ground rod ${gr.id}`);
+    } catch (err) {
+      errors.push(`Ground rod ${gr.id}: ${err.message}`);
+    }
+  }
+
+  // 5. Write segment rows
+  for (const seg of segments) {
+    try {
+      const segmentId = seg.id || `${projectId}-SEG-${counts.segments + 1}`;
+      const row = [[
+        segmentId,
+        projectId,
+        seg.contractor_id || '',
+        seg.section || '',
+        seg.from_structure_id || seg.from_handhole || '',
+        seg.to_structure_id || seg.to_handhole || '',
+        seg.footage || 0,
+        seg.street || '',
+        seg.gps_start_lat || '',
+        seg.gps_start_lng || '',
+        seg.gps_end_lat || '',
+        seg.gps_end_lng || '',
+        // Bore info
+        seg.bore?.code || '',
+        seg.bore?.qty || seg.footage || 0,
+        seg.bore?.duct_count || 1,
+        // Pull info
+        seg.pull?.code || '',
+        seg.pull?.qty || seg.footage || 0,
+        seg.pull?.cable_type || '',
+        // Status
+        'Not Started',
+        '', '', '', '', '', '', '', '',
+        'Not Started',
+        '', '', '', '', '', '', '', '',
       ]];
       const ok = await appendRow(DB.SEGMENTS, row);
-      if (ok) segmentsWritten++;
-      else errors.push(`Failed to write segment ${seg.contractor_id}`);
+      if (ok) counts.segments++;
+      else errors.push(`Failed to write segment ${seg.contractor_id || segmentId}`);
     } catch (err) {
       errors.push(`Segment ${seg.contractor_id}: ${err.message}`);
     }
   }
 
-  // 3. Write splice point rows
-  for (const sp of (splicePointsData || [])) {
+  // 6. Write splice point rows with PM readings
+  for (const sp of splicePoints) {
     try {
-      const spliceId = `${projectId}-SPL-${(sp.contractor_id || sp.location || '').replace(/[^A-Za-z0-9]/g, '')}`;
-      const requiredPhotos = sp.splice_type === '1x4'
-        ? '["basket","splice_tray","strength_members","grommets","closed","cables","in_ground"]'
-        : sp.splice_type === '1x8'
-          ? '["basket","splitter_tray","splice_tray","strength_members","grommets","closed","cables","in_ground"]'
-          : '["basket","splice_trays","strength_members","closed","cables","in_ground"]';
-      
+      const spliceId = sp.id || `${projectId}-SP-${counts.splicePoints + 1}`;
+      const spliceType = sp.splice_type || '1x4';
+
+      // Build PM readings JSON for 1x4s
+      let pmReadings = '';
+      if (spliceType === '1x4' && sp.splitters) {
+        const readings = [];
+        for (const splitter of sp.splitters) {
+          for (const reading of (splitter.readings || [])) {
+            readings.push({
+              id: reading.id,
+              port: reading.port,
+              value_dBm: reading.value_dBm,
+              status: reading.status || 'pending',
+              splitter_id: splitter.id,
+            });
+          }
+        }
+        pmReadings = JSON.stringify(readings);
+      }
+
       const row = [[
-        spliceId,                                   // splice_id
-        projectId,                                  // project_id
-        sp.contractor_id || '',                     // contractor_id
-        sp.location || '',                          // location
-        sp.handhole_type || '',                     // handhole_type
-        sp.splice_type || '',                       // splice_type
-        sp.position_type || '',                     // position_type
-        sp.fiber_count || 2,                        // fiber_count
-        sp.tray_count || 1,                         // tray_count
-        sp.gps_lat || '',                           // gps_lat
-        sp.gps_lng || '',                           // gps_lng
-        'Not Started',                              // status
-        '', '', '', '', '',                         // assigned_to through qc_approved_date
-        requiredPhotos,                             // required_photos
-        '', '', '', '',                             // uploaded_photos through notes
+        spliceId,
+        projectId,
+        sp.contractor_id || sp.handhole_label || '',
+        sp.location || sp.handhole_id || '',
+        sp.handhole_type || '',
+        spliceType,
+        sp.position_type || '',
+        sp.fiber_count || 2,
+        sp.tray_count || 1,
+        sp.gps_lat || '',
+        sp.gps_lng || '',
+        'Not Started',
+        '', '', '', '', '',
+        sp.enclosure_photos_required || 7,
+        sp.pm_photos_required || (spliceType === '1x4' ? 2 : 0),
+        sp.total_photos_required || (spliceType === '1x4' ? 9 : 8),
+        pmReadings,
+        sp.splitter_count || (spliceType === '1x4' ? 2 : 0),
       ]];
       const ok = await appendRow(DB.SPLICE_POINTS, row);
-      if (ok) splicesWritten++;
-      else errors.push(`Failed to write splice ${sp.contractor_id}`);
+      if (ok) counts.splicePoints++;
+      else errors.push(`Failed to write splice ${sp.contractor_id || spliceId}`);
     } catch (err) {
       errors.push(`Splice ${sp.contractor_id}: ${err.message}`);
     }
   }
 
+  console.log(`[importProject] Complete: ${JSON.stringify(counts)}, errors: ${errors.length}`);
+
   return {
     success: errors.length === 0,
-    counts: {
-      project: projectWritten ? 1 : 0,
-      segments: segmentsWritten,
-      splicePoints: splicesWritten,
-    },
+    counts,
     errors: errors.length > 0 ? errors : undefined,
   };
 }
 
 export { DB };
 
-// v3.2.0 - Added flowerpots support
+// v4.0.0 - All billables: handholes, flowerpots, ground_rods, segments, splice_points
