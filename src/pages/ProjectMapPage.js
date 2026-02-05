@@ -39,7 +39,7 @@ import { uploadPhotoBatch } from '../services/photoUploadService';
 import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
-import { GoogleMap, useJsApiLoader, Polyline, Marker, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Polyline, OverlayView } from '@react-google-maps/api';
 
 // Helper: get status color
 function getStatusColor(status) {

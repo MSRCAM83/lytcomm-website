@@ -32,98 +32,13 @@ const DB = {
   ISSUES:       '1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g',
 };
 
-// ===== DEMO FALLBACK DATA =====
-const DEMO_PROJECT = {
-  project_id: 'VXS-SLPH01-006', customer: 'Vexus Fiber',
-  project_name: 'Sulphur LA City Build', po_number: '3160880',
-  total_value: 421712.30, start_date: '2026-02-05',
-  completion_date: '2029-01-09', status: 'Active',
-};
-
-const DEMO_SEGMENTS = [
-  { segment_id: 'VXS-SLPH01-006-A-A01', contractor_id: 'A\u2192A01', section: 'A', from_handhole: 'A (17x30x18)', to_handhole: 'A01 (15x20x12)', footage: 148, street: 'W Parish Rd', gps_start_lat: 30.2366, gps_start_lng: -93.3774, gps_end_lat: 30.2370, gps_end_lng: -93.3780, boring_status: 'QC Approved', pulling_status: 'Complete', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
-  { segment_id: 'VXS-SLPH01-006-A-A02', contractor_id: 'A01\u2192A02', section: 'A', from_handhole: 'A01 (15x20x12)', to_handhole: 'A02 (15x20x12)', footage: 172, street: 'W Parish Rd', gps_start_lat: 30.2370, gps_start_lng: -93.3780, gps_end_lat: 30.2375, gps_end_lng: -93.3788, boring_status: 'QC Approved', pulling_status: 'Complete', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
-  { segment_id: 'VXS-SLPH01-006-A-A03', contractor_id: 'A02\u2192A03', section: 'A', from_handhole: 'A02 (15x20x12)', to_handhole: 'A03 (15x20x12)', footage: 165, street: 'W Parish Rd', gps_start_lat: 30.2375, gps_start_lng: -93.3788, gps_end_lat: 30.2380, gps_end_lng: -93.3796, boring_status: 'Complete', pulling_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #1' },
-  { segment_id: 'VXS-SLPH01-006-A-A04', contractor_id: 'A03\u2192A04', section: 'A', from_handhole: 'A03 (15x20x12)', to_handhole: 'A04 (15x20x12)', footage: 198, street: 'N Huntington St', gps_start_lat: 30.2380, gps_start_lng: -93.3796, gps_end_lat: 30.2387, gps_end_lng: -93.3802, boring_status: 'In Progress', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
-  { segment_id: 'VXS-SLPH01-006-A-A05', contractor_id: 'A04\u2192A05', section: 'A', from_handhole: 'A04 (15x20x12)', to_handhole: 'A05 (15x20x12)', footage: 210, street: 'N Huntington St', gps_start_lat: 30.2387, gps_start_lng: -93.3802, gps_end_lat: 30.2394, gps_end_lng: -93.3808, boring_status: 'Not Started', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
-  { segment_id: 'VXS-SLPH01-006-B-B01', contractor_id: 'B\u2192B01', section: 'B', from_handhole: 'B (30x48x24)', to_handhole: 'B01 (17x30x18)', footage: 320, street: 'S Cities Service Hwy', gps_start_lat: 30.2350, gps_start_lng: -93.3760, gps_end_lat: 30.2340, gps_end_lng: -93.3745, boring_status: 'QC Approved', pulling_status: 'QC Approved', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2' },
-  { segment_id: 'VXS-SLPH01-006-B-B02', contractor_id: 'B01\u2192B02', section: 'B', from_handhole: 'B01 (17x30x18)', to_handhole: 'B02 (15x20x12)', footage: 285, street: 'S Cities Service Hwy', gps_start_lat: 30.2340, gps_start_lng: -93.3745, gps_end_lat: 30.2332, gps_end_lng: -93.3732, boring_status: 'QC Approved', pulling_status: 'In Progress', boring_assigned_to: 'Gulf Coast Boring LLC', pulling_assigned_to: 'LYT Crew #2' },
-  { segment_id: 'VXS-SLPH01-006-B-B03', contractor_id: 'B02\u2192B03', section: 'B', from_handhole: 'B02 (15x20x12)', to_handhole: 'B03 (15x20x12)', footage: 156, street: 'E Napoleon St', gps_start_lat: 30.2332, gps_start_lng: -93.3732, gps_end_lat: 30.2328, gps_end_lng: -93.3720, boring_status: 'Complete', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
-  { segment_id: 'VXS-SLPH01-006-C-C01', contractor_id: 'C\u2192C01', section: 'C', from_handhole: 'C (17x30x18)', to_handhole: 'C01 (15x20x12)', footage: 245, street: 'Maplewood Dr', gps_start_lat: 30.2400, gps_start_lng: -93.3750, gps_end_lat: 30.2410, gps_end_lng: -93.3762, boring_status: 'Issue', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC', boring_notes: 'Hit rock at 80 LF - rerouting' },
-  { segment_id: 'VXS-SLPH01-006-C-C02', contractor_id: 'C01\u2192C02', section: 'C', from_handhole: 'C01 (15x20x12)', to_handhole: 'C02 (15x20x12)', footage: 190, street: 'Maplewood Dr', gps_start_lat: 30.2410, gps_start_lng: -93.3762, gps_end_lat: 30.2418, gps_end_lng: -93.3772, boring_status: 'Not Started', pulling_status: 'Not Started', boring_assigned_to: 'Gulf Coast Boring LLC' },
-  { segment_id: 'VXS-SLPH01-006-D-D01', contractor_id: 'D\u2192D01', section: 'D', from_handhole: 'D (17x30x18)', to_handhole: 'D01 (15x20x12)', footage: 178, street: 'E Burton St', gps_start_lat: 30.2345, gps_start_lng: -93.3800, gps_end_lat: 30.2352, gps_end_lng: -93.3812, boring_status: 'Not Started', pulling_status: 'Not Started' },
-  { segment_id: 'VXS-SLPH01-006-D-D02', contractor_id: 'D01\u2192D02', section: 'D', from_handhole: 'D01 (15x20x12)', to_handhole: 'D02 (15x20x12)', footage: 225, street: 'E Burton St', gps_start_lat: 30.2352, gps_start_lng: -93.3812, gps_end_lat: 30.2360, gps_end_lng: -93.3824, boring_status: 'Not Started', pulling_status: 'Not Started' },
-];
-
-const DEMO_SPLICE_POINTS = [
-  { splice_id: 'VXS-SLPH01-006-SPL-A01', project_id: 'VXS-SLPH01-006', contractor_id: 'A01', location: 'Handhole A01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2370, gps_lng: -93.3780, pm_readings: JSON.stringify([
-    { port: 'SA1P1', value_dBm: -18.5, status: 'pass', timestamp: '2026-02-03T10:00:00Z' },
-    { port: 'SA1P2', value_dBm: -22.1, status: 'pass', timestamp: '2026-02-03T10:01:00Z' },
-    { port: 'SA1P3', value_dBm: null, status: 'pending' },
-    { port: 'SA1P4', value_dBm: null, status: 'pending' },
-    { port: 'SB1P5', value_dBm: -26.8, status: 'warning', timestamp: '2026-02-03T10:02:00Z' },
-    { port: 'SB1P6', value_dBm: null, status: 'pending' },
-    { port: 'SB1P7', value_dBm: null, status: 'pending' },
-    { port: 'SB1P8', value_dBm: null, status: 'pending' },
-  ]) },
-  { splice_id: 'VXS-SLPH01-006-SPL-A02', project_id: 'VXS-SLPH01-006', contractor_id: 'A02', location: 'Handhole A02 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2375, gps_lng: -93.3788 },
-  { splice_id: 'VXS-SLPH01-006-SPL-A05', project_id: 'VXS-SLPH01-006', contractor_id: 'A05', location: 'Handhole A05 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2394, gps_lng: -93.3808 },
-  { splice_id: 'VXS-SLPH01-006-SPL-B', project_id: 'VXS-SLPH01-006', contractor_id: 'B', location: 'Handhole B (30x48x24)', handhole_type: '30x48x24 LHH', splice_type: '2x8', position_type: 'mid-span', fiber_count: 48, tray_count: 2, status: 'Not Started', gps_lat: 30.2350, gps_lng: -93.3760 },
-  { splice_id: 'VXS-SLPH01-006-SPL-B01', project_id: 'VXS-SLPH01-006', contractor_id: 'B01', location: 'Handhole B01 (17x30x18)', handhole_type: '17x30x18 B', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2340, gps_lng: -93.3745 },
-  { splice_id: 'VXS-SLPH01-006-SPL-C01', project_id: 'VXS-SLPH01-006', contractor_id: 'C01', location: 'Handhole C01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'mid-span', status: 'Not Started', gps_lat: 30.2410, gps_lng: -93.3762 },
-  { splice_id: 'VXS-SLPH01-006-SPL-D01', project_id: 'VXS-SLPH01-006', contractor_id: 'D01', location: 'Handhole D01 (15x20x12)', handhole_type: '15x20x12 TB', splice_type: '1x4', position_type: 'end-of-line', status: 'Not Started', gps_lat: 30.2352, gps_lng: -93.3812 },
-];
-
-const DEMO_FLOWERPOTS = [
-  { id: 'VXS-SLPH01-006-FP-001', project_id: 'VXS-SLPH01-006', label: 'FP-001', code: 'UG12', qty: 1, gps_lat: 30.2368, gps_lng: -93.3777 },
-  { id: 'VXS-SLPH01-006-FP-002', project_id: 'VXS-SLPH01-006', label: 'FP-002', code: 'UG12', qty: 1, gps_lat: 30.2372, gps_lng: -93.3784 },
-  { id: 'VXS-SLPH01-006-FP-003', project_id: 'VXS-SLPH01-006', label: 'FP-003', code: 'UG12', qty: 1, gps_lat: 30.2377, gps_lng: -93.3792 },
-  { id: 'VXS-SLPH01-006-FP-004', project_id: 'VXS-SLPH01-006', label: 'FP-004', code: 'UG12', qty: 1, gps_lat: 30.2382, gps_lng: -93.3799 },
-  { id: 'VXS-SLPH01-006-FP-005', project_id: 'VXS-SLPH01-006', label: 'FP-005', code: 'UG12', qty: 1, gps_lat: 30.2389, gps_lng: -93.3805 },
-  { id: 'VXS-SLPH01-006-FP-006', project_id: 'VXS-SLPH01-006', label: 'FP-006', code: 'UG12', qty: 1, gps_lat: 30.2345, gps_lng: -93.3752 },
-  { id: 'VXS-SLPH01-006-FP-007', project_id: 'VXS-SLPH01-006', label: 'FP-007', code: 'UG12', qty: 1, gps_lat: 30.2336, gps_lng: -93.3738 },
-  { id: 'VXS-SLPH01-006-FP-008', project_id: 'VXS-SLPH01-006', label: 'FP-008', code: 'UG12', qty: 1, gps_lat: 30.2405, gps_lng: -93.3756 },
-  { id: 'VXS-SLPH01-006-FP-009', project_id: 'VXS-SLPH01-006', label: 'FP-009', code: 'UG12', qty: 1, gps_lat: 30.2414, gps_lng: -93.3767 },
-  { id: 'VXS-SLPH01-006-FP-010', project_id: 'VXS-SLPH01-006', label: 'FP-010', code: 'UG12', qty: 1, gps_lat: 30.2348, gps_lng: -93.3806 },
-];
-
-const DEMO_HANDHOLES = [
-  { id: 'VXS-SLPH01-006-HH-001', project_id: 'VXS-SLPH01-006', label: 'A', type: '17x30x18', code: 'UG17', qty: 1, section: 'A', gps_lat: 30.2366, gps_lng: -93.3774 },
-  { id: 'VXS-SLPH01-006-HH-002', project_id: 'VXS-SLPH01-006', label: 'A01', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2370, gps_lng: -93.3780 },
-  { id: 'VXS-SLPH01-006-HH-003', project_id: 'VXS-SLPH01-006', label: 'A02', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2375, gps_lng: -93.3788 },
-  { id: 'VXS-SLPH01-006-HH-004', project_id: 'VXS-SLPH01-006', label: 'A03', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2380, gps_lng: -93.3796 },
-  { id: 'VXS-SLPH01-006-HH-005', project_id: 'VXS-SLPH01-006', label: 'A04', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2387, gps_lng: -93.3802 },
-  { id: 'VXS-SLPH01-006-HH-006', project_id: 'VXS-SLPH01-006', label: 'A05', type: '15x20x12', code: 'UG20', qty: 1, section: 'A', gps_lat: 30.2394, gps_lng: -93.3808 },
-  { id: 'VXS-SLPH01-006-HH-007', project_id: 'VXS-SLPH01-006', label: 'B', type: '30x48x24', code: 'UG27', qty: 1, section: 'B', gps_lat: 30.2350, gps_lng: -93.3760 },
-  { id: 'VXS-SLPH01-006-HH-008', project_id: 'VXS-SLPH01-006', label: 'B01', type: '17x30x18', code: 'UG17', qty: 1, section: 'B', gps_lat: 30.2340, gps_lng: -93.3745 },
-  { id: 'VXS-SLPH01-006-HH-009', project_id: 'VXS-SLPH01-006', label: 'B02', type: '15x20x12', code: 'UG20', qty: 1, section: 'B', gps_lat: 30.2332, gps_lng: -93.3732 },
-  { id: 'VXS-SLPH01-006-HH-010', project_id: 'VXS-SLPH01-006', label: 'B03', type: '15x20x12', code: 'UG20', qty: 1, section: 'B', gps_lat: 30.2328, gps_lng: -93.3720 },
-  { id: 'VXS-SLPH01-006-HH-011', project_id: 'VXS-SLPH01-006', label: 'C', type: '17x30x18', code: 'UG17', qty: 1, section: 'C', gps_lat: 30.2400, gps_lng: -93.3750 },
-  { id: 'VXS-SLPH01-006-HH-012', project_id: 'VXS-SLPH01-006', label: 'C01', type: '15x20x12', code: 'UG20', qty: 1, section: 'C', gps_lat: 30.2410, gps_lng: -93.3762 },
-  { id: 'VXS-SLPH01-006-HH-013', project_id: 'VXS-SLPH01-006', label: 'C02', type: '15x20x12', code: 'UG20', qty: 1, section: 'C', gps_lat: 30.2418, gps_lng: -93.3772 },
-  { id: 'VXS-SLPH01-006-HH-014', project_id: 'VXS-SLPH01-006', label: 'D', type: '17x30x18', code: 'UG17', qty: 1, section: 'D', gps_lat: 30.2345, gps_lng: -93.3800 },
-  { id: 'VXS-SLPH01-006-HH-015', project_id: 'VXS-SLPH01-006', label: 'D01', type: '15x20x12', code: 'UG20', qty: 1, section: 'D', gps_lat: 30.2352, gps_lng: -93.3812 },
-  { id: 'VXS-SLPH01-006-HH-016', project_id: 'VXS-SLPH01-006', label: 'D02', type: '15x20x12', code: 'UG20', qty: 1, section: 'D', gps_lat: 30.2360, gps_lng: -93.3824 },
-];
-
-const DEMO_GROUND_RODS = [
-  { id: 'VXS-SLPH01-006-GR-001', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-001' },
-  { id: 'VXS-SLPH01-006-GR-002', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-002' },
-  { id: 'VXS-SLPH01-006-GR-003', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-003' },
-  { id: 'VXS-SLPH01-006-GR-004', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-004' },
-  { id: 'VXS-SLPH01-006-GR-005', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-005' },
-  { id: 'VXS-SLPH01-006-GR-006', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-006' },
-  { id: 'VXS-SLPH01-006-GR-007', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-007' },
-  { id: 'VXS-SLPH01-006-GR-008', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-008' },
-  { id: 'VXS-SLPH01-006-GR-009', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-009' },
-  { id: 'VXS-SLPH01-006-GR-010', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-010' },
-  { id: 'VXS-SLPH01-006-GR-011', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-011' },
-  { id: 'VXS-SLPH01-006-GR-012', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-012' },
-  { id: 'VXS-SLPH01-006-GR-013', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-013' },
-  { id: 'VXS-SLPH01-006-GR-014', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-014' },
-  { id: 'VXS-SLPH01-006-GR-015', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-015' },
-  { id: 'VXS-SLPH01-006-GR-016', project_id: 'VXS-SLPH01-006', code: 'UG13', qty: 1, handhole_id: 'VXS-SLPH01-006-HH-016' },
-];
+// ===== EMPTY FALLBACK DATA (no demo data) =====
+const DEMO_PROJECT = null;
+const DEMO_SEGMENTS = [];
+const DEMO_SPLICE_POINTS = [];
+const DEMO_FLOWERPOTS = [];
+const DEMO_HANDHOLES = [];
+const DEMO_GROUND_RODS = [];
 
 // ===== GATEWAY HELPERS =====
 
