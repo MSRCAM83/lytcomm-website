@@ -190,8 +190,8 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
           ] : [],
         }}
       >
-        {/* Segment Polylines */}
-        {segments.map(seg => {
+        {/* Segment Polylines - only render after map is ready to avoid setAt error */}
+        {map && segments.map(seg => {
           const startLat = parseFloat(seg.gps_start_lat);
           const startLng = parseFloat(seg.gps_start_lng);
           const endLat = parseFloat(seg.gps_end_lat);
@@ -214,8 +214,8 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
           );
         })}
 
-        {/* Handhole Markers */}
-        {showHandholes && handholesData.map((hh, idx) => {
+        {/* Handhole Markers - only render after map is ready */}
+        {map && showHandholes && handholesData.map((hh, idx) => {
           const isLarge = (hh.type || hh.label || '').includes('30x48');
           const isMedium = (hh.type || hh.label || '').includes('17x30') || (hh.type || hh.label || '').includes('24x36');
           const color = isLarge ? '#2196F3' : isMedium ? '#FFB800' : '#4CAF50';
@@ -237,8 +237,8 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
           );
         })}
 
-        {/* Flowerpot Markers */}
-        {showFlowerpots && flowerpots && flowerpots.map((fp, idx) => {
+        {/* Flowerpot Markers - only render after map is ready */}
+        {map && showFlowerpots && flowerpots && flowerpots.map((fp, idx) => {
           const lat = parseFloat(fp.gps_lat);
           const lng = parseFloat(fp.gps_lng);
           if (isNaN(lat) || isNaN(lng)) return null;
@@ -253,8 +253,8 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
           );
         })}
 
-        {/* Splice Point Markers */}
-        {showSplicePoints && splicePoints && splicePoints.map((sp, idx) => {
+        {/* Splice Point Markers - only render after map is ready */}
+        {map && showSplicePoints && splicePoints && splicePoints.map((sp, idx) => {
           const lat = parseFloat(sp.gps_lat);
           const lng = parseFloat(sp.gps_lng);
           if (isNaN(lat) || isNaN(lng)) return null;
