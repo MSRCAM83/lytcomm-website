@@ -121,8 +121,9 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
         code: hh.code || 'UG20',
       })).filter(hh => !isNaN(hh.lat) && !isNaN(hh.lng));
     }
-    // Fallback: derive from segments
-    const hh = new window.Map();
+    // Fallback: derive from segments (use native Map, not lucide-react Map icon)
+    const NativeMap = typeof window !== 'undefined' ? window.Map : globalThis.Map;
+    const hh = new NativeMap();
     segments.forEach(seg => {
       const fromLabel = seg.from_handhole || seg.contractor_id?.split('→')[0] || '?';
       const toLabel = seg.to_handhole || seg.contractor_id?.split('→')[1] || '?';
