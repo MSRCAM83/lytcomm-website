@@ -258,17 +258,18 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     fetchProjects();
   }, []);
 
-  // Load assigned segments for this contractor
+  // Load assigned segments for this contractor (all projects)
   useEffect(() => {
     const loadMySegments = async () => {
       try {
         setSegmentsLoading(true);
-        const data = await loadFullProject('VXS-SLPH01-006');
+        // Load all segments (no project filter) to get contractor's work across all projects
+        const data = await loadFullProject(null);
         if (data && data.segments) {
           const companyName = loggedInUser?.company || loggedInUser?.name || '';
           const filtered = getContractorSegments(data.segments, companyName);
-          // If no match by company, show all (demo mode)
-          setMySegments(filtered.length > 0 ? filtered : data.segments);
+          // Only show segments assigned to this contractor
+          setMySegments(filtered);
         }
       } catch (err) {
         console.error('[ContractorDashboard] Segment load error:', err);
@@ -276,7 +277,9 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
         setSegmentsLoading(false);
       }
     };
-    loadMySegments();
+    if (loggedInUser) {
+      loadMySegments();
+    }
   }, [loggedInUser]);
 
   // Segment stats

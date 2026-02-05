@@ -161,15 +161,6 @@ const AdminLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </button>
             </form>
 
-            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
-              <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '8px' }}>
-                <strong>Demo Admin Credentials:</strong>
-              </p>
-              <p style={{ fontSize: '0.85rem', color: colors.gray }}>
-                Email: matt@lytcomm.com<br />
-                Password: ********
-              </p>
-            </div>
           </div>
         </div>
       </main>

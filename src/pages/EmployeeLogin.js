@@ -169,17 +169,6 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
               </button>
             </form>
 
-            {/* Demo Credentials */}
-            <div style={{ marginTop: '24px', padding: '16px', backgroundColor: darkMode ? colors.dark : '#f8fafc', borderRadius: '8px' }}>
-              <p style={{ fontSize: '0.85rem', color: colors.gray, marginBottom: '8px' }}>
-                <strong>Demo Credentials:</strong>
-              </p>
-              <p style={{ fontSize: '0.85rem', color: colors.gray }}>
-                Contact admin for access<br />
-                
-              </p>
-            </div>
-
             {/* Forgot Password */}
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
               <button

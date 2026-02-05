@@ -236,7 +236,7 @@ function App() {
       case 'admin-projects':
         return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} />;
       case 'daily-report':
-        return <DailyProductionReport darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
+        return <DailyProductionReport darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} projectId={selectedProjectId} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }

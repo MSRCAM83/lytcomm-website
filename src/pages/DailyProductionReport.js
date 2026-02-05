@@ -16,7 +16,7 @@ import { ArrowLeft, Printer, Download, Calendar, Filter, ChevronDown, Loader, Fi
 import { loadFullProject } from '../services/mapService';
 import { calculateSegmentBilling, calculateSpliceBilling } from '../utils/rateCardMatcher';
 
-function DailyProductionReport({ darkMode, user, setCurrentPage }) {
+function DailyProductionReport({ darkMode, user, setCurrentPage, projectId }) {
   const [loading, setLoading] = useState(true);
   const [segments, setSegments] = useState([]);
   const [splicePoints, setSplicePoints] = useState([]);
@@ -36,8 +36,12 @@ function DailyProductionReport({ darkMode, user, setCurrentPage }) {
 
   useEffect(() => {
     async function load() {
+      if (!projectId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const data = await loadFullProject('VXS-SLPH01-006');
+        const data = await loadFullProject(projectId);
         setSegments(data.segments || []);
         setSplicePoints(data.splicePoints || []);
         setProject(data.project || null);
@@ -47,7 +51,7 @@ function DailyProductionReport({ darkMode, user, setCurrentPage }) {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [projectId]);
 
   // Get unique contractors and sections
   const contractors = useMemo(() => {
