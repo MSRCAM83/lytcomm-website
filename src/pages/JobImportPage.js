@@ -413,7 +413,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       setProgressMsg('Building project preview...');
 
       const ext = data.extracted;
-      const projectId = ext.project?.project_id || 'VXS-SLPH01-006';
+      const projectId = ext.project?.project_id || null;
 
       const result = {
         project: {

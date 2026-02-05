@@ -73,7 +73,7 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
         const projects = await loadProjects();
         if (!cancelled) {
           setAllProjects(projects);
-          const pid = selectedProjectId || (projects[0]?.project_id) || 'VXS-SLPH01-006';
+          const pid = selectedProjectId || (projects[0]?.project_id) || null;
           if (setSelectedProjectId && pid !== selectedProjectId) setSelectedProjectId(pid);
           await fetchProjectData(pid);
         }

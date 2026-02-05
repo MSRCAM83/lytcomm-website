@@ -102,15 +102,8 @@ function AdminUserManagement({ darkMode, currentUser }) {
     setLoading(false);
   };
 
-  const getMockUsers = () => [
-    { id: 1, name: 'Matt Roy', email: 'matt@lytcomm.com', role: 'admin', status: 'active', createdAt: '2025-01-01', lastLogin: '2026-01-23' },
-    { id: 2, name: 'Mason Roy', email: 'mason@lytcomm.com', role: 'admin', status: 'active', createdAt: '2025-01-01', lastLogin: '2026-01-22' },
-    { id: 3, name: 'Donnie Wells', email: 'donnie@lytcomm.com', role: 'supervisor', status: 'active', createdAt: '2025-01-15', lastLogin: '2026-01-23' },
-    { id: 4, name: 'Mike Torres', email: 'mike@gulfcoastboring.com', role: 'contractor', company: 'Gulf Coast Boring LLC', status: 'active', createdAt: '2026-01-20', lastLogin: '2026-01-23' },
-    { id: 5, name: 'James Wilson', email: 'james@xyzdrilling.com', role: 'contractor', company: 'XYZ Drilling', status: 'active', createdAt: '2026-01-10', lastLogin: '2026-01-22' },
-    { id: 6, name: 'Carlos Rivera', email: 'carlos@lytcomm.com', role: 'employee', status: 'active', createdAt: '2025-06-01', lastLogin: '2026-01-23' },
-    { id: 7, name: 'Sarah Chen', email: 'sarah.chen@email.com', role: 'employee', status: 'pending', createdAt: '2026-01-21', lastLogin: null },
-  ];
+  // No mock users - all data from database
+  const getMockUsers = () => [];
 
   // Show notification
   const showNotification = (message, type = 'success') => {

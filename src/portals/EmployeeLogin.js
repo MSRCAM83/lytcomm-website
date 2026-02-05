@@ -29,7 +29,7 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
       setLoggedInUser(user);
       setCurrentPage('employee-dashboard');
     } else {
-      setError('Invalid email or password. Try demo: matt@lytcomm.com / ********');
+      setError('Invalid email or password. Please check your credentials.');
     }
 
     setLoading(false);
@@ -171,8 +171,8 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
                 <strong>Demo Credentials:</strong>
               </p>
               <p style={{ fontSize: '0.85rem', color: colors.gray }}>
-                Email: matt@lytcomm.com<br />
-                Password: ********
+                Contact admin for access<br />
+                
               </p>
             </div>
 

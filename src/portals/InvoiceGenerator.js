@@ -142,7 +142,7 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
     async function load() {
       setLoading(true);
       try {
-        const projectId = project?.project_id || 'VXS-SLPH01-006';
+        const projectId = project?.project_id || null;
         const data = await loadFullProject(projectId);
         setSegments(data.segments || []);
         setSplicePoints(data.splicePoints || []);
@@ -285,9 +285,9 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
     const record = {
       invoiceNumber: num,
       date: new Date().toISOString(),
-      project: project?.project_name || 'Sulphur LA City Build',
+      project: project?.project_name || null,
       customer: project?.customer || 'Vexus Fiber',
-      poNumber: project?.po_number || '3160880',
+      poNumber: project?.po_number || null,
       total: invoiceData.grandTotal,
       lineItemCount: invoiceData.summary.length,
       segmentCount: filteredSegments.length,
@@ -354,7 +354,7 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
           <div class="meta" style="margin-top:12px;">
             <strong>Invoice #:</strong> ${invNum}<br>
             <strong>Date:</strong> ${now.toLocaleDateString()}<br>
-            <strong>PO #:</strong> ${project?.po_number || '3160880'}<br>
+            <strong>PO #:</strong> ${project?.po_number || null}<br>
             <strong>Terms:</strong> Net 30
           </div>
         </div>
@@ -364,10 +364,10 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
         <div class="meta">
           <strong>Bill To:</strong><br>
           ${project?.customer || 'Vexus Fiber'}<br>
-          ${project?.project_name || 'Sulphur LA City Build'}
+          ${project?.project_name || null}
         </div>
         <div class="meta" style="text-align:right;">
-          <strong>Project:</strong> ${project?.project_id || 'VXS-SLPH01-006'}<br>
+          <strong>Project:</strong> ${project?.project_id || null}<br>
           <strong>Segments:</strong> ${filteredSegments.length} (${segments.filter(s => s.boring_status === 'QC Approved').length} QC Approved)
           ${filterSection !== 'all' ? `<br><strong>Section:</strong> ${filterSection}` : ''}
           ${filterContractor !== 'all' ? `<br><strong>Contractor:</strong> ${filterContractor}` : ''}
@@ -439,7 +439,7 @@ function InvoiceGenerator({ darkMode, user, setCurrentPage, loggedInUser, projec
             <div>
               <div style={{ fontSize: '1.2rem', fontWeight: 700, color: text }}>Invoice Generator</div>
               <div style={{ fontSize: '0.85rem', color: textMuted }}>
-                {project?.project_name || 'Sulphur LA City Build'} • PO {project?.po_number || '3160880'}
+                {project?.project_name || null} • PO {project?.po_number || null}
                 {invoiceNumber && <span style={{ marginLeft: 8, color: accent, fontWeight: 600 }}>#{invoiceNumber}</span>}
               </div>
             </div>

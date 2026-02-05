@@ -613,7 +613,7 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
   const segmentData = {
     ...segment,
     segment_id: segment.segment_id,
-    project_id: segment.segment_id?.split('-').slice(0, 3).join('-') || 'VXS-SLPH01-006',
+    project_id: segment.segment_id?.split('-').slice(0, 3).join('-') || null,
     boring_photos: segment.boring_photos || [],
     pulling_photos: segment.pulling_photos || [],
     splicing_photos: segment.splicing_photos || [],
@@ -635,7 +635,7 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
     const ok = await updateSegmentField(segId, field, newStatus);
     if (ok) {
       // Log the action
-      await logAction(segment.project_id || 'VXS-SLPH01-006', segId, user?.email, `${phase}_status_changed`, { from: segment[field], to: newStatus, notes: statusData?.notes });
+      await logAction(segment.project_id || null, segId, user?.email, `${phase}_status_changed`, { from: segment[field], to: newStatus, notes: statusData?.notes });
       
       // Write timestamp if completing
       if (newStatus === 'Complete' || newStatus === 'QC Approved') {
@@ -672,7 +672,7 @@ function SegmentDetailPanel({ segment, darkMode, onClose, isAdmin, user, onSegme
     console.log(`[ProjectMap] Photo upload: ${segment.segment_id} ${phase}`, photos);
     if (!photos || photos.length === 0) return;
     
-    const projectId = segment.project_id || 'VXS-SLPH01-006';
+    const projectId = segment.project_id || null;
     const segId = segment.segment_id;
     
     try {
@@ -1241,7 +1241,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
     async function fetchData(silent = false) {
       if (!silent) setLoading(true);
       try {
-        const data = await loadFullProject(projectId || 'VXS-SLPH01-006');
+        const data = await loadFullProject(projectId || null);
         if (!cancelled) {
           setAllSegments(data.segments);
           setSplicePoints(data.splicePoints || []);

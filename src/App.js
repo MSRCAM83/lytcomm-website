@@ -62,7 +62,7 @@ function App() {
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState('VXS-SLPH01-006');
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
@@ -295,8 +295,8 @@ function App() {
               darkMode={darkMode}
               user={loggedInUser}
               projectContext={{
-                project_name: 'Sulphur LA City Build',
-                project_id: 'VXS-SLPH01-006',
+                project_name: null,
+                project_id: selectedProjectId,
                 page: currentPage,
               }}
               minimized={chatMinimized}
