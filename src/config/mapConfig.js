@@ -1,11 +1,11 @@
 /**
  * LYT Communications - Map & Project Configuration
- * Version: 1.1.0
+ * Version: 1.2.0
  * Created: 2026-02-02
- * Updated: 2026-02-03
- * 
+ * Updated: 2026-02-04
+ *
  * Central configuration for the Project Map System including
- * status colors, map icons, billing rates, and project constants.
+ * status colors, map icons, billing rates, PM thresholds, and project constants.
  */
 
 // Google Maps API key (public, restricted by HTTP referrer to lytcomm.com)
@@ -40,10 +40,33 @@ export const MAP_ICONS = {
 // Photo requirements by splice type
 export const PHOTO_REQUIREMENTS = {
   '1x4': {
-    count: 7,
-    types: [
+    enclosureCount: 7,
+    pmPhotoCount: 2, // 1 photo per splitter (not per reading)
+    totalPhotos: 9, // 7 enclosure + 2 PM photos
+    enclosureTypes: [
       'Basket',
-      'Splice tray (1 tray)',
+      'Splice tray',
+      'Attached strength members',
+      'Grommets from inside',
+      'Completed enclosure closed',
+      'Cables entering enclosure',
+      'Enclosure in ground',
+    ],
+    splitterCount: 2,
+    pmReadingCount: 8, // 8 readings total, but only 2 photos
+    splitters: [
+      { name: 'Splitter A', ports: ['SA1P1', 'SA1P2', 'SA1P3', 'SA1P4'] },
+      { name: 'Splitter B', ports: ['SB1P5', 'SB1P6', 'SB1P7', 'SB1P8'] },
+    ],
+  },
+  '1x8': {
+    enclosureCount: 8,
+    pmReadingCount: 0, // No PM testing at 1x8/2x8 locations
+    totalPhotos: 8,
+    enclosureTypes: [
+      'Basket',
+      'Splitter tray',
+      'Splice tray',
       'Attached strength members',
       'Grommets from inside',
       'Completed enclosure closed',
@@ -51,12 +74,14 @@ export const PHOTO_REQUIREMENTS = {
       'Enclosure in ground',
     ],
   },
-  '1x8': {
-    count: 8,
-    types: [
+  '2x8': {
+    enclosureCount: 8,
+    pmReadingCount: 0, // No PM testing at 2x8 hub locations
+    totalPhotos: 8,
+    enclosureTypes: [
       'Basket',
       'Splitter tray',
-      'Splice tray (1 tray)',
+      'Splice tray',
       'Attached strength members',
       'Grommets from inside',
       'Completed enclosure closed',
@@ -65,8 +90,9 @@ export const PHOTO_REQUIREMENTS = {
     ],
   },
   'F1': {
-    baseCount: 4,
+    baseCount: 5,
     perTray: 1,
+    pmReadingCount: 0,
     baseTypes: [
       'Basket',
       'Strength members and grounds attached',
@@ -77,8 +103,9 @@ export const PHOTO_REQUIREMENTS = {
     trayPrefix: 'Splice tray',
   },
   'TYCO-D': {
-    baseCount: 4,
+    baseCount: 5,
     perTray: 1,
+    pmReadingCount: 0,
     baseTypes: [
       'Basket',
       'Strength members and grounds attached',
@@ -89,6 +116,34 @@ export const PHOTO_REQUIREMENTS = {
     trayPrefix: 'Splice tray',
   },
 };
+
+// Power Meter Thresholds (FTTH Standard)
+// These determine pass/fail status for PM readings at 1x4 locations
+// TODO: Make adjustable in website settings
+export const PM_THRESHOLDS = {
+  pass: { min: -25, max: -8 },      // Good signal: -8 to -25 dBm
+  warning: { min: -28, max: -25 },  // Marginal: -25 to -28 dBm (investigate)
+  failWeak: { max: -28 },           // Too much loss: weaker than -28 dBm
+  failStrong: { min: -8 },          // Could overload ONT: stronger than -8 dBm
+};
+
+// PM Reading statuses
+export const PM_STATUS = {
+  PENDING: 'pending',
+  NO_LIGHT: 'no_light',  // Fiber not yet lit - timestamp and complete later
+  PASS: 'pass',
+  WARNING: 'warning',
+  FAIL: 'fail',
+};
+
+// Helper function to evaluate PM reading status
+export function evaluatePMReading(dBm) {
+  if (dBm === null || dBm === undefined) return PM_STATUS.PENDING;
+  if (dBm > PM_THRESHOLDS.pass.max) return PM_STATUS.FAIL; // Too strong
+  if (dBm < PM_THRESHOLDS.failWeak.max) return PM_STATUS.FAIL; // Too weak
+  if (dBm < PM_THRESHOLDS.warning.max) return PM_STATUS.WARNING; // Marginal
+  return PM_STATUS.PASS;
+}
 
 // Vexus LA/TX 2026 Rate Card
 export const RATE_CARDS = {
@@ -219,4 +274,4 @@ export const SHEETS_CONFIG = {
   issues: 'Issues',
 };
 
-// v1.1.0
+// v1.2.0 - Added PM thresholds, updated photo requirements with PM reading counts

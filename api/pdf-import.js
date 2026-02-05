@@ -1,30 +1,39 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 3.1.0
+ * Version: 4.1.0
  * Updated: 2026-02-04
- * 
+ *
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Opus 4.5 Vision API.
- * 
- * v3.1.0: COMPLETE EXTRACTION - 4 bucket model:
- *         1. WO line items (faithful copy from work order table)
- *         2. Segments (boring + pulling + handhole + ground rod per segment)
- *         3. Splice points WITH billing (FS1/FS2/FS3/FS4 - previously excluded)
- *         4. Unallocated WO items (restoration, traffic, mobilization, etc.)
- *         Grand total = segments + splices + unallocated ≈ WO total.
- *         Fixed: splice billing was completely dropped in v3.0.0.
- *         Fixed: prompt example now shows ALL work item types.
+ *
+ * v4.1.0: EVERY billable item gets unique ID. Separate entity lists:
+ *         - handholes[], flowerpots[], ground_rods[], segments[], splice_points[]
+ *         - Even 30ft road crossings get segment IDs
+ *         - Quantities and codes only - rates applied by website
+ *         - Supports multiple rate views (customer vs contractor)
+ * v4.0.2: Use EXACT unit codes from WO (e.g., UG04-M024 not UG04)
+ * v4.0.1: Removed hardcoded prices - rates now extracted from WO line items
+ * v4.0.0: COMPLETE REWRITE with confirmed extraction rules:
+ *         - Duct codes: UG01/UG02/UG03 based on PLACE X callouts
+ *         - Flowerpots ARE segment endpoints (no ground rods)
+ *         - Splicing is SEPARATE WO - track splice points but DON'T bill
+ *         - Map reading: red numbers = footage, grey = slack loops
+ *         - Cable types from labels AND color legend
+ *         - Component IDs: {JOB_CODE}-{TYPE}-{SEQ} format
+ *         - PM readings at 1x4 locations (8 per location, "No Light" option)
+ *         - Discrepancy handling: use WO qty, log differences
+ * v3.1.0: 4 bucket model with splice billing (now removed per rules)
  * v3.0.0: TILED MAP INPUT - 8 high-res tiles at 4x scale.
  * v2.9.0: Split processing. WO as text, map as images.
  * v2.8.0: Upgraded to Opus 4.5.
- * 
+ *
  * POST /api/pdf-import
- * Body: { 
+ * Body: {
  *   work_order_text,
  *   map_text, map_images[], map_tile_labels[],
- *   rate_card_id 
+ *   rate_card_id
  * }
- * 
+ *
  * Requires: ANTHROPIC_API_KEY env var, Fluid Compute enabled
  */
 
@@ -234,43 +243,84 @@ export default async function handler(req, res) {
 }
 
 /**
- * Build the system prompt - tile-aware version
+ * Build the system prompt - tile-aware version (v4.0.0)
  */
 function buildSystemPrompt(isTiled) {
   let prompt = `You are a fiber optic construction data extraction specialist for LYT Communications. You extract structured data from construction maps and work orders with 100% accuracy.
 
-YOUR TASK: Read the work order line items (text) and the construction map (images). Extract EVERY segment, handhole, footage number, splice point, and street name. Then assign billing to each.
+YOUR TASK: Read the work order line items (text) and the construction map (images). Extract EVERY segment, handhole, flowerpot, footage number, and splice point location. Assign billing for segments ONLY (splicing is a separate work order).
 
-FOUR BUCKETS OF DATA TO EXTRACT:
+THREE BUCKETS OF DATA TO EXTRACT:
 
 BUCKET 1 - WORK ORDER LINE ITEMS:
-Copy every line item from the work order table exactly as printed: code, description, qty, uom, rate, total. This is the billing source of truth.
+Copy every line item from the work order table exactly as printed: code, description, qty, uom, rate, total.
+IMPORTANT: The rates in this table are the SOURCE OF TRUTH for all billing calculations.
 
-BUCKET 2 - SEGMENTS (from map):
-Each segment between two handholes gets work_items for:
-- Boring: UG1 ($8.00/LF for 1-4 ducts), UG23 ($9.50/LF for 5 ducts), or UG24 ($10.50/LF for 6 ducts)
-  → The map shows duct counts in callout boxes like "PLACE 4 - 1.25" HDPE DUCTS" = UG1
-  → "PLACE 5 - 1.25" HDPE DUCTS" = UG23, "PLACE 6" = UG24
-- Pulling: UG4 ($0.55/LF) for distribution cable (branch runs), UG28 ($1.00/LF) for feeder cable (288-432ct on inter-section hub-to-hub runs)
-- Handhole install at destination: UG20 ($40/EA for 15x20x12 TB), UG17 ($60/EA for 17x30x18), UG27 ($210/EA for 30x48x24), etc.
-- Ground rod: UG13 ($40/EA) at each handhole
+BUCKET 2 - SEGMENTS (from map, WITH billing):
+Each segment between structures (handholes OR flowerpots) gets work_items.
+USE THE EXACT CODES AND RATES FROM THE WORK ORDER LINE ITEMS.
+- Boring: UG01/UG02/UG03 based on duct count from "PLACE X" callouts
+- Pulling: Use the EXACT pull code from WO (e.g., UG04-M024, UG04-M048, UG04-A024, UG28-288)
+- Handhole/Flowerpot install at destination: UG12/UG17/UG18/UG20/UG27 etc.
+- Ground rod: UG13 at each HANDHOLE only (NOT flowerpots)
 
-BUCKET 3 - SPLICE POINTS (from map, WITH billing):
-Each splice point gets work_items:
-- 1x4 mid-span terminal: FS2 ($275 ring cut) + FS1 x2 fibers ($33) + FS3 x8 tests ($52.80) = $360.80
-- 1x4 end-of-line terminal: FS4 ($137.50 case setup) + FS1 x2 ($33) + FS3 x8 ($52.80) = $223.30
-- 1x8 mid-span splitter: FS2 ($275) + FS1 x2 ($33) + FS3 x8 ($52.80) = $360.80
-- 1x8 end-of-line splitter: FS4 ($137.50) + FS1 x2 ($33) + FS3 x8 ($52.80) = $223.30
-- F1/TYCO-D butt splice (432ct): FS4 ($137.50) + FS1 x432 ($7,128) = $7,265.50 per splice
+BUCKET 3 - SPLICE POINTS (from map, NO billing - tracking only):
+Create records for each splice location but DO NOT add work_items (splicing is a separate work order):
 
-BUCKET 4 - UNALLOCATED WO ITEMS:
-Any work order line items that don't map to specific segments or splices (restoration, traffic control, mobilization, locate wire, tracer tape, etc.)
+1x4 TERMINALS (at Terminal Boxes):
+- 2 splitters inside (not 1)
+- 8 power meter readings total: SA1P1, SA1P2, SA1P3, SA1P4, SB1P5, SB1P6, SB1P7, SB1P8
+- Each PM reading needs: actual dBm value (number), status
+- Status options: "pending", "no_light" (fiber not lit yet), "pass", "warning", "fail"
+- 1 photo per splitter (2 total PM photos, not 8)
+- 7 enclosure photos + 2 PM photos = 9 total photos
+
+2x8 HUBS (at larger handholes):
+- NO power meter testing at these locations
+- 8 enclosure photos required
+
+TYCO-D/F1 at 30x48x24 LHH:
+- "9 SPLICES" callout = part of this job's splice WO
+- Track location for workflow
+
+CRITICAL: EXTRACT QUANTITIES AND CODES ONLY - NO RATE CALCULATIONS
+Do NOT calculate totals or apply rates. The website will apply rates from the selected rate card.
+Extract: unit codes, quantities, and descriptions only.
+The same extraction supports multiple rate views (customer billing vs contractor payment).
+
+CRITICAL MAP READING RULES:
+- RED NUMBERS = Conduit footage (billable boring) - read EXACTLY as printed
+- GREY NUMBERS = Slack loop storage (NOT separate bore footage)
+- RED TEXT STARTING WITH LETTERS = Labels, not footage
+- SECTION LETTERS (A, B, C, D, E, F) come from labels on the map
+- MAP LEGEND in top right shows color coding for cable types (024F vs 048F)
+- "PLACE X" CALLOUTS have arrows pointing to their sections - follow arrows for duct count
+
+DISCREPANCY HANDLING:
+- Use Work Order quantities as source of truth
+- If map counts differ from WO, LOG the discrepancy but continue extraction
+- Extraction does NOT pause for human review
+
+COMPONENT ID FORMAT:
+Generate unique IDs for EVERY billable component using job code from WO.
+Even small 30-foot road crossings get their own segment ID.
+
+- Handholes: {JOB_CODE}-HH-{NNN} (e.g., SLPH.01.006-HH-001) - each is billable
+- Flowerpots: {JOB_CODE}-FP-{NNN} (e.g., SLPH.01.006-FP-001) - each is billable
+- Ground Rods: {JOB_CODE}-GR-{NNN} (e.g., SLPH.01.006-GR-001) - 1 per handhole
+- Segments: {JOB_CODE}-SEG-{NNN} (e.g., SLPH.01.006-SEG-001) - each bore/pull run
+- Splice Points: {JOB_CODE}-SP-{NNN} (e.g., SLPH.01.006-SP-001) - tracking only
+- Splitters: {JOB_CODE}-SPL-{NNN} (e.g., SLPH.01.006-SPL-001) - 2 per 1x4, 1 photo each
+- PM Readings: {JOB_CODE}-PM-{NNN} (e.g., SLPH.01.006-PM-001) - 8 per 1x4 (4 per splitter)
+
+Every billable/trackable item = unique ID. No exceptions.
 
 CRITICAL ACCURACY RULES:
 - Read footage numbers EXACTLY as printed. Do not estimate, round, or guess.
-- The work order total_value is the source of truth for the project total.
-- grand_total = sum of all segment values + all splice values + all unallocated items.
-- grand_total should approximately equal the work order total_value.
+- Extract QUANTITIES and CODES only - do NOT calculate rates or totals.
+- Use EXACT unit codes from WO (e.g., UG04-M024 not just UG04).
+- Splicing is separate WO - create splice point records but no work_items.
+- Rates will be applied by the website based on selected rate card.
 - Your entire response must be a single valid JSON object. No text before or after.`;
 
   if (isTiled) {
@@ -278,17 +328,18 @@ CRITICAL ACCURACY RULES:
 
 MAP TILE PROCESSING INSTRUCTIONS:
 The construction map has been split into high-resolution tiles for accurate reading.
-1. LEGEND TILE: Read this FIRST. Learn all symbols, line colors, and their meanings.
-2. KEY MAP TILE: Shows the overview with section boundaries labeled.
-3. SECTION TILES (R1C1 through R2C3): These are the detailed map sections in a 3x2 grid.
+1. LEGEND TILE: Read this FIRST. Learn all symbols, line colors (cable types), and their meanings.
+2. KEY MAP TILE: Shows the overview with section boundaries labeled (A, B, C, D, E, F).
+3. SECTION TILES (R1C1 through R2C3): Detailed map sections in a 3x2 grid.
    - R1C1 = top-left, R1C2 = top-center, R1C3 = top-right
    - R2C1 = bottom-left, R2C2 = bottom-center, R2C3 = bottom-right
 4. Each tile shows a zoomed-in portion. Carefully read ALL text in each tile:
-   - Handhole labels (single letters A,B,C = hubs, A01,A02,B01 = terminals)
-   - Footage numbers (small text along route lines between handholes)
+   - Handhole labels (single letters A,B,C = hubs with 2x8; A01,A02,B01 = terminals with 1x4)
+   - Flowerpot symbols (utility boxes along routes - ARE segment endpoints)
+   - Footage numbers: RED = conduit (bill), GREY = slack loops (don't bill separately)
+   - Cable labels on runs (024F, 048F) with matching legend colors
    - Street names (text along roads)
-   - Splice callout boxes (rectangular text boxes near handholes)
-   - Duct placement descriptions (PLACE X - 1.25" HDPE DUCTS...)
+   - "PLACE X" callouts with arrows pointing to duct count areas
 5. Features at tile edges may appear in adjacent tiles — verify across boundaries.
 6. Do NOT skip any tile. Every tile may contain unique data.`;
   }
@@ -299,60 +350,99 @@ The construction map has been split into high-resolution tiles for accurate read
 function buildExtractionPrompt(workOrderText, mapText, rateCardId, hasMapImages, isTiled) {
   let prompt = `TASK: Extract ALL construction project data from the work order text AND map images.
 
-STEP 1 - READ THE WORK ORDER text below. Copy EVERY line item exactly.
-STEP 2 - READ THE MAP ${isTiled ? 'TILES' : 'IMAGES'} for physical layout, handholes, footage, streets, duct counts.
-STEP 3 - ASSIGN BILLING: For each segment, calculate boring + pulling + handhole + ground rod. For each splice, calculate FS codes.
-STEP 4 - RECONCILE: grand_total (segments + splices + unallocated) should approximately equal work order total_value.
+STEP 1 - READ THE WORK ORDER text below. Copy EVERY line item exactly. Extract job code (e.g., SLPH.01.006).
+STEP 2 - BUILD A RATE LOOKUP TABLE from the work order line items (code → rate).
+STEP 3 - READ THE MAP ${isTiled ? 'TILES' : 'IMAGES'} for physical layout, handholes, flowerpots, footage, streets, duct counts.
+STEP 4 - ASSIGN BILLING: For each segment, use the RATES FROM THE WORK ORDER to calculate costs.
+STEP 5 - CREATE SPLICE POINT RECORDS: Track location and type but NO billing (splicing is separate WO).
+STEP 6 - LOG DISCREPANCIES: If map counts differ from WO, note in discrepancies array.
 
 RATE CARD: ${rateCardId || 'vexus-la-tx-2026'}
 
-=== BILLING RATES ===
+=== UNIT CODES (Use EXACT codes from Work Order line items) ===
 
-Underground Boring (check map duct count callouts):
-- UG1: Directional bore 1-4 ducts (1.25" ID) = $8.00/LF
-- UG23: Directional bore 5 ducts (1.25" ID) = $9.50/LF
-- UG24: Directional bore 6 ducts (1.25" ID) = $10.50/LF
+CRITICAL: Use the EXACT unit codes that appear in the Work Order line items table.
+Do NOT substitute or simplify codes. If WO shows "UG04-M024", use "UG04-M024" not "UG04".
+Do NOT include rates or calculate totals - extract QUANTITIES and CODES only.
 
-Cable Pulling:
-- UG4: Pull up to 144ct armored/micro cable = $0.55/LF (branch/distribution runs)
-- UG28: Place 288-432ct armored fiber in duct = $1.00/LF (feeder on inter-section hub-to-hub runs)
+Underground Boring (from "PLACE X" callouts with arrows on map):
+- UG01: 1 duct bore
+- UG02: 2 duct bore
+- UG03: 3 duct bore
+- UG16: 4 duct bore (if present in WO)
 
-Handholes (assign to segment ENDING at this handhole):
-- UG10: 30x48x30 fiberglass/polycrete = $310.00/EA
-- UG11: 24x36x24 fiberglass/polycrete = $110.00/EA
-- UG12: Utility Box = $20.00/EA
-- UG13: Ground rod 5/8"x8' = $40.00/EA (one per handhole)
-- UG17: 17x30x18 HDPE handhole = $60.00/EA
-- UG18: 24x36x18 HDPE handhole = $125.00/EA
-- UG19: 30x48x18 HDPE handhole = $250.00/EA
-- UG20: Terminal Box (15x20x12) = $40.00/EA
-- UG27: 30x48x24 HDPE handhole = $210.00/EA
+Cable Pulling (match EXACT code from WO based on cable type):
+- Look at WO line items for the exact pull codes used (e.g., UG04-M024, UG04-M048, UG04-A024, UG28-288, etc.)
+- 024F cable: use the 024 variant code from WO (e.g., UG04-M024 or UG04-A024)
+- 048F cable: use the 048 variant code from WO (e.g., UG04-M048 or UG04-A048)
+- Larger cables: may use UG28-288, UG28-432, etc.
 
-Splicing (assign to splice_points work_items):
-- FS1: Fusion splice 1 fiber = $16.50/EA
-- FS2: Ring cut (mid-span terminals) = $275.00/EA
-- FS3: Test Fiber (OTDR/power meter) = $6.60/EA
-- FS4: ReEnter/Install Enclosure (end-of-line) = $137.50/EA
+Handholes (assign to segment ENDING at this structure):
+- UG12: Utility Box / Flowerpot (NO ground rod for these)
+- UG17: 17x30x18 HDPE handhole
+- UG18: 24x36x18 HDPE handhole
+- UG20: Terminal Box (15x20x12)
+- UG27: 30x48x24 HDPE Large Handhole
 
-=== HANDHOLE SIZE to TYPE ===
-- 15x20x12 = Terminal Box (TB) -> typically 1x4 splice
-- 17x30x18 = HDPE Handhole (B) -> 1x8 or 1x4
-- 30x48x24 = Large Handhole (LHH) -> F1/TYCO-D butt splice (432 fibers)
+Ground Rods:
+- UG13: Ground rod
+- ONE per HANDHOLE only (NOT for flowerpots/utility boxes)
 
-=== SPLICE BILLING FORMULAS ===
-1x4 mid-span: FS2 ($275) + FS1x2 ($33) + FS3x8 ($52.80) = $360.80
-1x4 end-of-line: FS4 ($137.50) + FS1x2 ($33) + FS3x8 ($52.80) = $223.30
-1x8 mid-span: FS2 ($275) + FS1x2 ($33) + FS3x8 ($52.80) = $360.80
-1x8 end-of-line: FS4 ($137.50) + FS1x2 ($33) + FS3x8 ($52.80) = $223.30
-F1 butt splice (432ct): FS4 ($137.50) + FS1x432 ($7128) = $7265.50
+IMPORTANT:
+1. Extract QUANTITIES and CODES only - do NOT calculate totals
+2. Use the EXACT unit codes as they appear in the WO (including suffixes like -M024, -A048, -288, etc.)
+3. Rates will be applied by the website based on selected rate card
 
-=== SECTION NAMING ===
-- Single letters (A,B,C,D,E,F) = hub/main handholes
-- Numbered (A01,A02,B01) = branch handholes from that hub
-- Segments: hub to branch (A to A01) or hub to hub (A to B for inter-section links)
+=== MAP READING RULES ===
+
+FOOTAGE NUMBERS:
+- RED NUMBERS = Conduit footage (billable boring) - read EXACTLY as printed
+- GREY NUMBERS = Slack loop storage footage (NOT billed separately)
+- RED TEXT STARTING WITH LETTERS = Labels, not footage (ignore for billing)
+
+SEGMENT ENDPOINTS:
+- Footage is point-to-point between ANY structures
+- Structures include: Handholes (get ground rods) AND Flowerpots (no ground rods)
+
+DUCT COUNT:
+- Look for "PLACE 1", "PLACE 2", "PLACE 3" callouts on map
+- Callouts have ARROWS pointing to their sections
+- PLACE 1 = UG01, PLACE 2 = UG02, PLACE 3 = UG03
+
+CABLE TYPE:
+- Cable runs have TEXT LABELS (024F, 048F, etc.)
+- Cable runs are COLOR CODED per LEGEND (top right of map)
+- Match cable type to the EXACT pull code from WO line items:
+  - 024F cable → find the 024 pull code in WO (e.g., UG04-M024 or UG04-A024)
+  - 048F cable → find the 048 pull code in WO (e.g., UG04-M048 or UG04-A048)
+- 024F typically feeds 1x4 splitters, 048F typically feeds 2x8 splitters
+
+SECTIONS:
+- Section letters (A, B, C, D, E, F) come from LABELS on the map
+- Single letters = Hub handholes with 2x8 splitters
+- Numbered (A01, A02, B01) = Terminal handholes with 1x4 splitters
+
+=== SPLICE POINTS (Track Only - NO Billing) ===
+
+Splicing is a SEPARATE work order. Create records for tracking but do NOT add work_items:
+
+1x4 Splice Locations (Terminal Boxes):
+- Has 2 splitters inside
+- Requires 8 power meter readings: SA1P1, SA1P2, SA1P3, SA1P4, SB1P5, SB1P6, SB1P7, SB1P8
+- 7 enclosure photos required
+- pm_readings array with status "pending" or "no_light"
+
+2x8 Splice Locations (Hub Handholes):
+- NO power meter testing required
+- 8 enclosure photos required
+
+TYCO-D / "9 SPLICES" at 30x48x24 LHH:
+- This splice work IS part of this job (48ct fiber for 2x8)
+- But billing goes to separate splice WO
+- Track location for workflow
 
 === POSITION TYPE ===
-- end-of-line: LAST handhole in a chain (no onward connections)
+- end-of-line: LAST structure in a chain (no onward connections)
 - mid-span: Has connections continuing through it
 
 `;
@@ -367,128 +457,185 @@ F1 butt splice (432ct): FS4 ($137.50) + FS1x432 ($7128) = $7265.50
 
   if (hasMapImages) {
     if (isTiled) {
-      prompt += `\nThe map tiles follow. Process in order:\n1. Read the LEGEND tile to learn all symbols\n2. Check the KEY MAP for section layout\n3. Scan each section tile R1C1 to R1C2 to R1C3 to R2C1 to R2C2 to R2C3\n4. For each tile, extract ALL handholes, footage numbers, streets, splice callouts, and duct count callouts\n5. Cross-reference across tile boundaries for features that span edges\n\n`;
+      prompt += `\nThe map tiles follow. Process in order:
+1. Read the LEGEND tile - learn cable colors (024F vs 048F) and all symbols
+2. Check the KEY MAP for section layout (A, B, C, D, E, F)
+3. Scan each section tile R1C1 → R1C2 → R1C3 → R2C1 → R2C2 → R2C3
+4. For each tile, extract:
+   - ALL handholes and flowerpots (both are segment endpoints)
+   - RED footage numbers (conduit - billable)
+   - GREY footage numbers (slack loops - note but don't bill separately)
+   - Cable type labels (024F/048F) with colors matching legend
+   - "PLACE X" callouts - follow arrows for duct count
+   - Street names
+5. Cross-reference across tile boundaries for features that span edges\n\n`;
     } else {
-      prompt += `\nMap images follow. Examine EVERY page for handholes, footage, streets, duct counts.\n\n`;
+      prompt += `\nMap images follow. Examine EVERY page for handholes, flowerpots, footage (red=billable, grey=slack), cable labels, duct counts.\n\n`;
     }
   }
 
   prompt += `REQUIRED JSON OUTPUT:
 {
   "project": {
-    "customer": "string",
-    "project_name": "string",
-    "po_number": "string",
-    "total_value": number,
-    "start_date": "YYYY-MM-DD",
-    "completion_date": "YYYY-MM-DD",
-    "rate_card_id": "${rateCardId || 'vexus-la-tx-2026'}"
+    "job_code": "extracted from WO (e.g., SLPH.01.006)",
+    "customer": "extracted from WO",
+    "project_name": "extracted from WO",
+    "po_number": "extracted from WO",
+    "wo_total": "extracted from WO (number) - for reference only"
   },
   "work_order_line_items": [
-    { "code": "UG1", "description": "Directional bore 1-4 ducts", "qty": 25000, "uom": "LF", "rate": 8.00, "total": 200000.00 },
-    { "code": "UG4", "description": "Pull cable up to 144ct", "qty": 25000, "uom": "LF", "rate": 0.55, "total": 13750.00 },
-    { "code": "UG13", "description": "Ground rod", "qty": 50, "uom": "EA", "rate": 40.00, "total": 2000.00 },
-    { "code": "FS1", "description": "Fusion splice 1 fiber", "qty": 500, "uom": "EA", "rate": 16.50, "total": 8250.00 }
+    { "code": "UG01", "description": "Direct Bore 1-1.25in", "qty": 22149, "uom": "LF" },
+    { "code": "UG04-M024", "description": "Pull 024F micro cable", "qty": 34083, "uom": "LF" },
+    "... copy ALL line items from WO, NO rates ..."
+  ],
+  "handholes": [
+    {
+      "id": "{job_code}-HH-001",
+      "label": "A (from map)",
+      "type": "17x30x18",
+      "code": "UG17",
+      "section": "A",
+      "street": "street name"
+    },
+    {
+      "id": "{job_code}-HH-002",
+      "label": "A01",
+      "type": "15x20x12",
+      "code": "UG20",
+      "section": "A",
+      "street": "street name"
+    }
+  ],
+  "flowerpots": [
+    {
+      "id": "{job_code}-FP-001",
+      "label": "FP near A01 (or map reference)",
+      "code": "UG12",
+      "section": "A",
+      "street": "street name"
+    }
+  ],
+  "ground_rods": [
+    {
+      "id": "{job_code}-GR-001",
+      "code": "UG13",
+      "handhole_id": "{job_code}-HH-001",
+      "handhole_label": "A"
+    }
   ],
   "segments": [
     {
-      "contractor_id": "A->A01",
+      "id": "{job_code}-SEG-001",
       "section": "A",
-      "from_handhole": "A",
-      "to_handhole": "A01",
-      "from_hh_size": "17x30x18",
-      "to_hh_size": "15x20x12",
+      "from_structure_id": "{job_code}-HH-001",
+      "from_label": "A",
+      "to_structure_id": "{job_code}-HH-002",
+      "to_label": "A01",
       "footage": 148,
       "street": "W Parish Rd",
-      "duct_count": 4,
-      "cable_type": "distribution",
-      "work_items": [
-        { "code": "UG1", "qty": 148, "rate": 8.00, "total": 1184.00, "desc": "Directional bore 4 ducts" },
-        { "code": "UG4", "qty": 148, "rate": 0.55, "total": 81.40, "desc": "Pull cable" },
-        { "code": "UG20", "qty": 1, "rate": 40.00, "total": 40.00, "desc": "Terminal Box at A01" },
-        { "code": "UG13", "qty": 1, "rate": 40.00, "total": 40.00, "desc": "Ground rod at A01" }
-      ],
-      "total_value": 1345.40
+      "bore": {
+        "code": "UG02",
+        "qty": 148,
+        "duct_count": 2
+      },
+      "pull": {
+        "code": "UG04-M024",
+        "qty": 148,
+        "cable_type": "024F"
+      }
     },
     {
-      "contractor_id": "A->B",
-      "section": "A-B",
-      "from_handhole": "A",
-      "to_handhole": "B",
-      "from_hh_size": "17x30x18",
-      "to_hh_size": "17x30x18",
-      "footage": 500,
-      "street": "Main St",
-      "duct_count": 4,
-      "cable_type": "feeder",
-      "work_items": [
-        { "code": "UG1", "qty": 500, "rate": 8.00, "total": 4000.00, "desc": "Directional bore 4 ducts" },
-        { "code": "UG28", "qty": 500, "rate": 1.00, "total": 500.00, "desc": "Place 432ct feeder cable" },
-        { "code": "UG17", "qty": 1, "rate": 60.00, "total": 60.00, "desc": "17x30x18 HDPE at B" },
-        { "code": "UG13", "qty": 1, "rate": 40.00, "total": 40.00, "desc": "Ground rod at B" }
-      ],
-      "total_value": 4600.00
+      "id": "{job_code}-SEG-002",
+      "from_structure_id": "{job_code}-HH-002",
+      "to_structure_id": "{job_code}-FP-001",
+      "footage": 30,
+      "street": "Road Crossing",
+      "bore": { "code": "UG01", "qty": 30, "duct_count": 1 },
+      "pull": { "code": "UG04-M024", "qty": 30, "cable_type": "024F" },
+      "notes": "Small road crossing - still gets unique ID"
     }
   ],
   "splice_points": [
     {
-      "contractor_id": "A01",
-      "location": "Handhole A01 (15x20x12)",
-      "handhole_type": "15x20x12",
+      "id": "{job_code}-SP-001",
+      "handhole_id": "{job_code}-HH-002",
+      "handhole_label": "A01",
       "splice_type": "1x4",
+      "splitter_count": 2,
       "position_type": "mid-span",
-      "fiber_count": 2,
-      "tray_count": 1,
-      "work_items": [
-        { "code": "FS2", "qty": 1, "rate": 275.00, "total": 275.00, "desc": "Ring cut (mid-span)" },
-        { "code": "FS1", "qty": 2, "rate": 16.50, "total": 33.00, "desc": "Fusion splice" },
-        { "code": "FS3", "qty": 8, "rate": 6.60, "total": 52.80, "desc": "Test fiber" }
+      "section": "A",
+      "splitters": [
+        {
+          "id": "{job_code}-SPL-001",
+          "name": "Splitter A",
+          "photo_id": null,
+          "readings": [
+            { "id": "{job_code}-PM-001", "port": "SA1P1", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-002", "port": "SA1P2", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-003", "port": "SA1P3", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-004", "port": "SA1P4", "value_dBm": null, "status": "pending" }
+          ]
+        },
+        {
+          "id": "{job_code}-SPL-002",
+          "name": "Splitter B",
+          "photo_id": null,
+          "readings": [
+            { "id": "{job_code}-PM-005", "port": "SB1P5", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-006", "port": "SB1P6", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-007", "port": "SB1P7", "value_dBm": null, "status": "pending" },
+            { "id": "{job_code}-PM-008", "port": "SB1P8", "value_dBm": null, "status": "pending" }
+          ]
+        }
       ],
-      "total_value": 360.80
+      "enclosure_photos_required": 7,
+      "pm_photos_required": 2,
+      "total_photos_required": 9,
+      "notes": "1x4: 2 splitters, 8 PM readings (4 per splitter), 1 photo per splitter. Splicing billed on separate WO."
     },
     {
-      "contractor_id": "F1-Entry",
-      "location": "Handhole ENTRY (30x48x24)",
-      "handhole_type": "30x48x24",
-      "splice_type": "F1",
-      "position_type": "end-of-line",
-      "fiber_count": 432,
-      "tray_count": 8,
-      "work_items": [
-        { "code": "FS4", "qty": 1, "rate": 137.50, "total": 137.50, "desc": "Install enclosure" },
-        { "code": "FS1", "qty": 432, "rate": 16.50, "total": 7128.00, "desc": "Fusion splice 432 fibers" }
-      ],
-      "total_value": 7265.50
+      "id": "{job_code}-SP-002",
+      "handhole_id": "{job_code}-HH-001",
+      "handhole_label": "A",
+      "splice_type": "2x8",
+      "splitter_count": 1,
+      "position_type": "hub",
+      "section": "A",
+      "pm_readings": [],
+      "enclosure_photos_required": 8,
+      "pm_photos_required": 0,
+      "total_photos_required": 8,
+      "notes": "2x8 hub - NO PM testing required. Splicing billed on separate WO."
     }
   ],
-  "unallocated_items": [
-    { "code": "XX", "description": "WO line item not assigned to a segment or splice", "qty": 1, "uom": "EA", "rate": 100.00, "total": 100.00 }
+  "discrepancies": [
+    { "type": "count_mismatch", "item": "Terminal Boxes", "wo_qty": 44, "map_qty": 48, "action": "using WO qty" }
   ],
   "sections": ["A", "B", "C", "D", "E", "F"],
-  "total_footage": number,
-  "total_segments": number,
-  "total_splice_points": number,
-  "segments_total": number,
-  "splices_total": number,
-  "unallocated_total": number,
-  "grand_total": number
+  "counts": {
+    "handholes": "count of handholes array",
+    "flowerpots": "count of flowerpots array",
+    "ground_rods": "count of ground_rods array (should = handholes)",
+    "segments": "count of segments array",
+    "splice_points": "count of splice_points array",
+    "total_bore_footage": "sum of all segment bore.qty",
+    "total_pull_footage": "sum of all segment pull.qty"
+  }
 }
 
 RULES:
-1. grand_total = segments_total + splices_total + unallocated_total
-2. segments_total = sum of all segment total_values
-3. splices_total = sum of all splice_point total_values
-4. unallocated_total = sum of all unallocated_items totals
-5. grand_total should approximately equal the work order project total_value
-6. Include EVERY segment from the map - do not skip any
-7. Read footage EXACTLY - do not estimate
-8. Handhole install costs go in the segment ending at that handhole
-9. Splice billing (FS1-FS4) goes in splice_points work_items NOT in segments
-10. work_order_line_items = faithful copy of EVERY line from the work order table
-11. unallocated_items = WO line items that cannot be assigned to specific segments or splices
-12. If the map shows PLACE X ducts use: 1-4 ducts=UG1, 5 ducts=UG23, 6 ducts=UG24
-13. Inter-section hub-to-hub runs (A to B, B to C, D to E, E to F) typically carry feeder cable (UG28 at $1.00/LF)
-14. Branch runs (A to A01, B to B03) carry distribution cable (UG4 at $0.55/LF)
+1. Extract QUANTITIES and CODES only - do NOT calculate rates or totals
+2. Use EXACT unit codes from WO (e.g., UG04-M024 not just UG04)
+3. Include EVERY segment from the map - do not skip any
+4. Read RED footage EXACTLY - do not estimate. GREY footage is slack loops.
+5. Handhole/flowerpot install goes in the segment ENDING at that structure
+6. Ground rod (UG13) ONLY for handholes, NOT for flowerpots
+7. splice_points have EMPTY work_items array (splicing is separate WO)
+8. work_order_line_items = faithful copy of codes/qty from WO (no rates)
+9. PLACE 1 = UG01, PLACE 2 = UG02, PLACE 3 = UG03 (duct count from callouts)
+10. Use job_code from WO to generate component IDs: {job_code}-SEG-001, etc.
+11. Log discrepancies between map and WO but use WO quantities
+12. Website will apply rates from selected rate card after extraction
 
 Return ONLY JSON. No markdown, no commentary.`;
 
