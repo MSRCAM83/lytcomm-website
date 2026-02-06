@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LYT Communications - Counter-Sign</title>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; }
+    .header { background: linear-gradient(135deg, #023E8A 0%, #0077B6 100%); color: #fff; padding: 20px 24px; }
+    .header h1 { font-size: 20px; margin-bottom: 2px; }
+    .header p { font-size: 13px; opacity: 0.85; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 20px 24px; margin-bottom: 16px; }
+    .card h2 { color: #0077B6; font-size: 16px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #00B4D8; }
+    .info-grid { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; }
+    .info-label { font-weight: 600; color: #64748b; font-size: 13px; }
+    .info-value { font-size: 14px; color: #1e293b; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-weight: 600; color: #475569; margin-bottom: 4px; font-size: 13px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; color: #1e293b; }
+    .form-group input:focus { outline: none; border-color: #0077B6; box-shadow: 0 0 0 3px rgba(0,119,182,0.1); }
+    .canvas-wrapper { border: 2px dashed #cbd5e1; border-radius: 8px; background: #fafbfc; position: relative; overflow: hidden; margin-bottom: 8px; }
+    .canvas-wrapper.active { border-color: #0077B6; border-style: solid; }
+    canvas { display: block; width: 100%; height: 120px; cursor: crosshair; touch-action: none; }
+    .canvas-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 14px; pointer-events: none; transition: opacity 0.3s; }
+    .canvas-hint.hidden { opacity: 0; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 22px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .btn-primary { background: #0077B6; color: #fff; }
+    .btn-primary:hover { background: #023E8A; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,119,182,0.3); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-outline { background: transparent; color: #64748b; border: 1px solid #e2e8f0; }
+    .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .status-box { padding: 14px 18px; border-radius: 8px; margin-top: 14px; font-size: 14px; line-height: 1.5; }
+    .status-box.loading { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .status-box.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status-box.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid #bfdbfe; border-top: 2.5px solid #1d4ed8; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    .action-badge { display: inline-block; background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>LYT Communications</h1>
+    <p>Document Counter-Signature</p>
+  </div>
+
+  <div class="container">
+    <!-- Loading State -->
+    <div id="loadingCard" class="card">
+      <h2>Loading Document</h2>
+      <div class="status-box loading">
+        <span class="spinner"></span> Retrieving document from Google Drive...
+      </div>
+    </div>
+
+    <!-- MSA Signing Form -->
+    <div id="msaForm" class="hidden">
+      <div class="card">
+        <span class="action-badge">ACTION REQUIRED</span>
+        <h2>Counter-Sign MSA Agreement</h2>
+        <p style="color:#64748b;font-size:13px;margin-bottom:14px;">The subcontractor has signed their section. Please sign the LYT Communications section below.</p>
+        <div class="info-grid" id="msaInfo"></div>
+      </div>
+
+      <div class="card">
+        <h2>Your Signature</h2>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="msaSignerName" placeholder="e.g., Matt Johnson" />
+        </div>
+        <div class="form-group">
+          <label>Your Title</label>
+          <input type="text" id="msaSignerTitle" placeholder="e.g., President" />
+        </div>
+        <div class="form-group">
+          <label>Draw Your Signature</label>
+          <div class="canvas-wrapper" id="msaCanvasWrapper">
+            <canvas id="msaCanvas" width="560" height="120"></canvas>
+            <span class="canvas-hint" id="msaHint">Sign here with mouse or finger</span>
+          </div>
+          <button class="btn btn-outline" onclick="clearCanvas('msa')" style="margin-top:6px;">Clear Signature</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="msaSubmitBtn" onclick="submitMSA()" disabled>Sign &amp; Save Document</button>
+        </div>
+        <div id="msaStatus"></div>
+      </div>
+    </div>
+
+    <!-- W-4 Employer Section Form -->
+    <div id="w4Form" class="hidden">
+      <div class="card">
+        <span class="action-badge">ACTION REQUIRED</span>
+        <h2>Complete W-4 Employer Section</h2>
+        <p style="color:#64748b;font-size:13px;margin-bottom:14px;">Fill in the employer information to complete the W-4 form.</p>
+        <div class="info-grid" id="w4Info"></div>
+      </div>
+
+      <div class="card">
+        <h2>Employer Information</h2>
+        <div class="form-group">
+          <label>Employer Identification Number (EIN)</label>
+          <input type="text" id="w4Ein" placeholder="XX-XXXXXXX" value="92-2826961" />
+        </div>
+        <div class="form-group">
+          <label>First Date of Employment</label>
+          <input type="date" id="w4HireDate" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="w4SubmitBtn" onclick="submitW4()">Save Employer Info</button>
+        </div>
+        <div id="w4Status"></div>
+      </div>
+    </div>
+
+    <!-- Success State -->
+    <div id="successCard" class="hidden">
+      <div class="card">
+        <h2 style="color:#16a34a;border-color:#22c55e;">Document Signed Successfully</h2>
+        <div class="status-box success" id="successMsg"></div>
+        <div class="btn-row" style="margin-top:16px;">
+          <a id="folderLink" class="btn btn-success" href="#" target="_blank">Open Folder in Google Drive</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorCard" class="hidden">
+      <div class="card">
+        <h2 style="color:#dc2626;border-color:#f87171;">Error</h2>
+        <div class="status-box error" id="errorMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Injected from server
+    const FILE_ID = '<?= fileId ?>';
+    const DOC_TYPE = '<?= docType ?>';
+    const FOLDER_URL = '<?= folderUrl ?>';
+
+    // State
+    let pdfBase64 = null;
+    let fileName = '';
+    const canvasState = { msa: { drawing: false, hasDrawn: false } };
+
+    // ===== SIGNATURE CANVAS =====
+    function initCanvas(prefix) {
+      const canvas = document.getElementById(prefix + 'Canvas');
+      const wrapper = document.getElementById(prefix + 'CanvasWrapper');
+      const hint = document.getElementById(prefix + 'Hint');
+      const ctx = canvas.getContext('2d');
+      const state = canvasState[prefix];
+
+      // Set actual canvas size
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      function getPos(e) {
+        const r = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        return { x: touch.clientX - r.left, y: touch.clientY - r.top };
+      }
+
+      function startDraw(e) {
+        e.preventDefault();
+        state.drawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      function draw(e) {
+        if (!state.drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        if (!state.hasDrawn) {
+          state.hasDrawn = true;
+          hint.classList.add('hidden');
+          wrapper.classList.add('active');
+          validateForm(prefix);
+        }
+      }
+
+      function stopDraw(e) {
+        if (state.drawing) {
+          state.drawing = false;
+          ctx.closePath();
+        }
+      }
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDraw);
+      canvas.addEventListener('mouseleave', stopDraw);
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', draw, { passive: false });
+      canvas.addEventListener('touchend', stopDraw);
+    }
+
+    function clearCanvas(prefix) {
+      const canvas = document.getElementById(prefix + 'Canvas');
+      const wrapper = document.getElementById(prefix + 'CanvasWrapper');
+      const hint = document.getElementById(prefix + 'Hint');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvasState[prefix].hasDrawn = false;
+      hint.classList.remove('hidden');
+      wrapper.classList.remove('active');
+      validateForm(prefix);
+    }
+
+    function getCanvasDataUrl(prefix) {
+      return document.getElementById(prefix + 'Canvas').toDataURL('image/png');
+    }
+
+    function validateForm(prefix) {
+      if (prefix === 'msa') {
+        const name = document.getElementById('msaSignerName').value.trim();
+        const title = document.getElementById('msaSignerTitle').value.trim();
+        const hasSig = canvasState.msa.hasDrawn;
+        document.getElementById('msaSubmitBtn').disabled = !(name && title && hasSig);
+      }
+    }
+
+    // ===== LOAD DOCUMENT =====
+    function loadDocument() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result || !result.success) {
+            showError('Failed to load document: ' + (result ? result.error : 'Unknown error'));
+            return;
+          }
+          pdfBase64 = result.base64;
+          fileName = result.fileName || 'Document';
+          document.getElementById('loadingCard').classList.add('hidden');
+
+          if (DOC_TYPE === 'msa') {
+            showMSAForm(result);
+          } else if (DOC_TYPE === 'w4') {
+            showW4Form(result);
+          } else {
+            showError('Unknown document type: ' + DOC_TYPE);
+          }
+        })
+        .withFailureHandler(function(err) {
+          showError('Server error: ' + err.message);
+        })
+        .getFileForSigning(FILE_ID);
+    }
+
+    function showMSAForm(result) {
+      const info = document.getElementById('msaInfo');
+      info.innerHTML = '<span class="info-label">Document</span><span class="info-value">' + fileName + '</span>' +
+        '<span class="info-label">Type</span><span class="info-value">MSA Counter-Signature (LYT Side)</span>';
+      document.getElementById('msaForm').classList.remove('hidden');
+      initCanvas('msa');
+
+      // Validate on input
+      document.getElementById('msaSignerName').addEventListener('input', function() { validateForm('msa'); });
+      document.getElementById('msaSignerTitle').addEventListener('input', function() { validateForm('msa'); });
+    }
+
+    function showW4Form(result) {
+      const info = document.getElementById('w4Info');
+      info.innerHTML = '<span class="info-label">Document</span><span class="info-value">' + fileName + '</span>' +
+        '<span class="info-label">Type</span><span class="info-value">W-4 Employer Section</span>';
+      document.getElementById('w4Form').classList.remove('hidden');
+      // Set default hire date to today
+      document.getElementById('w4HireDate').value = new Date().toISOString().split('T')[0];
+    }
+
+    // ===== SUBMIT MSA COUNTER-SIGNATURE =====
+    async function submitMSA() {
+      const btn = document.getElementById('msaSubmitBtn');
+      const statusDiv = document.getElementById('msaStatus');
+      btn.disabled = true;
+      btn.textContent = 'Signing...';
+      statusDiv.innerHTML = '<div class="status-box loading"><span class="spinner"></span> Applying signature and saving...</div>';
+
+      try {
+        const signerName = document.getElementById('msaSignerName').value.trim();
+        const signerTitle = document.getElementById('msaSignerTitle').value.trim();
+        const signatureDataUrl = getCanvasDataUrl('msa');
+        const signDate = new Date().toLocaleDateString('en-US');
+        const signTimestamp = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+
+        // Load PDF with pdf-lib
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const pdfBytes = Uint8Array.from(atob(pdfBase64), function(c) { return c.charCodeAt(0); });
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const pages = pdfDoc.getPages();
+        const lastPage = pages[pages.length - 1];
+
+        // Embed signature image
+        const sigBase64 = signatureDataUrl.split('base64,')[1];
+        const sigBytes = Uint8Array.from(atob(sigBase64), function(c) { return c.charCodeAt(0); });
+        const sigImage = await pdfDoc.embedPng(sigBytes);
+
+        // ===== LYT COMMUNICATIONS SIGNATURE SECTION =====
+        // Position: Right side of last page (subcontractor is on the left at x~100)
+        // ADJUST THESE COORDINATES if the layout doesn't match your MSA template
+        const companyX = 330;
+
+        // Company signature image
+        lastPage.drawImage(sigImage, {
+          x: companyX, y: 390, width: 150, height: 35,
+        });
+
+        // Verification text
+        lastPage.drawText('e-Signed: ' + signTimestamp, {
+          x: companyX, y: 383, size: 5, font: font, color: rgb(0.4, 0.4, 0.4),
+        });
+
+        // Printed name
+        lastPage.drawText(signerName, {
+          x: companyX + 30, y: 358, size: 11, font: font, color: rgb(0, 0, 0),
+        });
+
+        // Title
+        lastPage.drawText(signerTitle, {
+          x: companyX, y: 331, size: 11, font: font, color: rgb(0, 0, 0),
+        });
+
+        // Date
+        lastPage.drawText(signDate, {
+          x: companyX, y: 305, size: 11, font: font, color: rgb(0, 0, 0),
+        });
+
+        // Save modified PDF
+        const modifiedBytes = await pdfDoc.save();
+        const modifiedBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(modifiedBytes)));
+
+        // Upload counter-signed version
+        google.script.run
+          .withSuccessHandler(function(saveResult) {
+            if (saveResult && saveResult.success) {
+              showSuccess('MSA has been counter-signed by ' + signerName + '.', saveResult.folderUrl || FOLDER_URL);
+            } else {
+              statusDiv.innerHTML = '<div class="status-box error">Failed to save: ' + (saveResult ? saveResult.error : 'Unknown') + '</div>';
+              btn.disabled = false;
+              btn.textContent = 'Sign & Save Document';
+            }
+          })
+          .withFailureHandler(function(err) {
+            statusDiv.innerHTML = '<div class="status-box error">Save error: ' + err.message + '</div>';
+            btn.disabled = false;
+            btn.textContent = 'Sign & Save Document';
+          })
+          .saveCounterSignedFile(FILE_ID, modifiedBase64, signerName);
+
+      } catch (err) {
+        statusDiv.innerHTML = '<div class="status-box error">Error: ' + err.message + '</div>';
+        btn.disabled = false;
+        btn.textContent = 'Sign & Save Document';
+      }
+    }
+
+    // ===== SUBMIT W-4 EMPLOYER SECTION =====
+    async function submitW4() {
+      const btn = document.getElementById('w4SubmitBtn');
+      const statusDiv = document.getElementById('w4Status');
+      const ein = document.getElementById('w4Ein').value.trim();
+      const hireDate = document.getElementById('w4HireDate').value;
+
+      if (!ein) {
+        statusDiv.innerHTML = '<div class="status-box error">Please enter the EIN.</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      statusDiv.innerHTML = '<div class="status-box loading"><span class="spinner"></span> Updating W-4 employer section...</div>';
+
+      try {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const pdfBytes = Uint8Array.from(atob(pdfBase64), function(c) { return c.charCodeAt(0); });
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const pages = pdfDoc.getPages();
+        const firstPage = pages[0];
+
+        // W-4 Employer Section coordinates (bottom of page 1)
+        // These positions are for the standard IRS W-4 (Rev. Dec 2020+)
+        // EIN field - right side of employer section
+        if (ein) {
+          firstPage.drawText(ein, {
+            x: 406, y: 49, size: 10, font: font, color: rgb(0, 0, 0),
+          });
+        }
+
+        // First date of employment
+        if (hireDate) {
+          const formatted = new Date(hireDate + 'T12:00:00').toLocaleDateString('en-US');
+          firstPage.drawText(formatted, {
+            x: 406, y: 70, size: 10, font: font, color: rgb(0, 0, 0),
+          });
+        }
+
+        // Save modified PDF
+        const modifiedBytes = await pdfDoc.save();
+        const modifiedBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(modifiedBytes)));
+
+        google.script.run
+          .withSuccessHandler(function(saveResult) {
+            if (saveResult && saveResult.success) {
+              showSuccess('W-4 employer section has been completed.', saveResult.folderUrl || FOLDER_URL);
+            } else {
+              statusDiv.innerHTML = '<div class="status-box error">Failed to save: ' + (saveResult ? saveResult.error : 'Unknown') + '</div>';
+              btn.disabled = false;
+              btn.textContent = 'Save Employer Info';
+            }
+          })
+          .withFailureHandler(function(err) {
+            statusDiv.innerHTML = '<div class="status-box error">Save error: ' + err.message + '</div>';
+            btn.disabled = false;
+            btn.textContent = 'Save Employer Info';
+          })
+          .saveCounterSignedFile(FILE_ID, modifiedBase64, 'LYT Communications (Employer)');
+
+      } catch (err) {
+        statusDiv.innerHTML = '<div class="status-box error">Error: ' + err.message + '</div>';
+        btn.disabled = false;
+        btn.textContent = 'Save Employer Info';
+      }
+    }
+
+    // ===== UI HELPERS =====
+    function showSuccess(message, folderUrl) {
+      document.getElementById('msaForm').classList.add('hidden');
+      document.getElementById('w4Form').classList.add('hidden');
+      document.getElementById('successMsg').textContent = message;
+      if (folderUrl) {
+        document.getElementById('folderLink').href = folderUrl;
+      }
+      document.getElementById('successCard').classList.remove('hidden');
+    }
+
+    function showError(message) {
+      document.getElementById('loadingCard').classList.add('hidden');
+      document.getElementById('errorMsg').textContent = message;
+      document.getElementById('errorCard').classList.remove('hidden');
+    }
+
+    // ===== INIT =====
+    if (!FILE_ID || !DOC_TYPE) {
+      showError('Missing required parameters. This link may be invalid.');
+    } else {
+      loadDocument();
+    }
+  </script>
+</body>
+</html>

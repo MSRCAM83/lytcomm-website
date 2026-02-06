@@ -530,309 +530,420 @@ export async function fillMSA(data, signatureDataUrl, signatureInfo = {}) {
   }
 }
 
-// v2.90 - Professional PDF layout with bordered sections
+// v3.0 - Professional PDF layout with LYT branding, proper text wrapping, page numbers
 export async function createFormPdf(title, content, signatureDataUrl, signatureInfo = {}, attachmentImage = null) {
   try {
     const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage([612, 792]); // Letter size
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    
-    const { width, height } = page.getSize();
-    let y = height - 40;
+
+    // Page dimensions
+    const pageWidth = 612;
+    const pageHeight = 792;
     const leftMargin = 50;
-    const rightMargin = width - 50;
+    const rightMargin = pageWidth - 50;
     const contentWidth = rightMargin - leftMargin;
-    
-    // Colors
+    const contentBottom = 65;
+
+    // LYT Brand Colors
     const lytBlue = rgb(0, 0.467, 0.714);
-    const darkGray = rgb(0.2, 0.2, 0.2);
+    const lytTeal = rgb(0, 0.706, 0.847);
+    const lytDarkBlue = rgb(0.008, 0.243, 0.541);
+    const white = rgb(1, 1, 1);
+    const darkText = rgb(0.12, 0.12, 0.12);
     const medGray = rgb(0.4, 0.4, 0.4);
-// eslint-disable-next-line no-unused-vars
-    const lightGray = rgb(0.85, 0.85, 0.85);
-    const borderGray = rgb(0.7, 0.7, 0.7);
-    
-    // Helper to check if we need a new page
-    const checkNewPage = (needed) => {
-      if (y - needed < 60) {
-        // Add footer to current page
-        page.drawText('LYT Communications, LLC - Confidential', {
-          x: leftMargin, y: 25, size: 8, font: font, color: medGray,
-        });
-        // Create new page
-        page = pdfDoc.addPage([612, 792]);
-        y = height - 40;
+    const lightBg = rgb(0.965, 0.975, 0.99);
+    const borderColor = rgb(0.80, 0.84, 0.90);
+    const checkGreen = rgb(0.18, 0.65, 0.25);
+
+    let page = pdfDoc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - 40;
+
+    // Accurate word wrapping using font metrics
+    const wrapText = (text, fontSize, maxWidth, useFont) => {
+      if (!text) return [''];
+      useFont = useFont || font;
+      const lines = [];
+      // Split on newlines first
+      const rawLines = String(text).split('\n');
+      for (const rawLine of rawLines) {
+        const words = rawLine.split(' ');
+        let currentLine = '';
+        for (const word of words) {
+          if (!word) continue;
+          const testLine = currentLine ? currentLine + ' ' + word : word;
+          const testWidth = useFont.widthOfTextAtSize(testLine, fontSize);
+          if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+        else if (rawLine === '') lines.push('');
+      }
+      return lines.length ? lines : [''];
+    };
+
+    // Create new page
+    const newPage = () => {
+      page = pdfDoc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - 40;
+    };
+
+    // Ensure space available, creates new page if needed
+    const ensureSpace = (needed) => {
+      if (y - needed < contentBottom) {
+        newPage();
         return true;
       }
       return false;
     };
-    
-    // Draw bordered box helper
-// eslint-disable-next-line no-unused-vars
-    const drawBox = (boxY, boxHeight, fillColor = null) => {
-      if (fillColor) {
-        page.drawRectangle({
-          x: leftMargin, y: boxY - boxHeight, width: contentWidth, height: boxHeight,
-          color: fillColor,
-        });
-      }
-      page.drawRectangle({
-        x: leftMargin, y: boxY - boxHeight, width: contentWidth, height: boxHeight,
-        borderColor: borderGray, borderWidth: 0.5,
-      });
-    };
-    
-    // ===== TITLE =====
-    page.drawText(title.toUpperCase(), {
-      x: leftMargin, y: y, size: 14, font: fontBold, color: lytBlue,
+
+    // ===== HEADER (first page only) =====
+    // Dark blue header bar
+    page.drawRectangle({
+      x: 0, y: pageHeight - 68, width: pageWidth, height: 68,
+      color: lytDarkBlue,
     });
-    y -= 8;
+    // Teal accent strip
+    page.drawRectangle({
+      x: 0, y: pageHeight - 72, width: pageWidth, height: 4,
+      color: lytTeal,
+    });
+    // Company name
+    page.drawText('LYT COMMUNICATIONS', {
+      x: leftMargin, y: pageHeight - 32, size: 20, font: fontBold, color: white,
+    });
+    // Company details
+    page.drawText('12130 State Highway 3, Webster, TX 77598   |   (832) 850-3887   |   info@lytcomm.com', {
+      x: leftMargin, y: pageHeight - 52, size: 8, font: font, color: rgb(0.72, 0.82, 0.98),
+    });
+
+    y = pageHeight - 95;
+
+    // ===== DOCUMENT TITLE =====
+    page.drawText(title.toUpperCase(), {
+      x: leftMargin, y: y, size: 15, font: fontBold, color: lytBlue,
+    });
+    y -= 6;
+    // Teal underline
     page.drawLine({
       start: { x: leftMargin, y: y }, end: { x: rightMargin, y: y },
-      thickness: 2, color: lytBlue,
+      thickness: 2.5, color: lytTeal,
     });
-    y -= 20;
-    
+    y -= 4;
+    // Thin separator
+    page.drawLine({
+      start: { x: leftMargin, y: y }, end: { x: rightMargin, y: y },
+      thickness: 0.5, color: borderColor,
+    });
+    y -= 16;
+
     // ===== CONTENT SECTIONS =====
     if (Array.isArray(content)) {
       for (const section of content) {
-        // Skip "ELECTRONIC SIGNATURE" and "ELECTRONIC RECORD" sections only when a signature
-        // is present (since the signature block already renders IP/timestamp underneath).
-        // For unsigned PDFs, keep these sections so the audit trail is preserved.
+        // Skip electronic signature/record sections when signature is present
         if (signatureDataUrl && section.title && (
           section.title.toUpperCase().includes('ELECTRONIC SIGNATURE') ||
           section.title.toUpperCase().includes('ELECTRONIC RECORD')
         )) {
           continue;
         }
-        
-        // Calculate section height
-        let sectionHeight = 0;
-        if (section.title) sectionHeight += 20;
-        if (section.fields) sectionHeight += section.fields.length * 16 + 8;
-        if (section.checkboxes) sectionHeight += section.checkboxes.length * 16 + 8;
-        if (section.paragraphs) sectionHeight += section.paragraphs.length * 28 + 8;
-        if (section.table) sectionHeight += (section.table.rows.length + 1) * 18 + 10;
-        sectionHeight = Math.max(sectionHeight, 30);
-        
-        checkNewPage(sectionHeight + 10);
-        
-// eslint-disable-next-line no-unused-vars
-        const sectionStartY = y;
-        
-        // Section title bar
+
+        // Pre-calculate section height for smarter page breaks
+        let estimatedHeight = 0;
+        if (section.title) estimatedHeight += 28;
+        if (section.fields) estimatedHeight += section.fields.length * 20 + 8;
+        if (section.checkboxes) estimatedHeight += section.checkboxes.length * 22 + 8;
+        if (section.paragraphs) {
+          for (const para of section.paragraphs) {
+            const lines = wrapText(para, 9, contentWidth - 28);
+            estimatedHeight += lines.length * 14 + 10;
+          }
+        }
+        if (section.table) estimatedHeight += ((section.table.rows?.length || 0) + 1) * 20 + 10;
+
+        // Try to keep small sections together on one page
+        const maxPageContent = pageHeight - 40 - contentBottom;
+        if (estimatedHeight > 0 && estimatedHeight < maxPageContent) {
+          ensureSpace(Math.min(estimatedHeight + 10, 220));
+        }
+
+        // ---- Section Title Bar ----
         if (section.title) {
+          ensureSpace(28);
+          // Dark blue title bar
           page.drawRectangle({
-            x: leftMargin, y: y - 18, width: contentWidth, height: 18,
-            color: rgb(0.95, 0.97, 1),
-          });
-          page.drawRectangle({
-            x: leftMargin, y: y - 18, width: contentWidth, height: 18,
-            borderColor: borderGray, borderWidth: 0.5,
+            x: leftMargin, y: y - 22, width: contentWidth, height: 22,
+            color: lytDarkBlue,
           });
           page.drawText(section.title, {
-            x: leftMargin + 8, y: y - 13, size: 10, font: fontBold, color: lytBlue,
+            x: leftMargin + 12, y: y - 16, size: 9.5, font: fontBold, color: white,
           });
-          y -= 22;
+          y -= 26;
         }
-        
-        // Fields in a nice two-column layout when possible
+
+        // ---- Fields ----
         if (section.fields && section.fields.length > 0) {
-          const fieldStartY = y;
-          let fieldY = y - 4;
-          
+          const rowHeight = 20;
+
           for (let i = 0; i < section.fields.length; i++) {
             const field = section.fields[i];
-            checkNewPage(20);
-            
-            // Label
-            page.drawText(field.label + ':', {
-              x: leftMargin + 10, y: fieldY, size: 9, font: fontBold, color: darkGray, maxWidth: 170,
+            ensureSpace(rowHeight);
+
+            const rowY = y - rowHeight;
+
+            // Alternating row background
+            if (i % 2 === 0) {
+              page.drawRectangle({
+                x: leftMargin, y: rowY, width: contentWidth, height: rowHeight,
+                color: lightBg,
+              });
+            }
+            // Row bottom border
+            page.drawLine({
+              start: { x: leftMargin, y: rowY },
+              end: { x: rightMargin, y: rowY },
+              thickness: 0.3, color: borderColor,
+            });
+
+            // Label (bold, muted)
+            const labelText = (field.label || '') + ':';
+            page.drawText(labelText, {
+              x: leftMargin + 12, y: rowY + 6, size: 9, font: fontBold, color: medGray,
+              maxWidth: 165,
             });
             // Value
-            const valueX = leftMargin + 185;
-            page.drawText(String(field.value || 'N/A'), {
-              x: valueX, y: fieldY, size: 9, font: font, color: darkGray, maxWidth: contentWidth - 195,
+            const valueStr = String(field.value ?? 'N/A');
+            page.drawText(valueStr, {
+              x: leftMargin + 182, y: rowY + 6, size: 9, font: font, color: darkText,
+              maxWidth: contentWidth - 194,
             });
-            fieldY -= 16;
+
+            y = rowY;
           }
-          y = fieldY - 4;
-          
-          // Draw border around fields section
-          const fieldsHeight = fieldStartY - y;
-          page.drawRectangle({
-            x: leftMargin, y: y, width: contentWidth, height: fieldsHeight,
-            borderColor: borderGray, borderWidth: 0.5,
+          // Section bottom border
+          page.drawLine({
+            start: { x: leftMargin, y: y },
+            end: { x: rightMargin, y: y },
+            thickness: 0.7, color: borderColor,
           });
+          y -= 6;
         }
-        
-        // Checkboxes
+
+        // ---- Checkboxes ----
         if (section.checkboxes && section.checkboxes.length > 0) {
-          const cbStartY = y;
-          let cbY = y - 6;
-          
-          for (const cb of section.checkboxes) {
-            checkNewPage(18);
-            const mark = cb.checked ? '[X]' : '[ ]';
-            page.drawText(mark + ' ' + cb.label, {
-              x: leftMargin + 10, y: cbY, size: 9, font: font, color: darkGray, maxWidth: contentWidth - 20,
-            });
-            cbY -= 16;
-          }
-          y = cbY - 4;
-          
-          // Border around checkboxes
-          const cbHeight = cbStartY - y;
-          page.drawRectangle({
-            x: leftMargin, y: y, width: contentWidth, height: cbHeight,
-            borderColor: borderGray, borderWidth: 0.5,
-          });
-        }
-        
-        // Paragraphs
-        if (section.paragraphs && section.paragraphs.length > 0) {
-          const paraStartY = y;
-          let paraY = y - 8;
-          
-          for (const para of section.paragraphs) {
-            checkNewPage(30);
-            // Simple word wrap
-            const words = para.split(' ');
-            let line = '';
-            const maxChars = 85;
-            
-            for (const word of words) {
-              const testLine = line + (line ? ' ' : '') + word;
-              if (testLine.length > maxChars) {
-                page.drawText(line, {
-                  x: leftMargin + 10, y: paraY, size: 9, font: font, color: darkGray,
-                });
-                paraY -= 12;
-                line = word;
-              } else {
-                line = testLine;
-              }
-            }
-            if (line) {
-              page.drawText(line, {
-                x: leftMargin + 10, y: paraY, size: 9, font: font, color: darkGray,
+          const cbRowHeight = 22;
+
+          for (let i = 0; i < section.checkboxes.length; i++) {
+            const cb = section.checkboxes[i];
+            ensureSpace(cbRowHeight);
+
+            const rowY = y - cbRowHeight;
+
+            // Subtle alternating background
+            if (i % 2 === 0) {
+              page.drawRectangle({
+                x: leftMargin, y: rowY, width: contentWidth, height: cbRowHeight,
+                color: lightBg,
               });
-              paraY -= 16;
+            }
+
+            // Checkbox
+            const boxSize = 11;
+            const boxX = leftMargin + 12;
+            const boxY = rowY + 5.5;
+
+            if (cb.checked) {
+              // Filled checkbox
+              page.drawRectangle({
+                x: boxX, y: boxY, width: boxSize, height: boxSize,
+                color: checkGreen, borderColor: checkGreen, borderWidth: 0.5,
+              });
+              // White checkmark lines
+              page.drawLine({
+                start: { x: boxX + 2, y: boxY + 5 },
+                end: { x: boxX + 4.5, y: boxY + 2.5 },
+                thickness: 1.8, color: white,
+              });
+              page.drawLine({
+                start: { x: boxX + 4.5, y: boxY + 2.5 },
+                end: { x: boxX + 9, y: boxY + 8.5 },
+                thickness: 1.8, color: white,
+              });
+            } else {
+              // Empty checkbox
+              page.drawRectangle({
+                x: boxX, y: boxY, width: boxSize, height: boxSize,
+                borderColor: borderColor, borderWidth: 1, color: white,
+              });
+            }
+
+            // Label
+            page.drawText(cb.label || '', {
+              x: leftMargin + 30, y: rowY + 7, size: 9, font: font, color: darkText,
+              maxWidth: contentWidth - 42,
+            });
+
+            y = rowY;
+          }
+          // Bottom border
+          page.drawLine({
+            start: { x: leftMargin, y: y },
+            end: { x: rightMargin, y: y },
+            thickness: 0.5, color: borderColor,
+          });
+          y -= 6;
+        }
+
+        // ---- Paragraphs (with proper wrapping) ----
+        if (section.paragraphs && section.paragraphs.length > 0) {
+          // Light left accent bar for paragraph blocks
+          const paraStartY = y;
+
+          for (const para of section.paragraphs) {
+            const lines = wrapText(para, 9, contentWidth - 28);
+
+            for (const line of lines) {
+              ensureSpace(16);
+              page.drawText(line, {
+                x: leftMargin + 14, y: y - 13, size: 9, font: font, color: darkText,
+              });
+              y -= 14;
+            }
+            y -= 4; // gap between paragraphs
+          }
+
+          // Draw left accent bar from paraStartY down to y (only on same page)
+          if (paraStartY - y > 10 && paraStartY > contentBottom) {
+            const barTop = Math.min(paraStartY, pageHeight - 40);
+            const barBottom = Math.max(y + 2, contentBottom);
+            if (barTop > barBottom) {
+              page.drawRectangle({
+                x: leftMargin, y: barBottom, width: 3, height: barTop - barBottom,
+                color: lytTeal,
+              });
             }
           }
-          y = paraY - 4;
-          
-          // Border
-          const paraHeight = paraStartY - y;
-          page.drawRectangle({
-            x: leftMargin, y: y, width: contentWidth, height: paraHeight,
-            borderColor: borderGray, borderWidth: 0.5,
-          });
+          y -= 4;
         }
-        
-        // Table (for rate card, etc.)
+
+        // ---- Table ----
         if (section.table && section.table.rows) {
-          const tableStartY = y;
-          let tableY = y - 4;
-          const colWidths = section.table.colWidths || [200, 80, 80];
-          
+          const colWidths = section.table.colWidths || [200, 100, 100];
+          const tableRowHeight = 20;
+
           // Header row
           if (section.table.headers) {
-            let colX = leftMargin + 5;
+            ensureSpace(tableRowHeight);
+            page.drawRectangle({
+              x: leftMargin, y: y - tableRowHeight, width: contentWidth, height: tableRowHeight,
+              color: lytDarkBlue,
+            });
+            let colX = leftMargin + 8;
             for (let i = 0; i < section.table.headers.length; i++) {
               page.drawText(section.table.headers[i], {
-                x: colX, y: tableY, size: 8, font: fontBold, color: darkGray,
+                x: colX, y: y - 14, size: 8, font: fontBold, color: white,
               });
               colX += colWidths[i] || 100;
             }
-            tableY -= 14;
-            page.drawLine({
-              start: { x: leftMargin, y: tableY + 4 }, end: { x: rightMargin, y: tableY + 4 },
-              thickness: 0.5, color: borderGray,
-            });
+            y -= tableRowHeight;
           }
-          
+
           // Data rows
-          for (const row of section.table.rows) {
-            checkNewPage(16);
-            let colX = leftMargin + 5;
+          for (let r = 0; r < section.table.rows.length; r++) {
+            const row = section.table.rows[r];
+            ensureSpace(tableRowHeight);
+
+            const rowY = y - tableRowHeight;
+
+            // Alternating row colors
+            if (r % 2 === 0) {
+              page.drawRectangle({
+                x: leftMargin, y: rowY, width: contentWidth, height: tableRowHeight,
+                color: lightBg,
+              });
+            }
+
+            let colX = leftMargin + 8;
             for (let i = 0; i < row.length; i++) {
               page.drawText(String(row[i] || ''), {
-                x: colX, y: tableY, size: 8, font: font, color: darkGray, maxWidth: (colWidths[i] || 100) - 5,
+                x: colX, y: rowY + 6, size: 8, font: font, color: darkText,
+                maxWidth: (colWidths[i] || 100) - 10,
               });
               colX += colWidths[i] || 100;
             }
-            tableY -= 14;
+
+            // Row border
+            page.drawLine({
+              start: { x: leftMargin, y: rowY },
+              end: { x: rightMargin, y: rowY },
+              thickness: 0.3, color: borderColor,
+            });
+
+            y = rowY;
           }
-          y = tableY - 4;
-          
-          // Border
-          const tableHeight = tableStartY - y;
-          page.drawRectangle({
-            x: leftMargin, y: y, width: contentWidth, height: tableHeight,
-            borderColor: borderGray, borderWidth: 0.5,
+          // Table bottom border
+          page.drawLine({
+            start: { x: leftMargin, y: y },
+            end: { x: rightMargin, y: y },
+            thickness: 0.7, color: lytBlue,
           });
+          y -= 6;
         }
-        
-        y -= 8; // Space between sections
+
+        y -= 10; // Space between sections
       }
     }
-    
+
     // ===== EMBEDDED IMAGE (Voided Check) =====
     if (attachmentImage) {
       try {
-        console.log('Attempting to embed attachment image...');
         let imgData = attachmentImage.data || attachmentImage;
-        
-        // Make sure we have valid data
-        if (!imgData) {
-          console.error('No image data provided');
-        } else {
+
+        if (imgData) {
           const imgBase64 = imgData.includes('base64,') ? imgData.split('base64,')[1] : imgData;
           const imgBytes = Uint8Array.from(atob(imgBase64), c => c.charCodeAt(0));
-          
-          const mimeType = attachmentImage.mimeType || 
-            (imgData.includes('image/png') ? 'image/png' : 
+
+          const mimeType = attachmentImage.mimeType ||
+            (imgData.includes('image/png') ? 'image/png' :
              imgData.includes('image/jpeg') ? 'image/jpeg' : 'image/jpeg');
-          
+
           let imgEmbed;
           if (mimeType.includes('png')) {
             imgEmbed = await pdfDoc.embedPng(imgBytes);
           } else if (mimeType.includes('pdf')) {
-            // Can't embed PDF as image - note it
-            checkNewPage(30);
+            ensureSpace(30);
             page.drawText('VOIDED CHECK: See attached PDF file', {
-              x: leftMargin + 10, y: y - 15, size: 9, font: font, color: darkGray,
+              x: leftMargin + 14, y: y - 15, size: 9, font: font, color: darkText,
             });
             y -= 35;
           } else {
             imgEmbed = await pdfDoc.embedJpg(imgBytes);
           }
-          
+
           if (imgEmbed) {
-            checkNewPage(180);
-            
+            ensureSpace(180);
+
             // Section header
             page.drawRectangle({
-              x: leftMargin, y: y - 18, width: contentWidth, height: 18,
-              color: rgb(0.95, 0.97, 1),
-            });
-            page.drawRectangle({
-              x: leftMargin, y: y - 18, width: contentWidth, height: 18,
-              borderColor: borderGray, borderWidth: 0.5,
+              x: leftMargin, y: y - 22, width: contentWidth, height: 22,
+              color: lytDarkBlue,
             });
             page.drawText('VOIDED CHECK / BANK VERIFICATION', {
-              x: leftMargin + 8, y: y - 13, size: 10, font: fontBold, color: lytBlue,
+              x: leftMargin + 12, y: y - 16, size: 9.5, font: fontBold, color: white,
             });
-            y -= 25;
-            
+            y -= 28;
+
             // Scale image
             const maxImgWidth = contentWidth - 20;
             const maxImgHeight = 150;
             const dims = imgEmbed.scale(1);
             let imgWidth = dims.width;
             let imgHeight = dims.height;
-            
+
             if (imgWidth > maxImgWidth) {
               const scale = maxImgWidth / imgWidth;
               imgWidth = maxImgWidth;
@@ -843,84 +954,114 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
               imgHeight = maxImgHeight;
               imgWidth *= scale;
             }
-            
+
             // Draw image with border
-            const imgBoxHeight = imgHeight + 20;
+            const imgBoxHeight = imgHeight + 16;
             page.drawRectangle({
               x: leftMargin, y: y - imgBoxHeight, width: contentWidth, height: imgBoxHeight,
-              borderColor: borderGray, borderWidth: 0.5,
+              borderColor: borderColor, borderWidth: 0.5,
             });
             page.drawImage(imgEmbed, {
-              x: leftMargin + 10, y: y - imgHeight - 10, width: imgWidth, height: imgHeight,
+              x: leftMargin + 10, y: y - imgHeight - 8, width: imgWidth, height: imgHeight,
             });
             y -= imgBoxHeight + 10;
-            
-            console.log('Image embedded successfully');
           }
         }
       } catch (imgErr) {
         console.error('Error embedding attachment:', imgErr);
         page.drawText('[Image could not be embedded: ' + imgErr.message + ']', {
-          x: leftMargin + 10, y: y - 15, size: 8, font: font, color: rgb(0.7, 0.3, 0.3),
+          x: leftMargin + 12, y: y - 15, size: 8, font: font, color: rgb(0.7, 0.2, 0.2),
         });
         y -= 25;
       }
     }
-    
+
     // ===== SIGNATURE BLOCK =====
     if (signatureDataUrl) {
       try {
-        checkNewPage(100);
-        
+        ensureSpace(110);
+
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
-          
-          y -= 10;
-          
-          // Signature box
+
+          y -= 8;
+
+          // Blue left accent bar for signature block
           page.drawRectangle({
-            x: leftMargin, y: y - 80, width: 250, height: 80,
-            borderColor: borderGray, borderWidth: 0.5,
+            x: leftMargin, y: y - 90, width: 3.5, height: 90,
+            color: lytBlue,
           });
-          
-          page.drawText('SIGNATURE', {
-            x: leftMargin + 5, y: y - 12, size: 8, font: fontBold, color: medGray,
+
+          // Signature block background
+          page.drawRectangle({
+            x: leftMargin + 3.5, y: y - 90, width: 280, height: 90,
+            color: rgb(0.98, 0.99, 1), borderColor: borderColor, borderWidth: 0.5,
           });
-          
-          // Draw signature
+
+          // "AUTHORIZED SIGNATURE" label
+          page.drawText('AUTHORIZED SIGNATURE', {
+            x: leftMargin + 14, y: y - 13, size: 8, font: fontBold, color: lytBlue,
+          });
+
+          // Signature image
           page.drawImage(sigImage, {
-            x: leftMargin + 10, y: y - 55, width: 150, height: 35,
+            x: leftMargin + 14, y: y - 56, width: 160, height: 38,
           });
-          
+
           // Signature line
           page.drawLine({
-            start: { x: leftMargin + 10, y: y - 58 }, end: { x: leftMargin + 200, y: y - 58 },
-            thickness: 0.5, color: darkGray,
+            start: { x: leftMargin + 14, y: y - 60 },
+            end: { x: leftMargin + 240, y: y - 60 },
+            thickness: 0.7, color: darkText,
           });
-          
-          // Date/Time/IP directly under signature
-          const sigInfo = `Signed: ${signatureInfo.timestamp || new Date().toLocaleString()} | IP: ${signatureInfo.ip || 'N/A'}`;
+
+          // Date/Time/IP
+          const sigInfo = `Signed: ${signatureInfo.timestamp || new Date().toLocaleString()}  |  IP: ${signatureInfo.ip || 'N/A'}`;
           page.drawText(sigInfo, {
-            x: leftMargin + 10, y: y - 72, size: 7, font: font, color: medGray,
+            x: leftMargin + 14, y: y - 74, size: 7, font: font, color: medGray,
           });
-          
-          y -= 90;
+
+          // Date line and label on right side
+          const dateStr = signatureInfo.timestamp ? signatureInfo.timestamp.split(',')[0] || '' : new Date().toLocaleDateString();
+          page.drawText('Date: ' + dateStr, {
+            x: leftMargin + 14, y: y - 84, size: 7, font: font, color: medGray,
+          });
+
+          y -= 100;
         }
       } catch (sigErr) {
         console.error('Signature embed error:', sigErr);
       }
     }
-    
-    // ===== FOOTER =====
-    page.drawText('LYT Communications, LLC - Confidential', {
-      x: leftMargin, y: 25, size: 8, font: font, color: medGray,
-    });
-    
+
+    // ===== ADD FOOTERS WITH PAGE NUMBERS TO ALL PAGES =====
+    const allPages = pdfDoc.getPages();
+    const totalPages = allPages.length;
+    for (let i = 0; i < totalPages; i++) {
+      const p = allPages[i];
+      // Teal line above footer
+      p.drawLine({
+        start: { x: leftMargin, y: 48 },
+        end: { x: rightMargin, y: 48 },
+        thickness: 0.7, color: lytTeal,
+      });
+      // Company name left
+      p.drawText('LYT Communications, LLC  |  Confidential', {
+        x: leftMargin, y: 36, size: 7, font: font, color: medGray,
+      });
+      // Page number right
+      const pageLabel = `Page ${i + 1} of ${totalPages}`;
+      const pageLabelWidth = font.widthOfTextAtSize(pageLabel, 7);
+      p.drawText(pageLabel, {
+        x: rightMargin - pageLabelWidth, y: 36, size: 7, font: font, color: medGray,
+      });
+    }
+
     const pdfBytes = await pdfDoc.save();
     const base64 = btoa(String.fromCharCode(...pdfBytes));
     return `data:application/pdf;base64,${base64}`;
-    
+
   } catch (error) {
     console.error('Error creating form PDF:', error);
     throw error;

@@ -71,15 +71,111 @@ function doPost(e) {
 }
 
 /**
- * Handle GET requests (for testing the endpoint)
+ * Handle GET requests - health check or counter-signing page
  */
 function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || '';
+
+  // Serve counter-signing page
+  if (action === 'sign') {
+    Logger.log('doGet: Serving signing page for fileId=' + (e.parameter.fileId || 'none'));
+    const template = HtmlService.createTemplateFromFile('SigningPage');
+    template.fileId = e.parameter.fileId || '';
+    template.docType = e.parameter.type || '';
+    template.folderUrl = e.parameter.folder || '';
+    return template.evaluate()
+      .setTitle('LYT Communications - Counter-Sign Document')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // Default: health check
   Logger.log('doGet called - API health check');
-  return createResponse({ 
-    status: 'LYT Onboarding API Active v2.0',
+  return createResponse({
+    status: 'LYT Onboarding API Active v3.0',
     timestamp: new Date().toISOString(),
     folderId: PARENT_FOLDER_ID
   });
+}
+
+/**
+ * Get a PDF file from Drive for counter-signing (called from SigningPage.html)
+ */
+function getFileForSigning(fileId) {
+  try {
+    if (!fileId) return { success: false, error: 'No file ID provided' };
+
+    const file = DriveApp.getFileById(fileId);
+    const blob = file.getBlob();
+    const base64 = Utilities.base64Encode(blob.getBytes());
+
+    Logger.log('getFileForSigning: Loaded ' + file.getName() + ' (' + blob.getBytes().length + ' bytes)');
+
+    return {
+      success: true,
+      fileName: file.getName(),
+      base64: base64,
+      mimeType: blob.getContentType()
+    };
+  } catch (e) {
+    Logger.log('getFileForSigning ERROR: ' + e.toString());
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Save a counter-signed PDF back to Drive (called from SigningPage.html)
+ */
+function saveCounterSignedFile(fileId, base64Data, signerName) {
+  try {
+    if (!fileId || !base64Data) return { success: false, error: 'Missing file ID or data' };
+
+    const originalFile = DriveApp.getFileById(fileId);
+    const folder = originalFile.getParents().next();
+
+    // Create counter-signed version with updated name
+    const origName = originalFile.getName();
+    const newName = origName.replace('.pdf', ' (Counter-Signed).pdf');
+
+    const bytes = Utilities.base64Decode(base64Data);
+    const blob = Utilities.newBlob(bytes, 'application/pdf', newName);
+    const newFile = folder.createFile(blob);
+
+    Logger.log('saveCounterSignedFile: Saved ' + newName + ' to ' + folder.getName());
+
+    // Send confirmation email
+    try {
+      const timestamp = Utilities.formatDate(new Date(), 'America/Chicago', 'MMMM dd, yyyy \'at\' hh:mm a z');
+      SUCCESS_EMAILS.forEach(function(email) {
+        MailApp.sendEmail({
+          to: email,
+          subject: 'Document Counter-Signed: ' + origName,
+          body: signerName + ' counter-signed ' + origName + ' on ' + timestamp + '\n\nView: ' + newFile.getUrl(),
+          htmlBody: '<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">' +
+            '<div style="background:linear-gradient(135deg,#023E8A,#0077B6);padding:16px 20px;color:#fff;border-radius:8px 8px 0 0;">' +
+            '<h2 style="margin:0;font-size:16px;">Document Counter-Signed</h2></div>' +
+            '<div style="padding:16px 20px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">' +
+            '<p><strong>' + signerName + '</strong> has counter-signed:</p>' +
+            '<p style="background:#f0fdf4;padding:10px 14px;border-radius:6px;color:#16a34a;font-weight:600;">' + origName + '</p>' +
+            '<p style="color:#64748b;font-size:13px;">Signed on ' + timestamp + '</p>' +
+            '<a href="' + newFile.getUrl() + '" style="display:inline-block;background:#0077B6;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;margin-top:8px;">View Signed Document</a>' +
+            '<br><a href="' + folder.getUrl() + '" style="display:inline-block;color:#0077B6;margin-top:12px;font-size:13px;">Open Full Folder</a>' +
+            '</div></div>',
+        });
+      });
+    } catch (emailErr) {
+      Logger.log('Counter-sign email failed (non-critical): ' + emailErr.toString());
+    }
+
+    return {
+      success: true,
+      fileName: newName,
+      fileUrl: newFile.getUrl(),
+      folderUrl: folder.getUrl()
+    };
+  } catch (e) {
+    Logger.log('saveCounterSignedFile ERROR: ' + e.toString());
+    return { success: false, error: e.toString() };
+  }
 }
 
 /**
@@ -868,6 +964,20 @@ function createDocumentAcknowledgment(docName, docData, formData) {
 }
 
 /**
+ * Extract file ID from a Google Drive URL
+ */
+function extractFileId(driveUrl) {
+  if (!driveUrl) return '';
+  // Handle URLs like https://drive.google.com/file/d/FILE_ID/view
+  var match = driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  // Handle URLs like https://drive.google.com/open?id=FILE_ID
+  match = driveUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  return '';
+}
+
+/**
  * Format document name for display
  */
 function formatDocName(docName) {
@@ -906,31 +1016,38 @@ function sendSuccessEmail(type, formData, folderUrl, pdfLinks) {
        <tr><td style="padding:6px 12px;color:#666;">Phone</td><td style="padding:6px 12px;">${safe(formData.contactPhone, 'Not provided')}</td></tr>`;
 
   // Build ACTION REQUIRED section - docs that need counter-signature
+  // Generate signing page URLs using this script's deployment URL
+  const scriptUrl = ScriptApp.getService().getUrl();
   let actionHtml = '';
   if (type === 'contractor' || type === 'unknown') {
     const msaLink = pdfLinks['MSA Agreement.pdf'];
     if (msaLink) {
+      // Extract file ID from Drive URL
+      const msaFileId = extractFileId(msaLink);
+      const signUrl = scriptUrl + '?action=sign&type=msa&fileId=' + msaFileId + '&folder=' + encodeURIComponent(folderUrl);
       actionHtml = `
       <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:16px 20px;margin:20px 0;">
         <h3 style="margin:0 0 8px;color:#856404;font-size:16px;">⚠️ ACTION REQUIRED - Counter-Signature Needed</h3>
-        <p style="margin:0 0 12px;color:#856404;">The following document requires your signature on the LYT Communications side:</p>
-        <a href="${msaLink}" style="display:inline-block;background:#0077b6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
-          ✍️ Sign MSA Agreement
+        <p style="margin:0 0 12px;color:#856404;">The MSA requires your signature on the LYT Communications side:</p>
+        <a href="${signUrl}" style="display:inline-block;background:#0077b6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">
+          ✍️ Counter-Sign MSA Now
         </a>
-        <p style="margin:8px 0 0;color:#856404;font-size:12px;">Open in Google Drive → Download → Sign → Re-upload to the folder</p>
+        <p style="margin:10px 0 0;color:#856404;font-size:12px;">Click above to open the e-signing page. You can also <a href="${msaLink}" style="color:#856404;">view the document in Drive</a>.</p>
       </div>`;
     }
   } else if (type === 'employee') {
     const w4Link = pdfLinks['W-4 Tax Form.pdf'];
     if (w4Link) {
+      const w4FileId = extractFileId(w4Link);
+      const signUrl = scriptUrl + '?action=sign&type=w4&fileId=' + w4FileId + '&folder=' + encodeURIComponent(folderUrl);
       actionHtml = `
       <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:16px 20px;margin:20px 0;">
         <h3 style="margin:0 0 8px;color:#856404;font-size:16px;">⚠️ ACTION REQUIRED - Employer Section</h3>
         <p style="margin:0 0 12px;color:#856404;">The W-4 requires the employer section to be completed:</p>
-        <a href="${w4Link}" style="display:inline-block;background:#0077b6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+        <a href="${signUrl}" style="display:inline-block;background:#0077b6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">
           ✍️ Complete W-4 Employer Section
         </a>
-        <p style="margin:8px 0 0;color:#856404;font-size:12px;">Open in Google Drive → Download → Complete employer fields → Re-upload to the folder</p>
+        <p style="margin:10px 0 0;color:#856404;font-size:12px;">Click above to fill in the EIN and hire date. You can also <a href="${w4Link}" style="color:#856404;">view the document in Drive</a>.</p>
       </div>`;
     }
   }

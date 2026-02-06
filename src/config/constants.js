@@ -27,8 +27,8 @@ export const LYT_INFO = {
 };
 
 export const URLS = {
-  // ONBOARDING Script (v6.0) - Handles employee/contractor form submissions + email notifications
-  appsScript: 'https://script.google.com/macros/s/AKfycbx6AIFsqaRbQDJ5GwBegGZCJMzkvQZ4A2wwYXw7BjoP7Hqz44uxbyMi1jxoIDLZuiMH-w/exec',
+  // ONBOARDING Script (v3.0) - Handles employee/contractor form submissions + email notifications + e-signing
+  appsScript: 'https://script.google.com/macros/s/AKfycbwuBfWDZegdtnFloF_CehxiVI129RlEL9DEEt108r9HLYJopAMDvFYvmmOvhz4_rcGRQQ/exec',
   
   // PORTAL Script (v1.0) - Handles login, user management, password reset
   // Script ID: 1q7rGi07EhRasc5EdwU7QKGz7h_2-e1Qokk-EbVMEUHhz_IveC09sfcKG
