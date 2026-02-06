@@ -1,8 +1,9 @@
 // AdminDashboard.js v3.7 - NotificationBell + Project Map System navigation
 // Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, Search, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen, UserPlus, Shield } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, Search, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen, UserPlus, Shield, FlaskConical } from 'lucide-react';
 import { colors } from '../config/constants';
+import { submitTestContractor, submitTestEmployee } from '../services/testSubmissions';
 import NotificationBell from '../components/NotificationBell';
 
 // Direct Google Sheets CSV URLs (for reading data)
@@ -216,6 +217,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     { id: 'user-management', label: 'User Management', icon: UserCog, external: 'admin-users' },
     { id: 'admins', label: 'Admin Users', icon: Shield },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'testing', label: 'Test Submissions', icon: FlaskConical },
   ];
 
   const getStatusColor = (status) => {
@@ -783,6 +785,132 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     </div>
   );
 
+  // ===== TEST SUBMISSIONS =====
+  const [testStatus, setTestStatus] = useState({ contractor: null, employee: null });
+  const [testLogs, setTestLogs] = useState({ contractor: [], employee: [] });
+  const [testRunning, setTestRunning] = useState({ contractor: false, employee: false });
+
+  const handleTestContractor = async () => {
+    setTestRunning(prev => ({ ...prev, contractor: true }));
+    setTestLogs(prev => ({ ...prev, contractor: [] }));
+    setTestStatus(prev => ({ ...prev, contractor: null }));
+    try {
+      const result = await submitTestContractor((msg) => {
+        setTestLogs(prev => ({ ...prev, contractor: [...prev.contractor, msg] }));
+      });
+      setTestStatus(prev => ({ ...prev, contractor: result.success ? 'success' : 'error' }));
+    } catch (err) {
+      setTestStatus(prev => ({ ...prev, contractor: 'error' }));
+    }
+    setTestRunning(prev => ({ ...prev, contractor: false }));
+  };
+
+  const handleTestEmployee = async () => {
+    setTestRunning(prev => ({ ...prev, employee: true }));
+    setTestLogs(prev => ({ ...prev, employee: [] }));
+    setTestStatus(prev => ({ ...prev, employee: null }));
+    try {
+      const result = await submitTestEmployee((msg) => {
+        setTestLogs(prev => ({ ...prev, employee: [...prev.employee, msg] }));
+      });
+      setTestStatus(prev => ({ ...prev, employee: result.success ? 'success' : 'error' }));
+    } catch (err) {
+      setTestStatus(prev => ({ ...prev, employee: 'error' }));
+    }
+    setTestRunning(prev => ({ ...prev, employee: false }));
+  };
+
+  const renderTesting = () => (
+    <div>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>Test Submissions</h2>
+      <p style={{ color: colors.gray, marginBottom: '24px' }}>Generate fully-filled test contractor and employee submissions with all PDFs and signatures.</p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+        {/* Contractor Test */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <Building2 size={24} color={accentPrimary} />
+            <h3 style={{ margin: 0, color: textColor, fontSize: '1.1rem' }}>Test Contractor</h3>
+          </div>
+          <p style={{ color: colors.gray, fontSize: '0.9rem', marginBottom: '16px' }}>
+            Submits "Test Contractor LLC" with W-9, MSA, Rate Card, Insurance, Fleet, Skills, Direct Deposit, and Safety PDFs.
+          </p>
+          <button
+            onClick={handleTestContractor}
+            disabled={testRunning.contractor}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: testRunning.contractor ? '#9ca3af' : accentPrimary,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: testRunning.contractor ? 'wait' : 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            {testRunning.contractor ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Generating PDFs...</> : 'Run Contractor Test'}
+          </button>
+          {testLogs.contractor.length > 0 && (
+            <div style={{ marginTop: '12px', padding: '10px', backgroundColor: darkMode ? '#1a1a2e' : '#f1f5f9', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+              {testLogs.contractor.map((log, i) => (
+                <div key={i} style={{ color: log.includes('ERROR') || log.includes('FAILED') ? '#ef4444' : log.includes('SUCCESS') ? '#22c55e' : (darkMode ? '#d1d5db' : '#475569'), marginBottom: '2px' }}>{log}</div>
+              ))}
+            </div>
+          )}
+          {testStatus.contractor === 'success' && <div style={{ marginTop: '10px', color: '#22c55e', fontWeight: '600' }}>Submitted - check Google Drive + email</div>}
+          {testStatus.contractor === 'error' && <div style={{ marginTop: '10px', color: '#ef4444', fontWeight: '600' }}>Failed - check console for details</div>}
+        </div>
+
+        {/* Employee Test */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '24px', border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <User size={24} color={accentSecondary} />
+            <h3 style={{ margin: 0, color: textColor, fontSize: '1.1rem' }}>Test Employee</h3>
+          </div>
+          <p style={{ color: colors.gray, fontSize: '0.9rem', marginBottom: '16px' }}>
+            Submits "Jane TestEmployee" with W-4, Direct Deposit, Emergency Contact, Background Check, Drug Test, and Safety PDFs.
+          </p>
+          <button
+            onClick={handleTestEmployee}
+            disabled={testRunning.employee}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: testRunning.employee ? '#9ca3af' : accentSecondary,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: testRunning.employee ? 'wait' : 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            {testRunning.employee ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Generating PDFs...</> : 'Run Employee Test'}
+          </button>
+          {testLogs.employee.length > 0 && (
+            <div style={{ marginTop: '12px', padding: '10px', backgroundColor: darkMode ? '#1a1a2e' : '#f1f5f9', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+              {testLogs.employee.map((log, i) => (
+                <div key={i} style={{ color: log.includes('ERROR') || log.includes('FAILED') ? '#ef4444' : log.includes('SUCCESS') ? '#22c55e' : (darkMode ? '#d1d5db' : '#475569'), marginBottom: '2px' }}>{log}</div>
+              ))}
+            </div>
+          )}
+          {testStatus.employee === 'success' && <div style={{ marginTop: '10px', color: '#22c55e', fontWeight: '600' }}>Submitted - check Google Drive + email</div>}
+          {testStatus.employee === 'error' && <div style={{ marginTop: '10px', color: '#ef4444', fontWeight: '600' }}>Failed - check console for details</div>}
+        </div>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
@@ -790,6 +918,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
       case 'employees': return renderEmployees();
       case 'contractors': return renderContractors();
       case 'admins': return renderAdmins();
+      case 'testing': return renderTesting();
       default: return renderDashboard();
     }
   };

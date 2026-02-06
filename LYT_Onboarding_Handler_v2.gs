@@ -20,7 +20,7 @@
 const PARENT_FOLDER_ID = '11EuU2K-DzaT9KrDdbKOI4Q21c0-jKtiC';
 
 // Notification emails
-const SUCCESS_EMAILS = ['matt@lytcomm.com', 'mason@lytcomm.com', 'donnie@lytcomm.com'];
+const SUCCESS_EMAILS = ['matt@lytcomm.com', 'mason@lytcomm.com', 'donnie@lytcomm.com', 'dayna@lytcomm.com'];
 const ERROR_EMAILS = ['matt@lytcomm.com', 'mason@lytcomm.com'];
 
 /**
@@ -316,6 +316,8 @@ function processOnboarding(data) {
     drugTest: 'Drug Test Consent.pdf',
   };
 
+  const pdfLinks = {}; // Track file URLs for email links
+
   if (filledPdfs && typeof filledPdfs === 'object') {
     for (const [key, pdfDataUrl] of Object.entries(filledPdfs)) {
       if (!pdfDataUrl) continue;
@@ -327,9 +329,10 @@ function processOnboarding(data) {
         const pdfBytes = Utilities.base64Decode(base64Data);
         const fileName = pdfNames[key] || `${key}.pdf`;
         const pdfBlob = Utilities.newBlob(pdfBytes, 'application/pdf', fileName);
-        newFolder.createFile(pdfBlob);
+        const savedFile = newFolder.createFile(pdfBlob);
         savedFiles.push(fileName);
-        Logger.log('✓ Saved PDF: ' + fileName);
+        pdfLinks[fileName] = savedFile.getUrl();
+        Logger.log('✓ Saved PDF: ' + fileName + ' → ' + savedFile.getUrl());
       } catch (pdfError) {
         Logger.log('ERROR saving PDF ' + key + ': ' + pdfError.toString());
         errors.push('Failed to save ' + key + ' PDF: ' + pdfError.toString());
@@ -340,7 +343,7 @@ function processOnboarding(data) {
   // Step 11: Send notification email (non-blocking)
   if (SUCCESS_EMAILS && SUCCESS_EMAILS.length > 0) {
     try {
-      sendSuccessEmail(type, formData, newFolder.getUrl());
+      sendSuccessEmail(type, formData, newFolder.getUrl(), pdfLinks);
       Logger.log('✓ Success notification emails sent');
     } catch (emailError) {
       Logger.log('WARNING: Email failed (non-critical): ' + emailError.toString());
@@ -882,40 +885,126 @@ function formatDocName(docName) {
 }
 
 /**
- * Send success notification email
+ * Send success notification email with HTML formatting and document signing links
  */
-function sendSuccessEmail(type, formData, folderUrl) {
+function sendSuccessEmail(type, formData, folderUrl, pdfLinks) {
   formData = formData || {};
-  
+  pdfLinks = pdfLinks || {};
+
   const displayName = type === 'employee'
     ? `${safe(formData.firstName)} ${safe(formData.lastName)}`
     : safe(formData.companyName, 'Unknown');
-  
-  const contactInfo = type === 'employee'
-    ? `Email: ${safe(formData.email, 'Not provided')}\nPhone: ${safe(formData.phone, 'Not provided')}`
-    : `Contact: ${safe(formData.contactName)}\nEmail: ${safe(formData.contactEmail, 'No email')}\nPhone: ${safe(formData.contactPhone, 'Not provided')}`;
-  
-  const subject = `✓ New ${type === 'employee' ? 'Employee' : 'Contractor'} Onboarding Complete: ${displayName}`;
-  
-  const body = `
-A new ${type} has successfully completed onboarding on the LYT Communications portal.
 
-${type === 'employee' ? 'EMPLOYEE' : 'CONTRACTOR'} DETAILS
-${'-'.repeat(40)}
-${type === 'employee' ? 'Name' : 'Company'}: ${displayName}
-${contactInfo}
+  const subject = `✓ New ${type === 'employee' ? 'Employee' : 'Contractor'} Onboarding: ${displayName}`;
 
-Documents have been saved to Google Drive:
-${folderUrl}
+  // Build contact details HTML
+  const contactHtml = type === 'employee'
+    ? `<tr><td style="padding:6px 12px;color:#666;">Email</td><td style="padding:6px 12px;">${safe(formData.email, 'Not provided')}</td></tr>
+       <tr><td style="padding:6px 12px;color:#666;">Phone</td><td style="padding:6px 12px;">${safe(formData.phone, 'Not provided')}</td></tr>`
+    : `<tr><td style="padding:6px 12px;color:#666;">Contact</td><td style="padding:6px 12px;">${safe(formData.contactName)}</td></tr>
+       <tr><td style="padding:6px 12px;color:#666;">Email</td><td style="padding:6px 12px;">${safe(formData.contactEmail, 'Not provided')}</td></tr>
+       <tr><td style="padding:6px 12px;color:#666;">Phone</td><td style="padding:6px 12px;">${safe(formData.contactPhone, 'Not provided')}</td></tr>`;
 
----
-LYT Communications Onboarding System
-`;
-  
+  // Build ACTION REQUIRED section - docs that need counter-signature
+  let actionHtml = '';
+  if (type === 'contractor' || type === 'unknown') {
+    const msaLink = pdfLinks['MSA Agreement.pdf'];
+    if (msaLink) {
+      actionHtml = `
+      <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:16px 20px;margin:20px 0;">
+        <h3 style="margin:0 0 8px;color:#856404;font-size:16px;">⚠️ ACTION REQUIRED - Counter-Signature Needed</h3>
+        <p style="margin:0 0 12px;color:#856404;">The following document requires your signature on the LYT Communications side:</p>
+        <a href="${msaLink}" style="display:inline-block;background:#0077b6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+          ✍️ Sign MSA Agreement
+        </a>
+        <p style="margin:8px 0 0;color:#856404;font-size:12px;">Open in Google Drive → Download → Sign → Re-upload to the folder</p>
+      </div>`;
+    }
+  } else if (type === 'employee') {
+    const w4Link = pdfLinks['W-4 Tax Form.pdf'];
+    if (w4Link) {
+      actionHtml = `
+      <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:16px 20px;margin:20px 0;">
+        <h3 style="margin:0 0 8px;color:#856404;font-size:16px;">⚠️ ACTION REQUIRED - Employer Section</h3>
+        <p style="margin:0 0 12px;color:#856404;">The W-4 requires the employer section to be completed:</p>
+        <a href="${w4Link}" style="display:inline-block;background:#0077b6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+          ✍️ Complete W-4 Employer Section
+        </a>
+        <p style="margin:8px 0 0;color:#856404;font-size:12px;">Open in Google Drive → Download → Complete employer fields → Re-upload to the folder</p>
+      </div>`;
+    }
+  }
+
+  // Build document links list
+  let docsHtml = '';
+  const pdfEntries = Object.entries(pdfLinks);
+  if (pdfEntries.length > 0) {
+    const docRows = pdfEntries.map(function(entry) {
+      return `<tr>
+        <td style="padding:4px 12px;"><a href="${entry[1]}" style="color:#0077b6;text-decoration:none;">${entry[0]}</a></td>
+      </tr>`;
+    }).join('');
+    docsHtml = `
+    <h3 style="color:#1e293b;margin:20px 0 8px;font-size:15px;">📄 All Documents</h3>
+    <table style="border-collapse:collapse;width:100%;">${docRows}</table>`;
+  }
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f5f5f5;">
+  <div style="max-width:600px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0a3a7d,#0077b6);padding:24px 30px;color:#fff;">
+      <h1 style="margin:0;font-size:20px;">LYT Communications</h1>
+      <p style="margin:4px 0 0;opacity:0.9;font-size:14px;">New ${type === 'employee' ? 'Employee' : 'Contractor'} Onboarding Complete</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px 30px;">
+
+      <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">${displayName}</h2>
+
+      <table style="border-collapse:collapse;width:100%;margin-bottom:16px;">
+        ${contactHtml}
+        <tr><td style="padding:6px 12px;color:#666;">Submitted</td><td style="padding:6px 12px;">${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })}</td></tr>
+      </table>
+
+      ${actionHtml}
+
+      ${docsHtml}
+
+      <!-- Folder Link -->
+      <div style="margin:20px 0;padding:12px 16px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;">
+        <a href="${folderUrl}" style="color:#0077b6;text-decoration:none;font-weight:bold;font-size:14px;">
+          📁 Open Full Folder in Google Drive
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 30px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;">
+      LYT Communications Onboarding System &bull; Automated Notification
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+  // Plain text fallback
+  const plainBody = `New ${type === 'employee' ? 'Employee' : 'Contractor'} Onboarding: ${displayName}\n\nDocuments: ${folderUrl}\n\n- LYT Communications`;
+
   // Send to all success recipients
   SUCCESS_EMAILS.forEach(function(email) {
     try {
-      MailApp.sendEmail(email, subject, body);
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        body: plainBody,
+        htmlBody: htmlBody,
+      });
     } catch (err) {
       Logger.log('Failed to send to ' + email + ': ' + err.toString());
     }
