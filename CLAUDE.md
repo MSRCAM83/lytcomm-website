@@ -56,7 +56,7 @@ Fiber optic construction company website with:
 ### PDF Extraction
 - Endpoint: `/api/pdf-import.js`
 - Requires: `ANTHROPIC_API_KEY` env var in Vercel
-- Uses Claude claude-sonnet-4-20250514 model
+- Uses Claude Opus 4.6 (claude-opus-4-6)
 
 ## Environment Variables (Vercel)
 - `ANTHROPIC_API_KEY` - Required for PDF extraction

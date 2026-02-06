@@ -122,6 +122,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
     otherSkills: '',
     // Rate Card
     rateCardAccepted: false,
+    rateCardSignature: null,
+    // Safety
+    safetySignature: null,
     // Banking / Direct Deposit
     bankName: '',
     routingNumber: '',
@@ -361,7 +364,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
       let companyInfoPdf = null;
       try {
         companyInfoPdf = await createFormPdf(
-          'Contractor Company Information',
+          'Company Information',
           [
             { title: 'COMPANY DETAILS', fields: [
               { label: 'Company Name', value: formData.companyName },
@@ -467,6 +470,10 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Jobs $250K - $1M', value: '$3,000,000' },
               { label: 'Jobs $1M+', value: '$5,000,000' },
             ]},
+            { title: 'CONTRACTOR COVERAGE', fields: [
+              { label: 'General Liability', value: formData.liabilityAmount || 'See COI' },
+              { label: 'Workers Comp', value: formData.workersCompAmount || 'See COI' },
+            ]},
             { title: 'CERTIFICATE DETAILS', fields: [
               { label: 'COI Uploaded', value: formData.coiFileName || 'Pending' },
               { label: 'Expiration Date', value: formData.coiExpiration || 'TBD' },
@@ -485,9 +492,24 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('Insurance error:', e);
       }
       
-      // 4. Rate Card Acceptance with actual rates
+      // 4. Rate Card Acceptance with live rates from Google Sheets
       let rateCardPdf = null;
       try {
+        // Build rate sections from live data grouped by category
+        const rateCategories = rateCardData.reduce((acc, item) => {
+          if (!acc[item.category]) acc[item.category] = [];
+          acc[item.category].push(item);
+          return acc;
+        }, {});
+
+        const rateSections = Object.entries(rateCategories).map(([category, items]) => ({
+          title: `${category} RATES`,
+          fields: items.map(item => ({
+            label: `${item.code} - ${item.description} (${item.uom})`,
+            value: item.price,
+          })),
+        }));
+
         rateCardPdf = await createFormPdf(
           'Rate Card Acceptance Agreement',
           [
@@ -495,33 +517,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Company', value: formData.companyName },
               { label: 'Contact', value: formData.contactName },
             ]},
-            { title: 'AERIAL CONSTRUCTION RATES', fields: [
-              { label: 'Place 6M strand', value: '$0.50/LF' },
-              { label: 'Lash Cable up to 144F', value: '$0.60/LF' },
-              { label: 'Overlash to Existing', value: '$0.60/LF' },
-              { label: 'Cable >144F', value: '$0.90/LF' },
-              { label: 'Down Guy (w/ Guard)', value: '$14.00/EA' },
-              { label: 'Screw Anchor 6000lbs', value: '$30.00/EA' },
-              { label: 'Pole Transfer (Dead)', value: '$50.00/EA' },
-              { label: 'Pole Transfer (Thru)', value: '$35.00/EA' },
-            ]},
-            { title: 'FIBER SPLICING RATES', fields: [
-              { label: 'Fusion Splice (1 fiber)', value: '$13.00/EA' },
-              { label: 'Ring Cut', value: '$180.00/EA' },
-              { label: 'Test Fiber', value: '$2.50/EA' },
-              { label: 'ReEnter Enclosure', value: '$100.00/EA' },
-            ]},
-            { title: 'UNDERGROUND RATES', fields: [
-              { label: 'Directional Bore 1-4 duct', value: '$6.00/LF' },
-              { label: 'Pull Cable in duct', value: '$0.30/LF' },
-              { label: 'Direct Bury - Plow', value: '$1.50/LF' },
-              { label: 'Hardscape Pothole', value: '$150.00/EA' },
-            ]},
-            { title: 'RESTORATION RATES', fields: [
-              { label: 'Asphalt up to 4"', value: '$15.00/SF' },
-              { label: 'Concrete up to 4"', value: '$20.00/SF' },
-              { label: 'Traffic Control', value: '$30.00/HR' },
-            ]},
+            ...rateSections,
             { title: 'PAYMENT TERMS', checkboxes: [
               { label: 'Net 30 from invoice approval', checked: true },
               { label: '10% retainage until project completion', checked: true },
@@ -554,8 +550,11 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Contact', value: formData.contactName },
             ]},
             { title: 'PERSONNEL', fields: [
-              { label: 'Total Employees', value: formData.totalEmployees || 'Not specified' },
-              { label: 'Field Technicians', value: formData.fieldTechnicians || 'Not specified' },
+              { label: 'Key Personnel Listed', value: formData.personnel.filter(p => p.name).length || 'None' },
+              ...formData.personnel.filter(p => p.name).map(p => ({
+                label: p.name,
+                value: [p.role, p.certifications].filter(Boolean).join(' - ') || 'No details',
+              })),
             ]},
             { title: 'FLEET/EQUIPMENT', fields: fleetList.length > 0 
               ? fleetList.map((item, i) => ({ label: `Item ${i+1}`, value: item }))
@@ -589,11 +588,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Contact', value: formData.contactName },
             ]},
             { title: 'CERTIFIED SKILLS', checkboxes: skillsList },
-            { title: 'CERTIFICATIONS', fields: [
-              { label: 'OSHA 10/30', value: formData.oshaCard ? 'Yes' : 'No' },
-              { label: 'First Aid/CPR', value: formData.firstAidCert ? 'Yes' : 'No' },
-              { label: 'CDL', value: formData.cdlLicense ? 'Yes' : 'No' },
-            ]},
+            ...(formData.otherSkills ? [{ title: 'ADDITIONAL SKILLS/SERVICES', paragraphs: [formData.otherSkills] }] : []),
             { title: 'ELECTRONIC RECORD', fields: [
               { label: 'IP Address', value: ipAddress },
               { label: 'Timestamp', value: signatureTimestamp },
@@ -607,11 +602,29 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         console.error('Skills error:', e);
       }
       
-      // 7. Direct Deposit Authorization
+      // 7. Direct Deposit Authorization (with embedded voided check)
       let directDepositPdf = null;
+      let voidedCheckImage = null;
+
+      if (formData.voidedCheckFile) {
+        try {
+          const reader = new FileReader();
+          voidedCheckImage = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve({
+              data: reader.result,
+              mimeType: formData.voidedCheckFile.type
+            });
+            reader.onerror = reject;
+            reader.readAsDataURL(formData.voidedCheckFile);
+          });
+        } catch (e) {
+          console.error('Error reading voided check:', e);
+        }
+      }
+
       try {
         directDepositPdf = await createFormPdf(
-          'Direct Deposit Authorization - Contractor',
+          'Direct Deposit Authorization',
           [
             { title: 'COMPANY', fields: [
               { label: 'Company Name', value: formData.companyName },
@@ -631,8 +644,9 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
-          formData.bankingSignature,
-          signatureInfo
+          formData.directDepositSignature,
+          signatureInfo,
+          voidedCheckImage
         );
         console.log('Direct Deposit PDF created');
       } catch (e) {
@@ -665,7 +679,7 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
               { label: 'Timestamp', value: signatureTimestamp },
             ]}
           ],
-          formData.safetySignature,
+          formData.safetySignature || formData.msaSignature,
           signatureInfo
         );
         console.log('Safety PDF created');
@@ -1589,11 +1603,21 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
           style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: accentPrimary }}
         />
         <span style={{ lineHeight: '1.5', color: textColor }}>
-          I have reviewed the rate card and understand that specific rates will be agreed upon in individual 
-          project SOWs. I agree to the general payment terms of Net 30 from invoice approval with 10% retainage 
+          I have reviewed the rate card and understand that specific rates will be agreed upon in individual
+          project SOWs. I agree to the general payment terms of Net 30 from invoice approval with 10% retainage
           held until project completion and final acceptance.
         </span>
       </label>
+
+      {formData.rateCardAccepted && (
+        <div style={{ marginTop: '16px' }}>
+          <SignaturePad
+            onSignatureChange={(sig) => setFormData({ ...formData, rateCardSignature: sig })}
+            label="Rate Card Acceptance Signature"
+            darkMode={darkMode}
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -1799,8 +1823,8 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
       case 3: return formData.coiFile && formData.coiExpiration && formData.liabilityAmount && formData.workersCompAmount;
       case 4: return true;
       case 5: return formData.skills.length > 0;
-      case 6: return formData.rateCardAccepted;
-      case 7: return formData.bankName && formData.routingNumber && formData.accountNumber;
+      case 6: return formData.rateCardAccepted && formData.rateCardSignature;
+      case 7: return formData.bankName && formData.routingNumber && formData.accountNumber && formData.directDepositSignature;
       default: return false;
     }
   };

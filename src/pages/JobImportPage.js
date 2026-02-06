@@ -413,73 +413,26 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       setProgressMsg('Building project preview...');
 
       const ext = data.extracted;
-      const projectId = ext.project?.project_id || null;
+      const jobCode = ext.project?.job_code || null;
 
       const result = {
         project: {
-          project_id: projectId,
-          customer: ext.project?.customer || 'Vexus Fiber',
+          job_code: jobCode,
+          customer: ext.project?.customer || '',
           project_name: ext.project?.project_name || '',
           po_number: ext.project?.po_number || '',
-          total_value: ext.project?.total_value || ext.grand_total || 0,
-          start_date: ext.project?.start_date || '',
-          completion_date: ext.project?.completion_date || '',
-          status: 'Active',
+          wo_total: ext.project?.wo_total || 0,
           rate_card_id: rateCardId,
         },
-        work_order_line_items: (ext.work_order_line_items || []).map(li => ({
-          code: li.code || '',
-          description: li.description || '',
-          qty: li.qty || 0,
-          uom: li.uom || '',
-          rate: li.rate || 0,
-          total: li.total || 0,
-        })),
-        segments: (ext.segments || []).map((seg, i) => ({
-          segment_id: `${projectId}-${seg.section || 'X'}-${(seg.to_handhole || `S${i}`).replace(/[^A-Za-z0-9]/g, '')}`,
-          contractor_id: seg.contractor_id || `${seg.from_handhole}→${seg.to_handhole}`,
-          section: seg.section || '',
-          from_handhole: seg.from_handhole ? `${seg.from_handhole} (${seg.from_hh_size || ''})` : '',
-          to_handhole: seg.to_handhole ? `${seg.to_handhole} (${seg.to_hh_size || ''})` : '',
-          footage: seg.footage || 0,
-          street: seg.street || '',
-          duct_count: seg.duct_count || null,
-          cable_type: seg.cable_type || null,
-          boring_status: 'Not Started',
-          work_items: seg.work_items || [],
-          total_value: seg.total_value || 0,
-        })),
-        splice_points: (ext.splice_points || []).map(sp => ({
-          splice_id: `${projectId}-SPL-${(sp.contractor_id || '').replace(/[^A-Za-z0-9]/g, '')}`,
-          contractor_id: sp.contractor_id || '',
-          location: sp.location || '',
-          handhole_type: sp.handhole_type || '',
-          splice_type: sp.splice_type || '',
-          position_type: sp.position_type || '',
-          fiber_count: sp.fiber_count || 2,
-          tray_count: sp.tray_count || 1,
-          status: 'Not Started',
-          work_items: sp.work_items || [],
-          total_value: sp.total_value || 0,
-        })),
-        unallocated_items: (ext.unallocated_items || []).map(ui => ({
-          code: ui.code || '',
-          description: ui.description || '',
-          qty: ui.qty || 0,
-          uom: ui.uom || '',
-          rate: ui.rate || 0,
-          total: ui.total || 0,
-        })),
-        stats: {
-          totalSegments: ext.total_segments || (ext.segments || []).length,
-          totalFootage: ext.total_footage || (ext.segments || []).reduce((sum, s) => sum + (s.footage || 0), 0),
-          totalSplicePoints: ext.total_splice_points || (ext.splice_points || []).length,
-          segmentsTotal: ext.segments_total || (ext.segments || []).reduce((sum, s) => sum + (s.total_value || 0), 0),
-          splicesTotal: ext.splices_total || (ext.splice_points || []).reduce((sum, s) => sum + (s.total_value || 0), 0),
-          unallocatedTotal: ext.unallocated_total || (ext.unallocated_items || []).reduce((sum, u) => sum + (u.total || 0), 0),
-          grandTotal: ext.grand_total || 0,
-          woTotal: ext.project?.total_value || 0,
-        },
+        work_order_line_items: ext.work_order_line_items || [],
+        handholes: ext.handholes || [],
+        flowerpots: ext.flowerpots || [],
+        ground_rods: ext.ground_rods || [],
+        segments: ext.segments || [],
+        splice_points: ext.splice_points || [],
+        discrepancies: ext.discrepancies || [],
+        sections: ext.sections || [],
+        counts: ext.counts || {},
         _usage: data.usage,
         _raw: ext,
       };
@@ -502,16 +455,16 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     try {
       const { importProject } = await import('../services/mapService');
 
-      const projectId = importResult.project.project_id;
+      const jobCode = importResult.project.job_code;
 
       // Pass the FULL extraction data to importProject
       // This includes: project, handholes, flowerpots, ground_rods, segments, splice_points
-      const result = await importProject(importResult, projectId);
+      const result = await importProject(importResult, jobCode);
 
       if (result.success) {
         const c = result.counts;
         const msg = `Project imported successfully!\n\n` +
-          `✅ Project: ${projectId}\n` +
+          `✅ Project: ${jobCode}\n` +
           `✅ Handholes: ${c.handholes || 0}\n` +
           `✅ Flowerpots: ${c.flowerpots || 0}\n` +
           `✅ Ground Rods: ${c.groundRods || 0}\n` +
@@ -805,14 +758,13 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Project Details</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 {[
-                  ['Project ID', importResult.project.project_id],
+                  ['Job Code', importResult.project.job_code],
                   ['Customer', importResult.project.customer],
                   ['Project Name', importResult.project.project_name],
                   ['PO Number', importResult.project.po_number],
-                  ['Total Value', `$${(importResult.project.total_value || 0).toLocaleString()}`],
-                  ['Start Date', importResult.project.start_date],
-                  ['Completion Date', importResult.project.completion_date],
+                  ['WO Total', importResult.project.wo_total ? `$${Number(importResult.project.wo_total).toLocaleString()}` : '—'],
                   ['Rate Card', importResult.project.rate_card_id],
+                  ['Sections', (importResult.sections || []).join(', ') || '—'],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p style={{ color: textMuted, fontSize: '0.8rem', margin: '0 0 2px' }}>{label}</p>
@@ -825,14 +777,13 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
             {/* Stats */}
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {[
-                ['Segments', importResult.stats.totalSegments, accent],
-                ['Total Footage', `${(importResult.stats.totalFootage || 0).toLocaleString()} LF`, '#FFB800'],
-                ['Splice Points', importResult.stats.totalSplicePoints, '#4CAF50'],
-                ['Segments $', `$${(importResult.stats.segmentsTotal || 0).toLocaleString()}`, accent],
-                ['Splicing $', `$${(importResult.stats.splicesTotal || 0).toLocaleString()}`, '#4CAF50'],
-                ['Unallocated $', `$${(importResult.stats.unallocatedTotal || 0).toLocaleString()}`, '#FFB800'],
-                ['Grand Total', `$${(importResult.stats.grandTotal || 0).toLocaleString()}`, successGreen],
-                ['WO Total', `$${(importResult.stats.woTotal || 0).toLocaleString()}`, textMuted],
+                ['Handholes', importResult.counts.handholes || importResult.handholes.length, accent],
+                ['Flowerpots', importResult.counts.flowerpots || importResult.flowerpots.length, '#FF9800'],
+                ['Ground Rods', importResult.counts.ground_rods || importResult.ground_rods.length, '#795548'],
+                ['Segments', importResult.counts.segments || importResult.segments.length, '#2196F3'],
+                ['Splice Points', importResult.counts.splice_points || importResult.splice_points.length, '#4CAF50'],
+                ['Bore Footage', `${(importResult.counts.total_bore_footage || 0).toLocaleString()} LF`, '#FFB800'],
+                ['Pull Footage', `${(importResult.counts.total_pull_footage || 0).toLocaleString()} LF`, '#E91E63'],
               ].map(([label, value, color]) => (
                 <div key={label} style={{
                   backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
@@ -875,21 +826,22 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          {['ID', 'Section', 'From', 'To', 'Footage', 'Street', 'Value'].map(h => (
+                          {['ID', 'Section', 'From', 'To', 'Footage', 'Bore', 'Pull', 'Street'].map(h => (
                             <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {importResult.segments.map((seg, i) => (
-                          <tr key={seg.segment_id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{seg.contractor_id}</td>
+                          <tr key={seg.id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{seg.id}</td>
                             <td style={{ padding: '8px' }}>{seg.section}</td>
-                            <td style={{ padding: '8px' }}>{seg.from_handhole}</td>
-                            <td style={{ padding: '8px' }}>{seg.to_handhole}</td>
+                            <td style={{ padding: '8px' }}>{seg.from_label}</td>
+                            <td style={{ padding: '8px' }}>{seg.to_label}</td>
                             <td style={{ padding: '8px', fontWeight: 600 }}>{seg.footage} LF</td>
+                            <td style={{ padding: '8px', fontFamily: 'monospace' }}>{seg.bore?.code} x{seg.bore?.duct_count}</td>
+                            <td style={{ padding: '8px', fontFamily: 'monospace' }}>{seg.pull?.code} ({seg.pull?.cable_type})</td>
                             <td style={{ padding: '8px' }}>{seg.street}</td>
-                            <td style={{ padding: '8px', color: successGreen }}>${(seg.total_value || 0).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -914,7 +866,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                   alignItems: 'center', fontSize: '1rem', fontWeight: 600,
                 }}
               >
-                Splice Points ({importResult.splice_points.length}) — ${(importResult.stats.splicesTotal || 0).toLocaleString()}
+                Splice Points ({importResult.splice_points.length}) — tracking only (no billing)
                 {expandedSection === 'splices' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </button>
               {expandedSection === 'splices' && (
@@ -925,20 +877,21 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          {['Location', 'Handhole', 'Type', 'Position', 'Fibers', 'Value'].map(h => (
+                          {['ID', 'Handhole', 'Type', 'Position', 'Splitters', 'PM Readings', 'Photos'].map(h => (
                             <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {importResult.splice_points.map((sp, i) => (
-                          <tr key={sp.splice_id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                            <td style={{ padding: '8px', fontWeight: 600 }}>{sp.location}</td>
-                            <td style={{ padding: '8px' }}>{sp.handhole_type}</td>
+                          <tr key={sp.id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{sp.id}</td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{sp.handhole_label}</td>
                             <td style={{ padding: '8px' }}>{sp.splice_type}</td>
                             <td style={{ padding: '8px' }}>{sp.position_type}</td>
-                            <td style={{ padding: '8px' }}>{sp.fiber_count}</td>
-                            <td style={{ padding: '8px', color: successGreen, fontWeight: 600 }}>${(sp.total_value || 0).toLocaleString()}</td>
+                            <td style={{ padding: '8px' }}>{sp.splitter_count}</td>
+                            <td style={{ padding: '8px' }}>{sp.splice_type === '1x4' ? '8' : '0'}</td>
+                            <td style={{ padding: '8px' }}>{sp.total_photos_required}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -974,7 +927,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          {['Code', 'Description', 'Qty', 'UOM', 'Rate', 'Total'].map(h => (
+                          {['Code', 'Description', 'Qty', 'UOM'].map(h => (
                             <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
                           ))}
                         </tr>
@@ -986,8 +939,6 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                             <td style={{ padding: '8px' }}>{li.description}</td>
                             <td style={{ padding: '8px' }}>{(li.qty || 0).toLocaleString()}</td>
                             <td style={{ padding: '8px' }}>{li.uom}</td>
-                            <td style={{ padding: '8px' }}>${(li.rate || 0).toFixed(2)}</td>
-                            <td style={{ padding: '8px', color: successGreen }}>${(li.total || 0).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -997,50 +948,120 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               )}
             </div>
 
-            {/* Unallocated Items */}
-            {(importResult.unallocated_items || []).length > 0 && (
-              <div style={{
-                backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
-                borderRadius: '8px',
-                border: `1px solid ${borderColor}`,
-                marginBottom: '24px',
-              }}>
-                <button
-                  onClick={() => setExpandedSection(expandedSection === 'unallocated' ? null : 'unallocated')}
-                  style={{
-                    width: '100%', padding: '14px 16px', background: 'none', border: 'none',
-                    color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', fontSize: '1rem', fontWeight: 600,
-                  }}
-                >
-                  Unallocated Items ({(importResult.unallocated_items || []).length}) — ${(importResult.stats.unallocatedTotal || 0).toLocaleString()}
-                  {expandedSection === 'unallocated' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                {expandedSection === 'unallocated' && (
-                  <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
+            {/* Handholes */}
+            <div style={{
+              backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
+              borderRadius: '8px',
+              border: `1px solid ${borderColor}`,
+              marginBottom: '16px',
+            }}>
+              <button
+                onClick={() => setExpandedSection(expandedSection === 'handholes' ? null : 'handholes')}
+                style={{
+                  width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                  color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '1rem', fontWeight: 600,
+                }}
+              >
+                Handholes ({importResult.handholes.length})
+                {expandedSection === 'handholes' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
+              {expandedSection === 'handholes' && (
+                <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
+                  {importResult.handholes.length === 0 ? (
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No handholes extracted.</p>
+                  ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          {['Code', 'Description', 'Qty', 'UOM', 'Rate', 'Total'].map(h => (
+                          {['ID', 'Label', 'Type', 'Code', 'Section', 'Street'].map(h => (
                             <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {(importResult.unallocated_items || []).map((ui, i) => (
-                          <tr key={i} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                            <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: 600 }}>{ui.code}</td>
-                            <td style={{ padding: '8px' }}>{ui.description}</td>
-                            <td style={{ padding: '8px' }}>{(ui.qty || 0).toLocaleString()}</td>
-                            <td style={{ padding: '8px' }}>{ui.uom}</td>
-                            <td style={{ padding: '8px' }}>${(ui.rate || 0).toFixed(2)}</td>
-                            <td style={{ padding: '8px', color: '#FFB800' }}>${(ui.total || 0).toLocaleString()}</td>
+                        {importResult.handholes.map((hh, i) => (
+                          <tr key={hh.id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{hh.id}</td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{hh.label}</td>
+                            <td style={{ padding: '8px' }}>{hh.type}</td>
+                            <td style={{ padding: '8px', fontFamily: 'monospace' }}>{hh.code}</td>
+                            <td style={{ padding: '8px' }}>{hh.section}</td>
+                            <td style={{ padding: '8px' }}>{hh.street}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Flowerpots */}
+            <div style={{
+              backgroundColor: darkMode ? '#0d1b2a' : '#ffffff',
+              borderRadius: '8px',
+              border: `1px solid ${borderColor}`,
+              marginBottom: '16px',
+            }}>
+              <button
+                onClick={() => setExpandedSection(expandedSection === 'flowerpots' ? null : 'flowerpots')}
+                style={{
+                  width: '100%', padding: '14px 16px', background: 'none', border: 'none',
+                  color: text, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '1rem', fontWeight: 600,
+                }}
+              >
+                Flowerpots ({importResult.flowerpots.length})
+                {expandedSection === 'flowerpots' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
+              {expandedSection === 'flowerpots' && (
+                <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
+                  {importResult.flowerpots.length === 0 ? (
+                    <p style={{ color: textMuted, fontStyle: 'italic' }}>No flowerpots extracted.</p>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                          {['ID', 'Label', 'Code', 'Section', 'Street'].map(h => (
+                            <th key={h} style={{ padding: '8px', textAlign: 'left', color: textMuted, fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importResult.flowerpots.map((fp, i) => (
+                          <tr key={fp.id || i} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>{fp.id}</td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{fp.label}</td>
+                            <td style={{ padding: '8px', fontFamily: 'monospace' }}>{fp.code}</td>
+                            <td style={{ padding: '8px' }}>{fp.section}</td>
+                            <td style={{ padding: '8px' }}>{fp.street}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Discrepancies */}
+            {importResult.discrepancies.length > 0 && (
+              <div style={{
+                backgroundColor: darkMode ? '#2a2a0a' : '#fffbeb',
+                borderRadius: '8px',
+                border: `1px solid #FFB800`,
+                marginBottom: '16px',
+                padding: '16px',
+              }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '0.95rem', color: '#FFB800' }}>
+                  Discrepancies ({importResult.discrepancies.length})
+                </h3>
+                {importResult.discrepancies.map((d, i) => (
+                  <p key={i} style={{ margin: '4px 0', fontSize: '0.85rem', color: text }}>
+                    <strong>{d.item}:</strong> WO says {d.wo_qty}, map shows {d.map_qty} — {d.action}
+                  </p>
+                ))}
               </div>
             )}
 

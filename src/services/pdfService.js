@@ -596,8 +596,10 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
     // ===== CONTENT SECTIONS =====
     if (Array.isArray(content)) {
       for (const section of content) {
-        // Skip "ELECTRONIC SIGNATURE" and "ELECTRONIC RECORD" sections - IP/timestamp only under signature
-        if (section.title && (
+        // Skip "ELECTRONIC SIGNATURE" and "ELECTRONIC RECORD" sections only when a signature
+        // is present (since the signature block already renders IP/timestamp underneath).
+        // For unsigned PDFs, keep these sections so the audit trail is preserved.
+        if (signatureDataUrl && section.title && (
           section.title.toUpperCase().includes('ELECTRONIC SIGNATURE') ||
           section.title.toUpperCase().includes('ELECTRONIC RECORD')
         )) {
@@ -645,12 +647,12 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             
             // Label
             page.drawText(field.label + ':', {
-              x: leftMargin + 10, y: fieldY, size: 9, font: fontBold, color: darkGray,
+              x: leftMargin + 10, y: fieldY, size: 9, font: fontBold, color: darkGray, maxWidth: 170,
             });
             // Value
-            const valueX = leftMargin + 120;
+            const valueX = leftMargin + 185;
             page.drawText(String(field.value || 'N/A'), {
-              x: valueX, y: fieldY, size: 9, font: font, color: darkGray, maxWidth: contentWidth - 130,
+              x: valueX, y: fieldY, size: 9, font: font, color: darkGray, maxWidth: contentWidth - 195,
             });
             fieldY -= 16;
           }

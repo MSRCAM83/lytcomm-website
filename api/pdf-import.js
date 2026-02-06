@@ -4,7 +4,7 @@
  * Updated: 2026-02-04
  *
  * Vercel serverless function that processes uploaded work order
- * and construction map PDFs via Claude Opus 4.5 Vision API.
+ * and construction map PDFs via Claude Opus 4.6 Vision API.
  *
  * v4.1.0: EVERY billable item gets unique ID. Separate entity lists:
  *         - handholes[], flowerpots[], ground_rods[], segments[], splice_points[]
@@ -154,7 +154,7 @@ export default async function handler(req, res) {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-opus-4-5-20251101',
+          model: 'claude-opus-4-6',
           max_tokens: 64000,
           system: buildSystemPrompt(isTiled),
           messages: [{ role: 'user', content: contentBlocks }],

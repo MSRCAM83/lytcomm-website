@@ -1587,7 +1587,7 @@ const EmployeeOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
       case 1:
         return formData.filingStatus && formData.w4Signature;
       case 2:
-        return formData.bankName && formData.routingNumber && formData.accountNumber;
+        return formData.bankName && formData.routingNumber && formData.accountNumber && formData.directDepositSignature;
       case 3:
         return formData.idFile;
       case 4:

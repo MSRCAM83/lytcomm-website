@@ -187,7 +187,12 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
             { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
             { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c2c2c' }] },
             { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
-          ] : [],
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+          ] : [
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+          ],
         }}
       >
         {/* Segment Polylines - only render after map is ready to avoid setAt error */}
