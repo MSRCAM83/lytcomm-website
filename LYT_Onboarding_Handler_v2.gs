@@ -102,9 +102,15 @@ function processOnboarding(data) {
     return { success: false, error: 'No data provided' };
   }
   
-  const type = data.type || 'unknown';
+  // Detect type from 'type' field or 'action' field
+  let type = data.type || 'unknown';
+  if (type === 'unknown' && data.action) {
+    if (data.action.toLowerCase().includes('employee')) type = 'employee';
+    else if (data.action.toLowerCase().includes('contractor')) type = 'contractor';
+  }
   const formData = data.formData || {};
   const documents = data.documents || {};
+  const filledPdfs = data.filledPdfs || {};
   const coiFile = data.coiFile;
   const voidedCheck = data.voidedCheck;
   const idFile = data.idFile;
@@ -188,7 +194,7 @@ function processOnboarding(data) {
   // Step 4: Save main onboarding document (HTML)
   try {
     const docContent = createOnboardingDocument(type, formData, documents);
-    const docBlob = Utilities.newBlob(docContent, 'text/html', `${folderName} - Onboarding Data.html`);
+    const docBlob = Utilities.newBlob(docContent, 'text/html', 'Onboarding Data.html');
     const docFile = newFolder.createFile(docBlob);
     savedFiles.push('Onboarding Data.html');
     Logger.log('✓ Saved: Onboarding Data.html');
@@ -208,7 +214,7 @@ function processOnboarding(data) {
     const jsonBlob = Utilities.newBlob(
       JSON.stringify(jsonData, null, 2),
       'application/json',
-      `${folderName} - Data Backup.json`
+      'Data Backup.json'
     );
     const jsonFile = newFolder.createFile(jsonBlob);
     savedFiles.push('Data Backup.json');
@@ -290,7 +296,48 @@ function processOnboarding(data) {
     }
   }
   
-  // Step 10: Send notification email (non-blocking)
+  // Step 10: Save filled PDFs (W-4/W-9, MSA, Rate Card, etc.)
+  const pdfNames = {
+    // Contractor PDFs
+    companyInfo: 'Company Information.pdf',
+    w9: 'W-9 Tax Form.pdf',
+    msa: 'MSA Agreement.pdf',
+    insurance: 'Insurance Certificate.pdf',
+    fleet: 'Fleet & Personnel.pdf',
+    skills: 'Skills & Capabilities.pdf',
+    rateCard: 'Rate Card Acceptance.pdf',
+    directDeposit: 'Direct Deposit Authorization.pdf',
+    safety: 'Safety Acknowledgment.pdf',
+    // Employee PDFs
+    personalInfo: 'Personal Information.pdf',
+    w4: 'W-4 Tax Form.pdf',
+    emergencyContact: 'Emergency Contact.pdf',
+    backgroundCheck: 'Background Check Authorization.pdf',
+    drugTest: 'Drug Test Consent.pdf',
+  };
+
+  if (filledPdfs && typeof filledPdfs === 'object') {
+    for (const [key, pdfDataUrl] of Object.entries(filledPdfs)) {
+      if (!pdfDataUrl) continue;
+      try {
+        // Extract base64 data from data URL (format: data:application/pdf;base64,XXXXX)
+        const base64Data = pdfDataUrl.includes('base64,')
+          ? pdfDataUrl.split('base64,')[1]
+          : pdfDataUrl;
+        const pdfBytes = Utilities.base64Decode(base64Data);
+        const fileName = pdfNames[key] || `${key}.pdf`;
+        const pdfBlob = Utilities.newBlob(pdfBytes, 'application/pdf', fileName);
+        newFolder.createFile(pdfBlob);
+        savedFiles.push(fileName);
+        Logger.log('✓ Saved PDF: ' + fileName);
+      } catch (pdfError) {
+        Logger.log('ERROR saving PDF ' + key + ': ' + pdfError.toString());
+        errors.push('Failed to save ' + key + ' PDF: ' + pdfError.toString());
+      }
+    }
+  }
+
+  // Step 11: Send notification email (non-blocking)
   if (SUCCESS_EMAILS && SUCCESS_EMAILS.length > 0) {
     try {
       sendSuccessEmail(type, formData, newFolder.getUrl());
@@ -301,7 +348,7 @@ function processOnboarding(data) {
     }
   }
   
-  // Step 11: Send warning email if there were partial errors
+  // Step 12: Send warning email if there were partial errors
   if (errors.length > 0 && ERROR_EMAILS && ERROR_EMAILS.length > 0) {
     try {
       sendErrorEmail(type, formData, 'Partial errors during submission (folder created but some files failed)', errors.join('; '));
