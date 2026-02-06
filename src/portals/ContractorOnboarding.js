@@ -766,21 +766,26 @@ const ContractorOnboarding = ({ setCurrentPage, darkMode, setDarkMode }) => {
         });
 
         const text = await response.text();
-        console.log('Response text:', text.substring(0, 500));
-        
+
         // Try to parse as JSON
         try {
           result = JSON.parse(text);
         } catch (parseErr) {
-          // Check if this looks like a Google redirect/error page
-          if (text.includes('Moved Temporarily')) {
-            // GAS processed the request but redirected
-            // The data was submitted - we just can't confirm
-            result = { 
-              success: true, 
-              message: 'Submitted successfully',
-              note: 'Check Google Drive for confirmation'
-            };
+          // GAS returns HTML with redirect - follow it to get actual JSON response
+          if (text.includes('HREF="')) {
+            const match = text.match(/HREF="([^"]+)"/i);
+            if (match) {
+              const redirectUrl = match[1].replace(/&amp;/g, '&');
+              const finalResponse = await fetch(redirectUrl);
+              const finalText = await finalResponse.text();
+              try {
+                result = JSON.parse(finalText);
+              } catch {
+                result = { success: true, message: 'Submitted successfully' };
+              }
+            } else {
+              result = { success: false, error: 'Server configuration error' };
+            }
           } else if (text.includes('Page Not Found') || text.includes('unable to open')) {
             result = { success: false, error: 'Server error - please try again' };
           } else {

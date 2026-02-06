@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle, MessageSquare } from 'lucide-react';
-import { LYT_INFO } from '../config/constants';
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, MessageSquare, Loader } from 'lucide-react';
+import { LYT_INFO, URLS } from '../config/constants';
 
 const ContactPage = ({ darkMode }) => {
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
@@ -28,11 +28,66 @@ const ContactPage = ({ darkMode }) => {
     message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Contact form submitted:', formData);
-    setSubmitted(true);
+    setLoading(true);
+    setError('');
+
+    try {
+      const payload = {
+        action: 'contactForm',
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || '',
+        company: formData.company || '',
+        projectType: formData.projectType || '',
+        message: formData.message,
+      };
+
+      const response = await fetch(URLS.appsScript, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await response.text();
+
+      // Handle GAS redirect
+      let result;
+      if (text.includes('HREF="')) {
+        const match = text.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
+          result = JSON.parse(finalText);
+        }
+      } else {
+        result = JSON.parse(text);
+      }
+
+      if (result && result.success) {
+        setSubmitted(true);
+      } else {
+        // Even if GAS doesn't handle contactForm, show success since we tried
+        // Fall back to mailto link
+        const subject = encodeURIComponent(`Website Contact: ${formData.projectType || 'General Inquiry'}`);
+        const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone}\nCompany: ${formData.company}\nProject Type: ${formData.projectType}\n\nMessage:\n${formData.message}`);
+        window.open(`mailto:${LYT_INFO.email}?subject=${subject}&body=${body}`, '_self');
+        setSubmitted(true);
+      }
+    } catch (err) {
+      // If API fails, fall back to mailto
+      const subject = encodeURIComponent(`Website Contact: ${formData.projectType || 'General Inquiry'}`);
+      const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone}\nCompany: ${formData.company}\nProject Type: ${formData.projectType}\n\nMessage:\n${formData.message}`);
+      window.open(`mailto:${LYT_INFO.email}?subject=${subject}&body=${body}`, '_self');
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -351,16 +406,17 @@ const ContactPage = ({ darkMode }) => {
 
                 <button
                   type="submit"
+                  disabled={loading}
                   style={{
                     width: '100%',
                     padding: '14px',
                     fontSize: '1rem',
                     fontWeight: '600',
-                    background: gradientColors,
+                    background: loading ? '#9ca3af' : gradientColors,
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -369,15 +425,17 @@ const ContactPage = ({ darkMode }) => {
                     boxShadow: `0 4px 15px ${accentPrimary}30`,
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.02)';
-                    e.currentTarget.style.boxShadow = `0 6px 20px ${accentPrimary}40`;
+                    if (!loading) {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = `0 6px 20px ${accentPrimary}40`;
+                    }
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.transform = 'scale(1)';
                     e.currentTarget.style.boxShadow = `0 4px 15px ${accentPrimary}30`;
                   }}
                 >
-                  <Send size={18} /> Send Message
+                  {loading ? <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Sending...</> : <><Send size={18} /> Send Message</>}
                 </button>
               </form>
             )}

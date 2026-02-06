@@ -122,15 +122,6 @@ export const skillOptions = [
   'Traffic Control',
 ];
 
-// Empty - no mock data. All data comes from database.
-export const mockUsers = [];
-export const mockProjects = [];
-export const mockContractors = [];
-export const mockTimeEntries = [];
-export const mockInvoices = [];
-export const mockFiles = [];
-export const mockAnnouncements = [];
-
 
 // Gateway configuration (for portal components)
 export const GATEWAY_CONFIG = {

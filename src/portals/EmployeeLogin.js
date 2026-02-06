@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowLeft, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { colors, mockUsers } from '../config/constants';
+import { colors, URLS } from '../config/constants';
+
+const PORTAL_URL = URLS.portalScript;
 
 const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
-  // eslint-disable-next-line no-unused-vars
-  const textColor = darkMode ? '#ffffff' : colors.dark;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,22 +14,76 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleLoginResult = (result) => {
+    setLoading(false);
+    if (result.success) {
+      const user = result.user || result.data || result;
+      setLoggedInUser({
+        email: user.email || email,
+        name: user.name || 'Employee',
+        role: user.role || 'employee',
+        status: user.status || 'active'
+      });
+      const role = (user.role || 'employee').toLowerCase();
+      if (role === 'admin') {
+        setCurrentPage('admin-dashboard');
+      } else if (role === 'contractor') {
+        setCurrentPage('contractor-dashboard');
+      } else {
+        setCurrentPage('employee-dashboard');
+      }
+    } else {
+      setError(result.message || 'Login failed. Please check your credentials.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const payload = {
+        action: 'login',
+        email: email.trim().toLowerCase(),
+        password: password
+      };
 
-    // Demo login - check against mock users
-    const user = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+      const initialResponse = await fetch(PORTAL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
 
-    if (user && password === '********') {
-      setLoggedInUser(user);
-      setCurrentPage('employee-dashboard');
-    } else {
-      setError('Invalid email or password. Please check your credentials.');
+      const initialText = await initialResponse.text();
+
+      if (initialText.includes('HREF="')) {
+        const match = initialText.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
+          try {
+            const result = JSON.parse(finalText);
+            handleLoginResult(result);
+            return;
+          } catch (parseErr) {
+            setError('Server error. Please try again.');
+          }
+        } else {
+          setError('Server configuration error.');
+        }
+      } else {
+        try {
+          const result = JSON.parse(initialText);
+          handleLoginResult(result);
+          return;
+        } catch (parseErr) {
+          setError('Invalid server response.');
+        }
+      }
+    } catch (err) {
+      setError('Unable to connect. Please try again.');
     }
 
     setLoading(false);
@@ -169,6 +223,7 @@ const EmployeeLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
               <button
                 type="button"
+                onClick={() => setCurrentPage('forgot-password')}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',

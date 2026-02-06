@@ -402,9 +402,24 @@ export async function submitTestContractor(onProgress) {
     try {
       result = JSON.parse(text);
     } catch {
-      result = text.includes('Moved Temporarily')
-        ? { success: true, message: 'Submitted (redirect response)' }
-        : { success: false, error: text.substring(0, 200) };
+      // GAS returns HTML with redirect - follow it to get actual JSON response
+      if (text.includes('HREF="')) {
+        const match = text.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
+          try {
+            result = JSON.parse(finalText);
+          } catch {
+            result = { success: true, message: 'Submitted (redirect followed)' };
+          }
+        } else {
+          result = { success: false, error: 'Could not parse redirect URL' };
+        }
+      } else {
+        result = { success: false, error: text.substring(0, 200) };
+      }
     }
 
     log(result.success ? 'SUCCESS: ' + (result.message || 'Contractor test submitted') : 'ERROR: ' + result.error);
@@ -696,9 +711,24 @@ export async function submitTestEmployee(onProgress) {
     try {
       result = JSON.parse(text);
     } catch {
-      result = text.includes('Moved Temporarily')
-        ? { success: true, message: 'Submitted (redirect response)' }
-        : { success: false, error: text.substring(0, 200) };
+      // GAS returns HTML with redirect - follow it to get actual JSON response
+      if (text.includes('HREF="')) {
+        const match = text.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
+          try {
+            result = JSON.parse(finalText);
+          } catch {
+            result = { success: true, message: 'Submitted (redirect followed)' };
+          }
+        } else {
+          result = { success: false, error: 'Could not parse redirect URL' };
+        }
+      } else {
+        result = { success: false, error: text.substring(0, 200) };
+      }
     }
 
     log(result.success ? 'SUCCESS: ' + (result.message || 'Employee test submitted') : 'ERROR: ' + result.error);

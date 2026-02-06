@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { colors, mockUsers, LYT_INFO } from '../config/constants';
+import { colors, URLS } from '../config/constants';
+
+const PORTAL_URL = URLS.portalScript;
 
 const AdminLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
   const bgColor = darkMode ? colors.dark : '#f8fafc';
   const cardBg = darkMode ? colors.darkLight : '#ffffff';
-  // eslint-disable-next-line no-unused-vars
-  const textColor = darkMode ? '#ffffff' : colors.dark;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,22 +14,73 @@ const AdminLogin = ({ setCurrentPage, setLoggedInUser, darkMode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleLoginResult = (result) => {
+    setLoading(false);
+    if (result.success) {
+      const user = result.user || result.data || result;
+      if ((user.role || '').toLowerCase() !== 'admin') {
+        setError('This account does not have admin access.');
+        return;
+      }
+      setLoggedInUser({
+        email: user.email || email,
+        name: user.name || 'Admin',
+        role: user.role || 'admin',
+        status: user.status || 'active'
+      });
+      setCurrentPage('admin-dashboard');
+    } else {
+      setError(result.message || 'Login failed. Please check your credentials.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const payload = {
+        action: 'login',
+        email: email.trim().toLowerCase(),
+        password: password
+      };
 
-    // Check for admin users
-    const adminEmails = LYT_INFO.adminEmails;
-    const user = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.role === 'admin');
+      const initialResponse = await fetch(PORTAL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
 
-    if (user && password === '********' && adminEmails.includes(email.toLowerCase())) {
-      setLoggedInUser(user);
-      setCurrentPage('admin-dashboard');
-    } else {
-      setError('Invalid credentials or insufficient permissions. Try: matt@lytcomm.com / ********');
+      const initialText = await initialResponse.text();
+
+      if (initialText.includes('HREF="')) {
+        const match = initialText.match(/HREF="([^"]+)"/i);
+        if (match) {
+          const redirectUrl = match[1].replace(/&amp;/g, '&');
+          const finalResponse = await fetch(redirectUrl);
+          const finalText = await finalResponse.text();
+          try {
+            const result = JSON.parse(finalText);
+            handleLoginResult(result);
+            return;
+          } catch (parseErr) {
+            setError('Server error. Please try again.');
+          }
+        } else {
+          setError('Server configuration error.');
+        }
+      } else {
+        try {
+          const result = JSON.parse(initialText);
+          handleLoginResult(result);
+          return;
+        } catch (parseErr) {
+          setError('Invalid server response.');
+        }
+      }
+    } catch (err) {
+      setError('Unable to connect. Please try again.');
     }
 
     setLoading(false);
