@@ -639,7 +639,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
       start: { x: leftMargin, y: y }, end: { x: rightMargin, y: y },
       thickness: 0.5, color: borderColor,
     });
-    y -= 16;
+    y -= 10;
 
     // ===== CONTENT SECTIONS =====
     if (Array.isArray(content)) {
@@ -671,6 +671,9 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
           ensureSpace(Math.min(estimatedHeight + 10, 220));
         }
 
+        // Track where section content starts (after title) for bordered box
+        let sectionContentStartY = y;
+
         // ---- Section Title Bar ----
         if (section.title) {
           ensureSpace(28);
@@ -682,12 +685,13 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
           page.drawText(section.title, {
             x: leftMargin + 12, y: y - 16, size: 9.5, font: fontBold, color: white,
           });
-          y -= 26;
+          y -= 22;
+          sectionContentStartY = y;
         }
 
         // ---- Fields ----
         if (section.fields && section.fields.length > 0) {
-          const rowHeight = 20;
+          const rowHeight = 18;
 
           for (let i = 0; i < section.fields.length; i++) {
             const field = section.fields[i];
@@ -698,7 +702,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             // Alternating row background
             if (i % 2 === 0) {
               page.drawRectangle({
-                x: leftMargin, y: rowY, width: contentWidth, height: rowHeight,
+                x: leftMargin + 0.5, y: rowY, width: contentWidth - 1, height: rowHeight,
                 color: lightBg,
               });
             }
@@ -712,30 +716,23 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             // Label (bold, muted)
             const labelText = (field.label || '') + ':';
             page.drawText(labelText, {
-              x: leftMargin + 12, y: rowY + 6, size: 9, font: fontBold, color: medGray,
-              maxWidth: 165,
+              x: leftMargin + 12, y: rowY + 5, size: 8.5, font: fontBold, color: medGray,
+              maxWidth: 160,
             });
             // Value
             const valueStr = String(field.value ?? 'N/A');
             page.drawText(valueStr, {
-              x: leftMargin + 182, y: rowY + 6, size: 9, font: font, color: darkText,
-              maxWidth: contentWidth - 194,
+              x: leftMargin + 178, y: rowY + 5, size: 8.5, font: font, color: darkText,
+              maxWidth: contentWidth - 190,
             });
 
             y = rowY;
           }
-          // Section bottom border
-          page.drawLine({
-            start: { x: leftMargin, y: y },
-            end: { x: rightMargin, y: y },
-            thickness: 0.7, color: borderColor,
-          });
-          y -= 6;
         }
 
         // ---- Checkboxes ----
         if (section.checkboxes && section.checkboxes.length > 0) {
-          const cbRowHeight = 22;
+          const cbRowHeight = 20;
 
           for (let i = 0; i < section.checkboxes.length; i++) {
             const cb = section.checkboxes[i];
@@ -746,15 +743,15 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             // Subtle alternating background
             if (i % 2 === 0) {
               page.drawRectangle({
-                x: leftMargin, y: rowY, width: contentWidth, height: cbRowHeight,
+                x: leftMargin + 0.5, y: rowY, width: contentWidth - 1, height: cbRowHeight,
                 color: lightBg,
               });
             }
 
             // Checkbox
-            const boxSize = 11;
+            const boxSize = 10;
             const boxX = leftMargin + 12;
-            const boxY = rowY + 5.5;
+            const boxY = rowY + 5;
 
             if (cb.checked) {
               // Filled checkbox
@@ -764,14 +761,14 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
               });
               // White checkmark lines
               page.drawLine({
-                start: { x: boxX + 2, y: boxY + 5 },
-                end: { x: boxX + 4.5, y: boxY + 2.5 },
-                thickness: 1.8, color: white,
+                start: { x: boxX + 2, y: boxY + 4.5 },
+                end: { x: boxX + 4, y: boxY + 2 },
+                thickness: 1.6, color: white,
               });
               page.drawLine({
-                start: { x: boxX + 4.5, y: boxY + 2.5 },
-                end: { x: boxX + 9, y: boxY + 8.5 },
-                thickness: 1.8, color: white,
+                start: { x: boxX + 4, y: boxY + 2 },
+                end: { x: boxX + 8, y: boxY + 7.5 },
+                thickness: 1.6, color: white,
               });
             } else {
               // Empty checkbox
@@ -783,42 +780,49 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
 
             // Label
             page.drawText(cb.label || '', {
-              x: leftMargin + 30, y: rowY + 7, size: 9, font: font, color: darkText,
-              maxWidth: contentWidth - 42,
+              x: leftMargin + 28, y: rowY + 6, size: 8.5, font: font, color: darkText,
+              maxWidth: contentWidth - 40,
             });
 
             y = rowY;
           }
-          // Bottom border
-          page.drawLine({
-            start: { x: leftMargin, y: y },
-            end: { x: rightMargin, y: y },
-            thickness: 0.5, color: borderColor,
-          });
-          y -= 6;
         }
 
         // ---- Paragraphs (with proper wrapping) ----
         if (section.paragraphs && section.paragraphs.length > 0) {
-          // Light left accent bar for paragraph blocks
-          const paraStartY = y;
-
+          // Light background for entire paragraph area
+          const paraLinesAll = [];
           for (const para of section.paragraphs) {
-            const lines = wrapText(para, 9, contentWidth - 28);
-
-            for (const line of lines) {
-              ensureSpace(16);
-              page.drawText(line, {
-                x: leftMargin + 14, y: y - 13, size: 9, font: font, color: darkText,
-              });
-              y -= 14;
-            }
-            y -= 4; // gap between paragraphs
+            paraLinesAll.push(...wrapText(para, 8.5, contentWidth - 30));
+            paraLinesAll.push(null); // gap marker
           }
+          const paraBlockHeight = paraLinesAll.reduce((h, l) => h + (l === null ? 6 : 13), 0) + 10;
 
-          // Draw left accent bar from paraStartY down to y (only on same page)
-          if (paraStartY - y > 10 && paraStartY > contentBottom) {
-            const barTop = Math.min(paraStartY, pageHeight - 40);
+          // Draw background
+          if (paraBlockHeight < 300) ensureSpace(paraBlockHeight);
+          else ensureSpace(40);
+          const paraBgTop = y;
+          page.drawRectangle({
+            x: leftMargin + 0.5, y: Math.max(y - paraBlockHeight, contentBottom),
+            width: contentWidth - 1,
+            height: Math.min(paraBlockHeight, y - contentBottom),
+            color: rgb(0.98, 0.99, 1),
+          });
+
+          y -= 6;
+          for (const line of paraLinesAll) {
+            if (line === null) { y -= 6; continue; }
+            ensureSpace(15);
+            page.drawText(line, {
+              x: leftMargin + 14, y: y - 11, size: 8.5, font: font, color: darkText,
+            });
+            y -= 13;
+          }
+          y -= 4;
+
+          // Teal left accent bar
+          if (paraBgTop - y > 8 && paraBgTop > contentBottom) {
+            const barTop = Math.min(paraBgTop, pageHeight - 40);
             const barBottom = Math.max(y + 2, contentBottom);
             if (barTop > barBottom) {
               page.drawRectangle({
@@ -827,13 +831,12 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
               });
             }
           }
-          y -= 4;
         }
 
         // ---- Table ----
         if (section.table && section.table.rows) {
           const colWidths = section.table.colWidths || [200, 100, 100];
-          const tableRowHeight = 20;
+          const tableRowHeight = 18;
 
           // Header row
           if (section.table.headers) {
@@ -845,7 +848,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             let colX = leftMargin + 8;
             for (let i = 0; i < section.table.headers.length; i++) {
               page.drawText(section.table.headers[i], {
-                x: colX, y: y - 14, size: 8, font: fontBold, color: white,
+                x: colX, y: y - 13, size: 8, font: fontBold, color: white,
               });
               colX += colWidths[i] || 100;
             }
@@ -862,7 +865,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             // Alternating row colors
             if (r % 2 === 0) {
               page.drawRectangle({
-                x: leftMargin, y: rowY, width: contentWidth, height: tableRowHeight,
+                x: leftMargin + 0.5, y: rowY, width: contentWidth - 1, height: tableRowHeight,
                 color: lightBg,
               });
             }
@@ -870,7 +873,7 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
             let colX = leftMargin + 8;
             for (let i = 0; i < row.length; i++) {
               page.drawText(String(row[i] || ''), {
-                x: colX, y: rowY + 6, size: 8, font: font, color: darkText,
+                x: colX, y: rowY + 5, size: 8, font: font, color: darkText,
                 maxWidth: (colWidths[i] || 100) - 10,
               });
               colX += colWidths[i] || 100;
@@ -885,16 +888,30 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
 
             y = rowY;
           }
-          // Table bottom border
-          page.drawLine({
-            start: { x: leftMargin, y: y },
-            end: { x: rightMargin, y: y },
-            thickness: 0.7, color: lytBlue,
-          });
-          y -= 6;
         }
 
-        y -= 10; // Space between sections
+        // ---- Draw section box border (left + right + bottom) ----
+        if (sectionContentStartY > y && sectionContentStartY > contentBottom) {
+          const boxTop = sectionContentStartY;
+          const boxBottom = y;
+          // Left border
+          page.drawLine({
+            start: { x: leftMargin, y: boxTop }, end: { x: leftMargin, y: boxBottom },
+            thickness: 0.5, color: borderColor,
+          });
+          // Right border
+          page.drawLine({
+            start: { x: rightMargin, y: boxTop }, end: { x: rightMargin, y: boxBottom },
+            thickness: 0.5, color: borderColor,
+          });
+          // Bottom border
+          page.drawLine({
+            start: { x: leftMargin, y: boxBottom }, end: { x: rightMargin, y: boxBottom },
+            thickness: 0.5, color: borderColor,
+          });
+        }
+
+        y -= 8; // Space between sections
       }
     }
 
@@ -979,56 +996,71 @@ export async function createFormPdf(title, content, signatureDataUrl, signatureI
     // ===== SIGNATURE BLOCK =====
     if (signatureDataUrl) {
       try {
-        ensureSpace(110);
+        ensureSpace(105);
 
         const sigBytes = dataUrlToBytes(signatureDataUrl);
         if (sigBytes) {
           const sigImage = await pdfDoc.embedPng(sigBytes);
 
-          y -= 8;
+          y -= 6;
+          const sigBlockTop = y;
+          const sigBlockHeight = 92;
 
-          // Blue left accent bar for signature block
+          // Full-width signature block with dark blue header strip
           page.drawRectangle({
-            x: leftMargin, y: y - 90, width: 3.5, height: 90,
-            color: lytBlue,
+            x: leftMargin, y: sigBlockTop - 20, width: contentWidth, height: 20,
+            color: lytDarkBlue,
           });
-
-          // Signature block background
-          page.drawRectangle({
-            x: leftMargin + 3.5, y: y - 90, width: 280, height: 90,
-            color: rgb(0.98, 0.99, 1), borderColor: borderColor, borderWidth: 0.5,
-          });
-
-          // "AUTHORIZED SIGNATURE" label
           page.drawText('AUTHORIZED SIGNATURE', {
-            x: leftMargin + 14, y: y - 13, size: 8, font: fontBold, color: lytBlue,
+            x: leftMargin + 12, y: sigBlockTop - 14, size: 9, font: fontBold, color: white,
           });
 
-          // Signature image
+          // Signature content area
+          page.drawRectangle({
+            x: leftMargin, y: sigBlockTop - sigBlockHeight,
+            width: contentWidth, height: sigBlockHeight - 20,
+            color: rgb(0.985, 0.99, 1),
+            borderColor: borderColor, borderWidth: 0.5,
+          });
+
+          // Signature image (left side)
           page.drawImage(sigImage, {
-            x: leftMargin + 14, y: y - 56, width: 160, height: 38,
+            x: leftMargin + 16, y: sigBlockTop - 62, width: 170, height: 36,
           });
 
           // Signature line
           page.drawLine({
-            start: { x: leftMargin + 14, y: y - 60 },
-            end: { x: leftMargin + 240, y: y - 60 },
+            start: { x: leftMargin + 16, y: sigBlockTop - 66 },
+            end: { x: leftMargin + 220, y: sigBlockTop - 66 },
             thickness: 0.7, color: darkText,
           });
+          page.drawText('Signature', {
+            x: leftMargin + 16, y: sigBlockTop - 76, size: 7, font: font, color: medGray,
+          });
 
-          // Date/Time/IP
-          const sigInfo = `Signed: ${signatureInfo.timestamp || new Date().toLocaleString()}  |  IP: ${signatureInfo.ip || 'N/A'}`;
+          // Date field (right side)
+          const dateStr = signatureInfo.timestamp
+            ? signatureInfo.timestamp.split(',')[0] || new Date().toLocaleDateString()
+            : new Date().toLocaleDateString();
+          page.drawText(dateStr, {
+            x: leftMargin + 320, y: sigBlockTop - 46, size: 10, font: font, color: darkText,
+          });
+          page.drawLine({
+            start: { x: leftMargin + 320, y: sigBlockTop - 50 },
+            end: { x: rightMargin - 16, y: sigBlockTop - 50 },
+            thickness: 0.7, color: darkText,
+          });
+          page.drawText('Date', {
+            x: leftMargin + 320, y: sigBlockTop - 60, size: 7, font: font, color: medGray,
+          });
+
+          // Verification info (bottom)
+          const sigInfo = `e-Signed: ${signatureInfo.timestamp || new Date().toLocaleString()}  |  IP: ${signatureInfo.ip || 'N/A'}`;
           page.drawText(sigInfo, {
-            x: leftMargin + 14, y: y - 74, size: 7, font: font, color: medGray,
+            x: leftMargin + 16, y: sigBlockTop - sigBlockHeight + 6, size: 6.5, font: font, color: medGray,
           });
 
-          // Date line and label on right side
-          const dateStr = signatureInfo.timestamp ? signatureInfo.timestamp.split(',')[0] || '' : new Date().toLocaleDateString();
-          page.drawText('Date: ' + dateStr, {
-            x: leftMargin + 14, y: y - 84, size: 7, font: font, color: medGray,
-          });
-
-          y -= 100;
+          y = sigBlockTop - sigBlockHeight - 6;
         }
       } catch (sigErr) {
         console.error('Signature embed error:', sigErr);
