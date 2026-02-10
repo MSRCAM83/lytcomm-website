@@ -185,6 +185,18 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const safetyTimer = setTimeout(() => controller.abort(), 750000);
 
+    // Build request body
+    const requestBody = {
+      model: 'claude-opus-4-6',
+      max_tokens: 64000,
+      system: buildSystemPrompt(isTiled),
+      messages: [{ role: 'user', content: contentBlocks }],
+    };
+
+    const bodyString = JSON.stringify(requestBody);
+    const bodySizeMB = (bodyString.length / (1024 * 1024)).toFixed(2);
+    console.log(`[REQUEST] Sending ${bodySizeMB}MB to Claude API (${contentBlocks.length} content blocks)`);
+
     let response;
     try {
       response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -195,18 +207,20 @@ export default async function handler(req, res) {
           'anthropic-version': '2023-06-01',
         },
         signal: controller.signal,
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 64000,
-          system: buildSystemPrompt(isTiled),
-          messages: [{ role: 'user', content: contentBlocks }],
-        }),
+        body: bodyString,
       });
     } catch (fetchErr) {
       clearTimeout(safetyTimer);
       if (fetchErr.name === 'AbortError') {
         return res.status(504).json({ error: 'AI processing timed out after 750s.' });
       }
+      console.error('Fetch error details:', {
+        name: fetchErr.name,
+        message: fetchErr.message,
+        cause: fetchErr.cause,
+        code: fetchErr.code,
+        stack: fetchErr.stack?.substring(0, 300)
+      });
       throw fetchErr;
     }
     clearTimeout(safetyTimer);
