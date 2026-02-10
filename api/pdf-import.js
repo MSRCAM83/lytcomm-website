@@ -1,17 +1,11 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 4.1.1
- * Updated: 2026-02-09
+ * Version: 4.1.0
+ * Updated: 2026-02-04
  *
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Opus 4.6 Vision API.
  *
- * v4.1.1: Pre-flight validation & cost optimization (2026-02-09)
- *         - Request body & base64 validation before API call
- *         - Cost estimation logging (~$X.XX per request)
- *         - Reduced body size limit 50mb → 10mb (Vercel Pro limit)
- *         - Better error reporting (message, stack, errorName)
- *         - Memory increased to 3008MB in vercel.json
  * v4.1.0: EVERY billable item gets unique ID. Separate entity lists:
  *         - handholes[], flowerpots[], ground_rods[], segments[], splice_points[]
  *         - Even 30ft road crossings get segment IDs
@@ -46,10 +40,9 @@
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb',
+      sizeLimit: '50mb',
     },
   },
-  maxDuration: 800,
 };
 
 export default async function handler(req, res) {
@@ -64,88 +57,16 @@ export default async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
-  // Comprehensive API key validation
-  console.log(`[API KEY CHECK] Present: YES, Length: ${apiKey.length}, Format: ${apiKey.substring(0, 20)}...${apiKey.substring(apiKey.length - 4)}`);
-
-  if (!apiKey.startsWith('sk-ant-')) {
-    return res.status(500).json({ error: 'Invalid API key format (should start with sk-ant-)' });
-  }
-
-  // Test API connectivity with minimal request FIRST
-  console.log('[API TEST] Testing Anthropic API connectivity...');
   try {
-    const testResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 10,
-        messages: [{ role: 'user', content: 'test' }]
-      })
-    });
-
-    if (!testResponse.ok) {
-      const errText = await testResponse.text();
-      console.error('[API TEST FAILED]', testResponse.status, errText.substring(0, 200));
-      return res.status(502).json({
-        error: 'Anthropic API key invalid or quota exceeded',
-        status: testResponse.status,
-        details: errText.substring(0, 300)
-      });
-    }
-
-    console.log('[API TEST] SUCCESS - API key valid and working');
-  } catch (testErr) {
-    console.error('[API TEST FAILED]', {
-      name: testErr.name,
-      message: testErr.message,
-      code: testErr.code,
-      cause: testErr.cause?.message
-    });
-    return res.status(502).json({
-      error: 'Cannot reach Anthropic API',
-      details: testErr.message,
-      cause: testErr.cause?.message || 'Unknown network error'
-    });
-  }
-
-  try {
-    // EARLY VALIDATION - Fail before expensive API call
-    if (!req.body || typeof req.body !== 'object') {
-      return res.status(400).json({ error: 'Invalid request body' });
-    }
-
-    const {
+    const { 
       work_order_text,
       map_text, map_images, map_tile_labels,
-      rate_card_id
+      rate_card_id 
     } = req.body;
 
     let mapImgs = map_images || [];
     const tileLabels = map_tile_labels || [];
     const MAX_MAP_IMAGES = 16; // Allow more now since tiles are smaller
-
-    // Validate image data BEFORE processing
-    if (mapImgs.length > 0) {
-      for (let i = 0; i < mapImgs.length; i++) {
-        if (!mapImgs[i] || typeof mapImgs[i] !== 'string') {
-          return res.status(400).json({
-            error: `Invalid image data at index ${i}. Expected base64 string.`
-          });
-        }
-        // Basic base64 validation (should be mostly alphanumeric + / + =)
-        if (!/^[A-Za-z0-9+/=]+$/.test(mapImgs[i].substring(0, 100))) {
-          return res.status(400).json({
-            error: `Invalid base64 encoding at image ${i}`
-          });
-        }
-      }
-    }
-
     if (mapImgs.length > MAX_MAP_IMAGES) {
       mapImgs = mapImgs.slice(0, MAX_MAP_IMAGES);
       console.log(`Map images capped at ${MAX_MAP_IMAGES} (was ${map_images.length})`);
@@ -158,18 +79,6 @@ export default async function handler(req, res) {
 
     if (!hasWOText && !hasMapImages && !hasMapText) {
       return res.status(400).json({ error: 'No extractable content.' });
-    }
-
-    // Estimate token cost BEFORE calling API
-    const estimatedInputTokens = Math.ceil(
-      ((work_order_text || '').length + (map_text || '').length) / 4 +
-      mapImgs.length * 1500  // ~1500 tokens per image average
-    );
-    const estimatedCost = (estimatedInputTokens / 1000000 * 5) + (64000 / 1000000 * 25);
-    console.log(`[COST ESTIMATE] ~${estimatedInputTokens}K input tokens + 64K output = ~$${estimatedCost.toFixed(2)}`);
-
-    if (estimatedInputTokens > 200000) {
-      console.warn(`[WARNING] Very large request: ${estimatedInputTokens}K tokens (check for oversized images)`);
     }
 
     console.log(`Processing v3.0.0: WO text=${(work_order_text||'').length} chars, map images=${mapImgs.length}${isTiled ? ' (TILED)' : ''}, map text=${(map_text||'').length} chars`);
@@ -230,83 +139,35 @@ export default async function handler(req, res) {
       }
     }
 
-    // Let Vercel's 800s maxDuration handle timeout (no abort controller)
-    // Don't kill request early - Claude vision processing can take 10+ minutes
-
-    // Build request body
-    const requestBody = {
-      model: 'claude-opus-4-6',
-      max_tokens: 64000,
-      system: buildSystemPrompt(isTiled),
-      messages: [{ role: 'user', content: contentBlocks }],
-    };
-
-    const bodyString = JSON.stringify(requestBody);
-    const bodySizeMB = (bodyString.length / (1024 * 1024)).toFixed(2);
-    console.log(`[REQUEST] Sending ${bodySizeMB}MB to Claude API (${contentBlocks.length} content blocks)`);
+    // Safety timeout at 750s
+    const controller = new AbortController();
+    const safetyTimer = setTimeout(() => controller.abort(), 750000);
 
     let response;
     try {
-      // Configure fetch with extended timeouts for long-running vision processing
-      const fetchOptions = {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
-        body: bodyString,
-        // Undici (Node.js fetch) timeout settings
-        keepalive: true,
-      };
-
-      // Create AbortController with 890s timeout (just under Vercel's 900s limit)
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 890000);
-      fetchOptions.signal = abortController.signal;
-
-      response = await fetch('https://api.anthropic.com/v1/messages', fetchOptions);
-      clearTimeout(timeoutId);
-    } catch (fetchErr) {
-
-      // Comprehensive fetch error diagnostics
-      const errorDetails = {
-        name: fetchErr.name,
-        message: fetchErr.message,
-        code: fetchErr.code,
-        errno: fetchErr.errno,
-        syscall: fetchErr.syscall,
-        cause: fetchErr.cause?.message || fetchErr.cause,
-        stack: fetchErr.stack?.substring(0, 500)
-      };
-
-      console.error('[FETCH ERROR] Comprehensive details:', JSON.stringify(errorDetails, null, 2));
-
-      // Specific error messages based on error type
-      let userMessage = 'Failed to send request to AI service';
-      if (fetchErr.code === 'ECONNREFUSED') {
-        userMessage = 'AI service refused connection';
-      } else if (fetchErr.code === 'ENOTFOUND') {
-        userMessage = 'Could not find AI service (DNS error)';
-      } else if (fetchErr.code === 'ETIMEDOUT') {
-        userMessage = 'Connection to AI service timed out';
-      } else if (fetchErr.code === 'ECONNRESET') {
-        userMessage = 'Connection to AI service was reset';
-      } else if (fetchErr.message?.includes('body too large')) {
-        userMessage = 'Request payload too large';
-      } else if (fetchErr.cause?.code === 'UND_ERR_HEADERS_TIMEOUT') {
-        userMessage = 'Request headers timeout';
-      }
-
-      return res.status(502).json({
-        error: userMessage,
-        errorType: fetchErr.name,
-        errorCode: fetchErr.code,
-        details: fetchErr.message,
-        cause: fetchErr.cause?.message,
-        bodySizeMB: bodySizeMB
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 64000,
+          system: buildSystemPrompt(isTiled),
+          messages: [{ role: 'user', content: contentBlocks }],
+        }),
       });
+    } catch (fetchErr) {
+      clearTimeout(safetyTimer);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(504).json({ error: 'AI processing timed out after 750s.' });
+      }
+      throw fetchErr;
     }
+    clearTimeout(safetyTimer);
 
     if (!response.ok) {
       const errText = await response.text();
