@@ -64,7 +64,54 @@ export default async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
-  console.log(`API Key present: ${apiKey ? 'YES' : 'NO'}, length: ${apiKey?.length || 0}, starts with: ${apiKey?.substring(0, 15)}...`);
+  // Comprehensive API key validation
+  console.log(`[API KEY CHECK] Present: YES, Length: ${apiKey.length}, Format: ${apiKey.substring(0, 20)}...${apiKey.substring(apiKey.length - 4)}`);
+
+  if (!apiKey.startsWith('sk-ant-')) {
+    return res.status(500).json({ error: 'Invalid API key format (should start with sk-ant-)' });
+  }
+
+  // Test API connectivity with minimal request FIRST
+  console.log('[API TEST] Testing Anthropic API connectivity...');
+  try {
+    const testResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'test' }]
+      })
+    });
+
+    if (!testResponse.ok) {
+      const errText = await testResponse.text();
+      console.error('[API TEST FAILED]', testResponse.status, errText.substring(0, 200));
+      return res.status(502).json({
+        error: 'Anthropic API key invalid or quota exceeded',
+        status: testResponse.status,
+        details: errText.substring(0, 300)
+      });
+    }
+
+    console.log('[API TEST] SUCCESS - API key valid and working');
+  } catch (testErr) {
+    console.error('[API TEST FAILED]', {
+      name: testErr.name,
+      message: testErr.message,
+      code: testErr.code,
+      cause: testErr.cause?.message
+    });
+    return res.status(502).json({
+      error: 'Cannot reach Anthropic API',
+      details: testErr.message,
+      cause: testErr.cause?.message || 'Unknown network error'
+    });
+  }
 
   try {
     // EARLY VALIDATION - Fail before expensive API call
@@ -216,14 +263,44 @@ export default async function handler(req, res) {
       if (fetchErr.name === 'AbortError') {
         return res.status(504).json({ error: 'AI processing timed out after 750s.' });
       }
-      console.error('Fetch error details:', {
+
+      // Comprehensive fetch error diagnostics
+      const errorDetails = {
         name: fetchErr.name,
         message: fetchErr.message,
-        cause: fetchErr.cause,
         code: fetchErr.code,
-        stack: fetchErr.stack?.substring(0, 300)
+        errno: fetchErr.errno,
+        syscall: fetchErr.syscall,
+        cause: fetchErr.cause?.message || fetchErr.cause,
+        stack: fetchErr.stack?.substring(0, 500)
+      };
+
+      console.error('[FETCH ERROR] Comprehensive details:', JSON.stringify(errorDetails, null, 2));
+
+      // Specific error messages based on error type
+      let userMessage = 'Failed to send request to AI service';
+      if (fetchErr.code === 'ECONNREFUSED') {
+        userMessage = 'AI service refused connection';
+      } else if (fetchErr.code === 'ENOTFOUND') {
+        userMessage = 'Could not find AI service (DNS error)';
+      } else if (fetchErr.code === 'ETIMEDOUT') {
+        userMessage = 'Connection to AI service timed out';
+      } else if (fetchErr.code === 'ECONNRESET') {
+        userMessage = 'Connection to AI service was reset';
+      } else if (fetchErr.message?.includes('body too large')) {
+        userMessage = 'Request payload too large';
+      } else if (fetchErr.cause?.code === 'UND_ERR_HEADERS_TIMEOUT') {
+        userMessage = 'Request headers timeout';
+      }
+
+      return res.status(502).json({
+        error: userMessage,
+        errorType: fetchErr.name,
+        errorCode: fetchErr.code,
+        details: fetchErr.message,
+        cause: fetchErr.cause?.message,
+        bodySizeMB: bodySizeMB
       });
-      throw fetchErr;
     }
     clearTimeout(safetyTimer);
 
