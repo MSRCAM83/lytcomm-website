@@ -64,6 +64,8 @@ export default async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
+  console.log(`API Key present: ${apiKey ? 'YES' : 'NO'}, length: ${apiKey?.length || 0}, starts with: ${apiKey?.substring(0, 15)}...`);
+
   try {
     // EARLY VALIDATION - Fail before expensive API call
     if (!req.body || typeof req.body !== 'object') {
