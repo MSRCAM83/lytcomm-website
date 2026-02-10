@@ -569,9 +569,21 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           >
             <ArrowLeft size={20} /> Back
           </button>
-          <h1 style={{ margin: 0, fontSize: '1.4rem' }}>
-            <span style={{ color: accent }}>Import</span> Work Order
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ margin: 0, fontSize: '1.4rem' }}>
+              <span style={{ color: accent }}>Import</span> Work Order
+            </h1>
+            <span style={{
+              backgroundColor: darkMode ? '#1e3a5f' : '#e2e8f0',
+              color: darkMode ? '#8892b0' : '#64748b',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontFamily: 'monospace',
+            }}>
+              v4.1.0
+            </span>
+          </div>
         </div>
         <button
           onClick={() => setDarkMode && setDarkMode(!darkMode)}

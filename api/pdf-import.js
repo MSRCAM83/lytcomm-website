@@ -238,7 +238,15 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('PDF import error:', error);
-    return res.status(500).json({ error: 'Internal server error', message: error.message });
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error type:', typeof error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      errorName: error.name,
+      stack: error.stack?.substring(0, 500)
+    });
   }
 }
 
