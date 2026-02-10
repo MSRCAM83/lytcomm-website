@@ -1,11 +1,17 @@
 /**
  * LYT Communications - PDF Import API Endpoint
- * Version: 4.1.0
- * Updated: 2026-02-04
+ * Version: 4.1.1
+ * Updated: 2026-02-09
  *
  * Vercel serverless function that processes uploaded work order
  * and construction map PDFs via Claude Opus 4.6 Vision API.
  *
+ * v4.1.1: Pre-flight validation & cost optimization (2026-02-09)
+ *         - Request body & base64 validation before API call
+ *         - Cost estimation logging (~$X.XX per request)
+ *         - Reduced body size limit 50mb → 10mb (Vercel Pro limit)
+ *         - Better error reporting (message, stack, errorName)
+ *         - Memory increased to 3008MB in vercel.json
  * v4.1.0: EVERY billable item gets unique ID. Separate entity lists:
  *         - handholes[], flowerpots[], ground_rods[], segments[], splice_points[]
  *         - Even 30ft road crossings get segment IDs
