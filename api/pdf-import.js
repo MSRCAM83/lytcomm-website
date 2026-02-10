@@ -54,8 +54,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'AI_GATEWAY_API_KEY not configured' });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
     const { 
@@ -143,25 +143,21 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const safetyTimer = setTimeout(() => controller.abort(), 750000);
 
-    // Convert Anthropic content blocks to OpenAI format for Vercel AI Gateway
-    const openAIMessages = [
-      { role: 'system', content: buildSystemPrompt(isTiled) },
-      { role: 'user', content: convertContentBlocksToOpenAI(contentBlocks) }
-    ];
-
     let response;
     try {
-      response = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'anthropic/claude-opus-4-6',
+          model: 'claude-opus-4-6',
           max_tokens: 64000,
-          messages: openAIMessages,
+          system: buildSystemPrompt(isTiled),
+          messages: [{ role: 'user', content: contentBlocks }],
         }),
       });
     } catch (fetchErr) {
@@ -181,16 +177,18 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // OpenAI format: data.choices[0].message.content
     let rawText = '';
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      rawText = data.choices[0].message.content || '';
+    if (data.content && Array.isArray(data.content)) {
+      rawText = data.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text || '')
+        .join('\n');
     }
 
-    console.log(`Response: text: ${rawText.length} chars, model: ${data.model || 'unknown'}, finish_reason: ${data.choices?.[0]?.finish_reason || 'unknown'}, usage: ${JSON.stringify(data.usage || {})}`);
+    console.log(`Response: ${data.content?.length || 0} blocks, text: ${rawText.length} chars, model: ${data.model}, stop: ${data.stop_reason}, usage: ${JSON.stringify(data.usage || {})}`);
 
-    if (data.choices?.[0]?.finish_reason === 'length') {
-      console.warn('Response truncated at max tokens. Will attempt JSON repair.');
+    if (data.stop_reason === 'max_tokens') {
+      console.warn('Response truncated at 64000 tokens. Will attempt JSON repair.');
     }
 
     // Parse JSON
