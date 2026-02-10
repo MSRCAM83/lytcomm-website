@@ -230,9 +230,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // Safety timeout at 750s
-    const controller = new AbortController();
-    const safetyTimer = setTimeout(() => controller.abort(), 750000);
+    // Let Vercel's 800s maxDuration handle timeout (no abort controller)
+    // Don't kill request early - Claude vision processing can take 10+ minutes
 
     // Build request body
     const requestBody = {
@@ -255,14 +254,9 @@ export default async function handler(req, res) {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
-        signal: controller.signal,
         body: bodyString,
       });
     } catch (fetchErr) {
-      clearTimeout(safetyTimer);
-      if (fetchErr.name === 'AbortError') {
-        return res.status(504).json({ error: 'AI processing timed out after 750s.' });
-      }
 
       // Comprehensive fetch error diagnostics
       const errorDetails = {
@@ -302,7 +296,6 @@ export default async function handler(req, res) {
         bodySizeMB: bodySizeMB
       });
     }
-    clearTimeout(safetyTimer);
 
     if (!response.ok) {
       const errText = await response.text();
