@@ -34,8 +34,8 @@ const MAX_PAGES_MAP = 4;
 // MAP TILING CONFIG
 // ============================================================
 // 4.0x scale: 11"x17" page → 4896x3168 (15.5M pixels, under Safari 16M limit)
-const MAP_RENDER_SCALE = 2.0; // Reduced from 4.0 to keep payload under 10MB
-const MAP_JPEG_QUALITY = 0.65; // Balanced quality to stay under 10MB Vercel limit
+const MAP_RENDER_SCALE = 1.5; // Reduced to 1.5x for faster processing
+const MAP_JPEG_QUALITY = 0.55; // Lower quality for faster processing
 // Tile grid: 3 columns x 2 rows = 6 map tiles per page
 const TILE_COLS = 3;
 const TILE_ROWS = 2;

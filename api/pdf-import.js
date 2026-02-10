@@ -247,7 +247,8 @@ export default async function handler(req, res) {
 
     let response;
     try {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Configure fetch with extended timeouts for long-running vision processing
+      const fetchOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +256,17 @@ export default async function handler(req, res) {
           'anthropic-version': '2023-06-01',
         },
         body: bodyString,
-      });
+        // Undici (Node.js fetch) timeout settings
+        keepalive: true,
+      };
+
+      // Create AbortController with 890s timeout (just under Vercel's 900s limit)
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 890000);
+      fetchOptions.signal = abortController.signal;
+
+      response = await fetch('https://api.anthropic.com/v1/messages', fetchOptions);
+      clearTimeout(timeoutId);
     } catch (fetchErr) {
 
       // Comprehensive fetch error diagnostics
