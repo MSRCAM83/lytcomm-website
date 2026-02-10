@@ -35,7 +35,7 @@ const MAX_PAGES_MAP = 4;
 // ============================================================
 // 4.0x scale: 11"x17" page → 4896x3168 (15.5M pixels, under Safari 16M limit)
 const MAP_RENDER_SCALE = 4.0;
-const MAP_JPEG_QUALITY = 0.85; // Higher quality for sharp text
+const MAP_JPEG_QUALITY = 0.65; // Balanced quality to stay under 10MB Vercel limit
 // Tile grid: 3 columns x 2 rows = 6 map tiles per page
 const TILE_COLS = 3;
 const TILE_ROWS = 2;
@@ -390,7 +390,10 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || errData.details || `API returned ${response.status}`);
+        const errorMsg = errData.message || errData.error || errData.details || `API returned ${response.status}`;
+        const errorDetails = errData.stack ? `\n\nStack: ${errData.stack}` : '';
+        console.error('Full API error:', errData);
+        throw new Error(errorMsg + errorDetails);
       }
 
       const data = await response.json();

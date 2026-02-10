@@ -40,9 +40,10 @@
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      sizeLimit: '10mb',
     },
   },
+  maxDuration: 800,
 };
 
 export default async function handler(req, res) {
@@ -58,15 +59,38 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { 
+    // EARLY VALIDATION - Fail before expensive API call
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'Invalid request body' });
+    }
+
+    const {
       work_order_text,
       map_text, map_images, map_tile_labels,
-      rate_card_id 
+      rate_card_id
     } = req.body;
 
     let mapImgs = map_images || [];
     const tileLabels = map_tile_labels || [];
     const MAX_MAP_IMAGES = 16; // Allow more now since tiles are smaller
+
+    // Validate image data BEFORE processing
+    if (mapImgs.length > 0) {
+      for (let i = 0; i < mapImgs.length; i++) {
+        if (!mapImgs[i] || typeof mapImgs[i] !== 'string') {
+          return res.status(400).json({
+            error: `Invalid image data at index ${i}. Expected base64 string.`
+          });
+        }
+        // Basic base64 validation (should be mostly alphanumeric + / + =)
+        if (!/^[A-Za-z0-9+/=]+$/.test(mapImgs[i].substring(0, 100))) {
+          return res.status(400).json({
+            error: `Invalid base64 encoding at image ${i}`
+          });
+        }
+      }
+    }
+
     if (mapImgs.length > MAX_MAP_IMAGES) {
       mapImgs = mapImgs.slice(0, MAX_MAP_IMAGES);
       console.log(`Map images capped at ${MAX_MAP_IMAGES} (was ${map_images.length})`);
@@ -79,6 +103,18 @@ export default async function handler(req, res) {
 
     if (!hasWOText && !hasMapImages && !hasMapText) {
       return res.status(400).json({ error: 'No extractable content.' });
+    }
+
+    // Estimate token cost BEFORE calling API
+    const estimatedInputTokens = Math.ceil(
+      ((work_order_text || '').length + (map_text || '').length) / 4 +
+      mapImgs.length * 1500  // ~1500 tokens per image average
+    );
+    const estimatedCost = (estimatedInputTokens / 1000000 * 5) + (64000 / 1000000 * 25);
+    console.log(`[COST ESTIMATE] ~${estimatedInputTokens}K input tokens + 64K output = ~$${estimatedCost.toFixed(2)}`);
+
+    if (estimatedInputTokens > 200000) {
+      console.warn(`[WARNING] Very large request: ${estimatedInputTokens}K tokens (check for oversized images)`);
     }
 
     console.log(`Processing v3.0.0: WO text=${(work_order_text||'').length} chars, map images=${mapImgs.length}${isTiled ? ' (TILED)' : ''}, map text=${(map_text||'').length} chars`);

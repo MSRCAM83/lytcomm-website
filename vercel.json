@@ -7,7 +7,7 @@
   "functions": {
     "api/pdf-import.js": {
       "maxDuration": 800,
-      "memory": 1024
+      "memory": 3008
     }
   },
   "crons": [
