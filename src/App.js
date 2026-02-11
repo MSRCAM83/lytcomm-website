@@ -48,6 +48,9 @@ import ProjectMapPage from './pages/ProjectMapPage';
 import AdminProjectDashboard from './pages/AdminProjectDashboard';
 import DailyProductionReport from './pages/DailyProductionReport';
 
+// Phase 10 - JSON Import
+import JsonImportPage from './pages/JsonImportPage';
+
 // Phase 9 - Field Assist Chat
 import FieldAssist from './components/Chat/FieldAssist';
 
@@ -166,6 +169,7 @@ function App() {
     'project-map',
     'admin-projects',
     'daily-report',
+    'json-import',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -236,6 +240,8 @@ function App() {
         return <AdminProjectDashboard darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} />;
       case 'daily-report':
         return <DailyProductionReport darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} projectId={selectedProjectId} />;
+      case 'json-import':
+        return <JsonImportPage darkMode={darkMode} setDarkMode={setDarkMode} user={loggedInUser} setCurrentPage={handleNavClick} />;
       default:
         return <HomePage setCurrentPage={handleNavClick} darkMode={darkMode} />;
     }
@@ -245,7 +251,7 @@ function App() {
   const chatEnabledPages = [
     'employee-dashboard', 'contractor-dashboard', 'admin-dashboard',
     'work-map', 'potholes', 'project-map', 'admin-projects', 'job-import', 'daily-report',
-    'daily-worksheet', 'invoices', 'metrics',
+    'daily-worksheet', 'invoices', 'metrics', 'json-import',
   ];
   const showFieldAssist = loggedInUser && chatEnabledPages.includes(currentPage);
 

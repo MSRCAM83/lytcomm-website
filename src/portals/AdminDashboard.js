@@ -1,7 +1,7 @@
 // AdminDashboard.js v3.7 - NotificationBell + Project Map System navigation
 // Fetches users directly from Google Sheets CSV export
 import React, { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Users, Briefcase, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, Search, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen, UserPlus, Shield, FlaskConical } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Briefcase, DollarSign, FileText, Settings, ChevronRight, CheckCircle, XCircle, Search, Building2, Eye, MapPin, UserCog, Target, Shovel, BarChart3, History, User, RefreshCw, Loader, Menu, X, Sun, Moon, Map, Upload, FolderOpen, UserPlus, Shield, FlaskConical, Clipboard } from 'lucide-react';
 import { colors } from '../config/constants';
 import { submitTestContractor, submitTestEmployee } from '../services/testSubmissions';
 import NotificationBell from '../components/NotificationBell';
@@ -205,6 +205,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     { id: 'project-map', label: 'Interactive Map', icon: Map, external: 'project-map' },
     { id: 'admin-projects', label: 'Projects Overview', icon: FolderOpen, external: 'admin-projects' },
     { id: 'job-import', label: 'Import Work Orders', icon: Upload, external: 'job-import' },
+    { id: 'json-import', label: 'Import JSON Data', icon: Clipboard, external: 'json-import' },
     { id: 'daily-report', label: 'Daily Report', icon: FileText, external: 'daily-report' },
     { id: 'divider-field', label: '── Field Operations ──', divider: true },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },

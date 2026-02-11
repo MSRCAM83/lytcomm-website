@@ -274,4 +274,107 @@ export const SHEETS_CONFIG = {
   issues: 'Issues',
 };
 
+// Vexus LA/TX 2026 Master Rate Card — ALL unit codes
+// vexus = what Vexus pays LYT, default_contractor = starting contractor rate (adjustable per project)
+// CRITICAL: Contractors NEVER see vexus rates or margins
+export const VEXUS_RATES = {
+  // Aerial
+  AE1:    { description: 'Place 6M strand', uom: 'LF', vexus: 0.65, default_contractor: 0.50 },
+  AE2:    { description: 'Lash Cable up to 144F on new strand', uom: 'LF', vexus: 0.80, default_contractor: 0.60 },
+  AE3:    { description: 'Overlash to existing up to 144F', uom: 'LF', vexus: 0.80, default_contractor: 0.60 },
+  'AE3.1': { description: 'Lash/Overlash larger than 144F', uom: 'LF', vexus: 1.20, default_contractor: 0.90 },
+  AE4:    { description: 'Place Down Guy incl Guy Guard', uom: 'EA', vexus: 17.40, default_contractor: 14.00 },
+  AE5:    { description: 'Place Screw Anchor 6000 lbs', uom: 'EA', vexus: 42.60, default_contractor: 30.00 },
+  AE6:    { description: 'Place Guy Guard', uom: 'EA', vexus: 0.00, default_contractor: 0.00 },
+  AE7:    { description: 'Place 2in Riser Guard', uom: 'EA', vexus: 40.00, default_contractor: 30.00 },
+  AE8:    { description: 'Place ADSS cable', uom: 'LF', vexus: 0.48, default_contractor: 0.40 },
+  AE9L:   { description: 'Cable Extension Arm Long', uom: 'EA', vexus: 65.00, default_contractor: 50.00 },
+  AE9S:   { description: 'Cable Extension Arm Short/Sidewalk', uom: 'EA', vexus: 55.00, default_contractor: 40.00 },
+  AE10:   { description: 'Tree Trimming', uom: 'Span', vexus: 35.00, default_contractor: 25.00 },
+  AE11:   { description: 'Resag cable', uom: 'Span', vexus: 30.00, default_contractor: 25.00 },
+  AE12:   { description: 'Delash/relash', uom: 'LF', vexus: 0.80, default_contractor: 0.60 },
+  AE13:   { description: 'Dead end Pole Transfer', uom: 'EA', vexus: 65.00, default_contractor: 50.00 },
+  AE14:   { description: 'Straight thru Pole Transfer', uom: 'EA', vexus: 45.00, default_contractor: 35.00 },
+  AE15:   { description: 'Bonding aerial strand', uom: 'EA', vexus: 10.00, default_contractor: 8.00 },
+  AE17:   { description: 'Place Aerial Damper Unit', uom: 'EA', vexus: 25.00, default_contractor: 20.00 },
+  AE18:   { description: 'Place Tree/Squirrel Guard', uom: 'LF', vexus: 0.32, default_contractor: 0.25 },
+  AE19:   { description: 'Remobilize temp to permanent pole attachment', uom: 'EA', vexus: 45.00, default_contractor: 35.00 },
+  AE31:   { description: 'Figure 8 cable up to 144F dip transition', uom: 'EA', vexus: 30.00, default_contractor: 22.00 },
+  'AE31.1': { description: 'Figure 8 cable larger than 144F dip transition', uom: 'LF', vexus: 1.20, default_contractor: 0.90 },
+  // Fiber Splicing
+  FS1:    { description: 'Fusion splice 1 fiber', uom: 'EA', vexus: 16.50, default_contractor: 13.00 },
+  FS2:    { description: 'Ring cut', uom: 'EA', vexus: 275.00, default_contractor: 180.00 },
+  FS3:    { description: 'Test Fiber', uom: 'EA', vexus: 6.60, default_contractor: 5.00 },
+  FS4:    { description: 'ReEnter/Install Enclosure', uom: 'EA', vexus: 137.50, default_contractor: 100.00 },
+  FS05:   { description: 'Ribbon splice', uom: 'EA', vexus: 16.50, default_contractor: 13.00 },
+  // Underground — Boring
+  UG1:    { description: 'Directional bore 1x 1.25in subduct', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  UG2:    { description: 'Directional bore 2x 1.25in subduct', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  UG3:    { description: 'Directional bore 3x 1.25in subduct', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  UG16:   { description: 'Directional bore 4x 1.25in subduct', uom: 'LF', vexus: 8.50, default_contractor: 6.50 },
+  UG23:   { description: 'Directional bore 5x 1.25in subduct', uom: 'LF', vexus: 9.50, default_contractor: 7.00 },
+  UG24:   { description: 'Directional bore 6x 1.25in subduct', uom: 'LF', vexus: 10.50, default_contractor: 8.00 },
+  UG21:   { description: '4in HDPE Duct Install bore', uom: 'LF', vexus: 8.25, default_contractor: 6.00 },
+  UG29:   { description: 'Bore 1x 2in duct', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  UG30:   { description: 'Bore 2x 2in duct', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  UG32:   { description: 'Cut/bore/saw', uom: 'LF', vexus: 8.00, default_contractor: 6.00 },
+  // Underground — Pulling
+  UG4:    { description: 'Pull up to 144ct armored/all micro cable in duct', uom: 'LF', vexus: 0.55, default_contractor: 0.40 },
+  UG22:   { description: 'Pull inner duct', uom: 'LF', vexus: 0.60, default_contractor: 0.45 },
+  UG28:   { description: 'Pull 288-432ct armored fiber in duct', uom: 'LF', vexus: 1.00, default_contractor: 0.60 },
+  // Underground — Direct Bury
+  UG5:    { description: 'Direct Bury Cable - Plow', uom: 'LF', vexus: 2.10, default_contractor: 1.50 },
+  UG6:    { description: 'Direct Bury Cable add depth 6in increments', uom: 'EA', vexus: 0.50, default_contractor: 0.40 },
+  UG7:    { description: 'Direct Bury Pipe - Plow', uom: 'LF', vexus: 2.10, default_contractor: 1.60 },
+  UG8:    { description: 'Direct Bury Pipe add duct', uom: 'LF', vexus: 0.50, default_contractor: 0.40 },
+  // Underground — Structures
+  UG9:    { description: 'Buried plant Pedestal', uom: 'EA', vexus: 40.00, default_contractor: 30.00 },
+  UG10:   { description: 'Fiberglass/polycrete Handhole 30x48x30', uom: 'EA', vexus: 310.00, default_contractor: 240.00 },
+  UG11:   { description: 'Fiberglass/polycrete Handhole 24x36x24', uom: 'EA', vexus: 110.00, default_contractor: 85.00 },
+  UG12:   { description: 'Utility Box / Flowerpot', uom: 'EA', vexus: 20.00, default_contractor: 16.00 },
+  UG13:   { description: 'Ground rod 5/8in x 8ft', uom: 'EA', vexus: 40.00, default_contractor: 30.00 },
+  UG14:   { description: 'Locate Marker post / Aux Ground Assembly', uom: 'EA', vexus: 18.00, default_contractor: 14.00 },
+  UG15:   { description: 'Route Marker Post', uom: 'EA', vexus: 12.00, default_contractor: 9.00 },
+  UG17:   { description: 'HDPE Handhole 17x30x18', uom: 'EA', vexus: 60.00, default_contractor: 48.00 },
+  UG18:   { description: 'HDPE Handhole 24x36x18', uom: 'EA', vexus: 125.00, default_contractor: 100.00 },
+  UG19:   { description: 'HDPE Handhole 30x48x18', uom: 'EA', vexus: 250.00, default_contractor: 200.00 },
+  UG20:   { description: 'Terminal Box', uom: 'EA', vexus: 40.00, default_contractor: 30.00 },
+  UG27:   { description: 'HDPE Handhole 30x48x24', uom: 'EA', vexus: 210.00, default_contractor: 160.00 },
+  UG31:   { description: 'Ground rod clamp/wire into marker post', uom: 'EA', vexus: 15.00, default_contractor: 12.00 },
+  // Poles
+  PP1:    { description: 'Place Pole 35ft Class 7', uom: 'EA', vexus: 360.00, default_contractor: 280.00 },
+  PP2:    { description: 'Hand Carry/Set in rear Easement', uom: 'EA', vexus: 100.00, default_contractor: 80.00 },
+  PP3:    { description: 'Detach and Remove Pole up to 35ft', uom: 'EA', vexus: 200.00, default_contractor: 160.00 },
+  BCP:    { description: 'Pole Banding', uom: 'EA', vexus: 0.00, default_contractor: 0.00 },
+  // Restoration
+  PA01:   { description: 'Place Asphalt up to 4in', uom: 'SF', vexus: 20.00, default_contractor: 15.00 },
+  PA02:   { description: 'Place Asphalt over 4in up to 8in', uom: 'SF', vexus: 30.00, default_contractor: 24.00 },
+  PA02A:  { description: 'Place Asphalt over 8in depth additive', uom: 'SF', vexus: 3.00, default_contractor: 2.25 },
+  PC01:   { description: 'Place Concrete up to 4in', uom: 'SF', vexus: 30.00, default_contractor: 20.00 },
+  PC02:   { description: 'Place Concrete over 4in up to 8in', uom: 'SF', vexus: 40.00, default_contractor: 30.00 },
+  PC02A:  { description: 'Place Concrete over 8in depth additive', uom: 'SF', vexus: 4.00, default_contractor: 3.00 },
+  RA1:    { description: 'Remove Asphalt', uom: 'CF', vexus: 20.00, default_contractor: 15.00 },
+  RC1:    { description: 'Remove Concrete', uom: 'CF', vexus: 40.00, default_contractor: 30.00 },
+  // Other
+  HSPH:   { description: 'Hardscape Potholing', uom: 'EA', vexus: 200.00, default_contractor: 150.00 },
+  TC1:    { description: 'Traffic control personnel', uom: 'HR', vexus: 40.00, default_contractor: 30.00 },
+  // Hourly Personnel (T&M / Extra Work)
+  L10A:   { description: 'Foreman', uom: 'HR', vexus: 45.00, default_contractor: 35.00 },
+  L30A:   { description: 'Lineman', uom: 'HR', vexus: 40.00, default_contractor: 30.00 },
+  L40A:   { description: 'Technician', uom: 'HR', vexus: 40.00, default_contractor: 30.00 },
+  L50A:   { description: 'Laborer', uom: 'HR', vexus: 35.00, default_contractor: 25.00 },
+  L70A:   { description: 'Supervisor', uom: 'HR', vexus: 75.00, default_contractor: 55.00 },
+  // Hourly Equipment (T&M / Extra Work)
+  E10:    { description: 'Pickup truck', uom: 'HR', vexus: 9.00, default_contractor: 7.00 },
+  E20:    { description: 'Directional drill', uom: 'HR', vexus: 115.00, default_contractor: 90.00 },
+  E30:    { description: 'Mini excavator', uom: 'HR', vexus: 45.00, default_contractor: 35.00 },
+  E40:    { description: 'Backhoe', uom: 'HR', vexus: 55.00, default_contractor: 42.00 },
+  E50:    { description: 'Trailer', uom: 'HR', vexus: 12.00, default_contractor: 9.00 },
+  E60:    { description: 'Air compressor', uom: 'HR', vexus: 18.00, default_contractor: 14.00 },
+  E70:    { description: 'Generator', uom: 'HR', vexus: 15.00, default_contractor: 12.00 },
+  E80:    { description: 'Cable reel trailer', uom: 'HR', vexus: 15.00, default_contractor: 12.00 },
+  E82:    { description: 'Fusion splicer', uom: 'HR', vexus: 25.00, default_contractor: 20.00 },
+};
+
 // v1.2.0 - Added PM thresholds, updated photo requirements with PM reading counts
+// v1.3.0 - Added VEXUS_RATES master rate card with dual pricing

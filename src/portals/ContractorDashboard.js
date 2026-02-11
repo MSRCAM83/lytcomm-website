@@ -2,7 +2,7 @@
 // Submits production logs, equipment checks, time entries to Google Sheets
 import React, { useState, useEffect } from 'react';
 import { LogOut, Briefcase, DollarSign, Settings, ChevronRight, CheckCircle, Activity, Truck, AlertTriangle, Shield, ShieldAlert, MapPin, Shovel, User, Loader, Menu, X, Map } from 'lucide-react';
-import { loadFullProject, getContractorSegments } from '../services/mapService';
+import { loadFullProject, getContractorSegments, loadLineItems } from '../services/mapService';
 import { colors } from '../config/constants';
 import NotificationBell from '../components/NotificationBell';
 
@@ -76,6 +76,10 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
   // Project Map segment data
   const [mySegments, setMySegments] = useState([]);
   const [segmentsLoading, setSegmentsLoading] = useState(true);
+
+  // Line items for contractor billing view
+  const [myLineItems, setMyLineItems] = useState([]);
+  const [lineItemsLoading, setLineItemsLoading] = useState(false);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
@@ -229,6 +233,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     { id: 'equipment', label: 'Equipment Check', icon: Truck },
     { id: 'compliance', label: 'Compliance', icon: Shield },
     { id: 'incidents', label: 'Incident Reports', icon: ShieldAlert },
+    { id: 'billing', label: 'My Billing', icon: DollarSign },
     { id: 'invoices', label: 'Invoices', icon: DollarSign },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -281,6 +286,24 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       loadMySegments();
     }
   }, [loggedInUser]);
+
+  // Load line items when switching to billing tab
+  const loadMyLineItems = async () => {
+    setLineItemsLoading(true);
+    try {
+      // Load line items for all projects — filter by segments assigned to contractor
+      const allItems = await loadLineItems(null);
+      // Get segment IDs assigned to this contractor
+      const mySegIds = new Set(mySegments.map(s => s.segment_id));
+      // Filter line items linked to contractor's segments
+      const filtered = allItems.filter(li => mySegIds.has(li.segment_id) || (!li.segment_id && mySegIds.size > 0));
+      setMyLineItems(filtered);
+    } catch (err) {
+      console.error('[ContractorDashboard] Line items load error:', err);
+    } finally {
+      setLineItemsLoading(false);
+    }
+  };
 
   // Segment stats
   const segStats = {
@@ -593,6 +616,95 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
     </div>
   );
 
+  const renderBilling = () => {
+    // Load on first view
+    if (!lineItemsLoading && myLineItems.length === 0 && mySegments.length > 0) {
+      loadMyLineItems();
+    }
+
+    const totalValue = myLineItems.reduce((sum, li) => {
+      const qty = parseFloat(li.quantity) || 0;
+      const rate = parseFloat(li.contractor_rate) || 0;
+      return sum + (qty * rate);
+    }, 0);
+
+    return (
+      <div>
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', color: textColor }}>My Billing</h2>
+          <p style={{ color: mutedColor }}>Line items and rates for your assigned work</p>
+        </div>
+
+        {/* Total */}
+        <div style={{ backgroundColor: cardBg, borderRadius: '12px', padding: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${accentSecondary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <DollarSign size={24} color={accentSecondary} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.85rem', color: mutedColor }}>Total Billable</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: textColor }}>
+              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: mutedColor }}>
+            {myLineItems.length} line items
+          </div>
+        </div>
+
+        {lineItemsLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: mutedColor }}>
+            <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /> Loading billing data...
+          </div>
+        ) : myLineItems.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', backgroundColor: cardBg, borderRadius: '12px', color: mutedColor }}>
+            <DollarSign size={40} style={{ opacity: 0.3, marginBottom: '8px' }} />
+            <div>No billing data available yet</div>
+            <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Billing data appears after work orders are imported</div>
+          </div>
+        ) : (
+          <div style={{ backgroundColor: cardBg, borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: 500 }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+                    {['Code', 'Description', 'UOM', 'Qty', 'Rate', 'Total'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px', color: mutedColor, fontWeight: '500', fontSize: '0.8rem' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {myLineItems.map((li, idx) => {
+                    const qty = parseFloat(li.quantity) || 0;
+                    const rate = parseFloat(li.contractor_rate) || 0;
+                    const total = qty * rate;
+                    return (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600, color: accentPrimary }}>{li.code}</td>
+                        <td style={{ padding: '10px 12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{li.description}</td>
+                        <td style={{ padding: '10px 12px', color: mutedColor }}>{li.uom}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{qty.toLocaleString()}</td>
+                        <td style={{ padding: '10px 12px' }}>${rate.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ backgroundColor: darkMode ? '#1e293b' : '#f1f5f9' }}>
+                    <td colSpan={5} style={{ padding: '12px', fontWeight: 700, textAlign: 'right' }}>Total:</td>
+                    <td style={{ padding: '12px', fontWeight: 700, color: accentSecondary }}>
+                      ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
@@ -600,6 +712,7 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       case 'equipment': return renderEquipment();
       case 'compliance': return renderCompliance();
       case 'incidents': return renderIncidents();
+      case 'billing': return renderBilling();
       case 'invoices': return renderInvoices();
       default: return renderDashboard();
     }

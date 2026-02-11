@@ -16,9 +16,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ArrowLeft, Plus, Map, Users, AlertCircle, Upload, BarChart3, Loader,
   Sun, Moon, ChevronRight, Zap, AlertTriangle, UserPlus, Check, X,
-  ChevronDown, RefreshCw, Clipboard
+  ChevronDown, RefreshCw, Clipboard, DollarSign, Download, Edit3
 } from 'lucide-react';
-import { loadProjects, loadFullProject, loadIssues, bulkAssignSegments } from '../services/mapService';
+import { loadProjects, loadFullProject, loadIssues, bulkAssignSegments, loadLineItems, updateLineItemRate } from '../services/mapService';
+import { VEXUS_RATES } from '../config/mapConfig';
 
 function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, selectedProjectId, setSelectedProjectId }) {
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,13 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
   const [assignResult, setAssignResult] = useState(null);
 
   const [showVersion, setShowVersion] = useState(false);
+
+  // Billing tab state
+  const [activeView, setActiveView] = useState('overview'); // 'overview' | 'billing'
+  const [lineItems, setLineItems] = useState([]);
+  const [lineItemsLoading, setLineItemsLoading] = useState(false);
+  const [editingRate, setEditingRate] = useState(null); // line_item_id being edited
+  const [editRateValue, setEditRateValue] = useState('');
 
   const bg = darkMode ? '#0d1b2a' : '#ffffff';
   const cardBg = darkMode ? '#112240' : '#f8fafc';
@@ -176,6 +184,55 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
     } finally {
       setAssigning(false);
     }
+  };
+
+  const loadBillingData = async () => {
+    if (!selectedProjectId) return;
+    setLineItemsLoading(true);
+    try {
+      const items = await loadLineItems(selectedProjectId);
+      setLineItems(items);
+    } catch (err) {
+      console.error('[AdminProjects] loadLineItems failed:', err);
+    } finally {
+      setLineItemsLoading(false);
+    }
+  };
+
+  const handleSaveRate = async (lineItemId) => {
+    const newRate = parseFloat(editRateValue);
+    if (isNaN(newRate) || newRate < 0) return;
+    const ok = await updateLineItemRate(selectedProjectId, lineItemId, newRate);
+    if (ok) {
+      setLineItems(prev => prev.map(li => {
+        if (li.line_item_id === lineItemId) {
+          const vRate = parseFloat(li.vexus_rate) || 0;
+          return { ...li, contractor_rate: newRate, margin: vRate - newRate };
+        }
+        return li;
+      }));
+    }
+    setEditingRate(null);
+    setEditRateValue('');
+  };
+
+  const exportLineItemsCSV = () => {
+    if (!lineItems.length) return;
+    const headers = ['Code', 'Description', 'UOM', 'Qty', 'Vexus Rate', 'Contractor Rate', 'Margin', 'Vexus Total', 'Contractor Total'];
+    const rows = lineItems.map(li => {
+      const qty = parseFloat(li.quantity) || 0;
+      const vRate = parseFloat(li.vexus_rate) || 0;
+      const cRate = parseFloat(li.contractor_rate) || 0;
+      return [li.code, li.description, li.uom, qty, vRate, cRate, (vRate - cRate).toFixed(2), (qty * vRate).toFixed(2), (qty * cRate).toFixed(2)];
+    });
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedProjectId}_line_items.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const ProgressBar = ({ percent, color, label }) => (
@@ -413,11 +470,158 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
         </div>
       )}
 
+      {/* View Tabs */}
+      <div style={{ padding: '0 24px', borderBottom: `1px solid ${borderColor}`, display: 'flex', gap: 0 }}>
+        {[
+          { id: 'overview', label: 'Overview', icon: <Map size={16} /> },
+          { id: 'billing', label: 'Billing / Line Items', icon: <DollarSign size={16} /> },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => { setActiveView(tab.id); if (tab.id === 'billing' && lineItems.length === 0) loadBillingData(); }}
+            style={{
+              padding: '12px 20px', border: 'none', cursor: 'pointer',
+              backgroundColor: 'transparent', color: activeView === tab.id ? accent : textMuted,
+              borderBottom: activeView === tab.id ? `2px solid ${accent}` : '2px solid transparent',
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem', fontWeight: activeView === tab.id ? 600 : 400,
+              transition: 'all 0.2s',
+            }}>
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Content */}
       <div style={{ padding: 24 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>{project?.project_name || 'Project Overview'}</h2>
 
-        {project && (
+        {activeView === 'billing' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Line Items — Billing Detail</h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={loadBillingData}
+                  style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: 8, padding: '6px 14px', cursor: 'pointer', color: textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem' }}>
+                  <RefreshCw size={14} /> Refresh
+                </button>
+                <button onClick={exportLineItemsCSV}
+                  disabled={lineItems.length === 0}
+                  style={{ background: 'none', border: `1px solid ${borderColor}`, borderRadius: 8, padding: '6px 14px', cursor: lineItems.length ? 'pointer' : 'not-allowed', color: lineItems.length ? accent : textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem' }}>
+                  <Download size={14} /> Export CSV
+                </button>
+              </div>
+            </div>
+
+            {lineItemsLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: textMuted }}>
+                <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                <div style={{ marginTop: 8 }}>Loading line items...</div>
+              </div>
+            ) : lineItems.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: textMuted, backgroundColor: cardBg, borderRadius: 12 }}>
+                <DollarSign size={40} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <div>No line items for this project</div>
+                <div style={{ fontSize: '0.8rem', marginTop: 4 }}>Import a project via JSON Import to populate billing data</div>
+              </div>
+            ) : (
+              <>
+                {/* Billing summary */}
+                {(() => {
+                  const totals = lineItems.reduce((acc, li) => {
+                    const qty = parseFloat(li.quantity) || 0;
+                    const vRate = parseFloat(li.vexus_rate) || 0;
+                    const cRate = parseFloat(li.contractor_rate) || 0;
+                    acc.vexus += qty * vRate;
+                    acc.contractor += qty * cRate;
+                    return acc;
+                  }, { vexus: 0, contractor: 0 });
+                  totals.margin = totals.vexus - totals.contractor;
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+                      <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontSize: '0.7rem', color: textMuted }}>Vexus Total</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#28a745' }}>${totals.vexus.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontSize: '0.7rem', color: textMuted }}>Contractor Cost</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>${totals.contractor.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontSize: '0.7rem', color: textMuted }}>Margin</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: accent }}>${totals.margin.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontSize: '0.7rem', color: textMuted }}>Line Items</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{lineItems.length}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Line items table */}
+                <div style={{ border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 800 }}>
+                      <thead>
+                        <tr style={{ backgroundColor: darkMode ? '#0d1b2a' : '#f1f5f9' }}>
+                          {['Code', 'Description', 'UOM', 'Qty', 'Vexus Rate', 'Contractor Rate', 'Margin', 'Total (V)', ''].map(h => (
+                            <th key={h} style={{ padding: '10px 12px', textAlign: h === '' ? 'center' : 'left', color: textMuted, fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lineItems.map(li => {
+                          const qty = parseFloat(li.quantity) || 0;
+                          const vRate = parseFloat(li.vexus_rate) || 0;
+                          const cRate = parseFloat(li.contractor_rate) || 0;
+                          const margin = vRate - cRate;
+                          const total = qty * vRate;
+                          const isEditing = editingRate === li.line_item_id;
+                          return (
+                            <tr key={li.line_item_id} style={{ borderBottom: `1px solid ${borderColor}` }}>
+                              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 600, color: accent }}>{li.code}</td>
+                              <td style={{ padding: '8px 12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{li.description}</td>
+                              <td style={{ padding: '8px 12px', color: textMuted }}>{li.uom}</td>
+                              <td style={{ padding: '8px 12px', fontWeight: 600 }}>{qty.toLocaleString()}</td>
+                              <td style={{ padding: '8px 12px' }}>${vRate.toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                {isEditing ? (
+                                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                    <input value={editRateValue} onChange={(e) => setEditRateValue(e.target.value)}
+                                      type="number" step="0.01" min="0"
+                                      style={{ width: 70, padding: '4px 6px', borderRadius: 4, border: `1px solid ${accent}`, backgroundColor: darkMode ? '#0d1b2a' : '#fff', color: text, fontSize: '0.8rem' }}
+                                      autoFocus onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRate(li.line_item_id); if (e.key === 'Escape') { setEditingRate(null); setEditRateValue(''); } }}
+                                    />
+                                    <button onClick={() => handleSaveRate(li.line_item_id)} style={{ background: '#28a745', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Save</button>
+                                  </div>
+                                ) : (
+                                  <span>${cRate.toFixed(2)}</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '8px 12px', color: margin > 0 ? '#28a745' : margin < 0 ? '#e85a4f' : textMuted, fontWeight: 500 }}>
+                                ${margin.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '8px 12px', fontWeight: 600 }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                {!isEditing && (
+                                  <button onClick={() => { setEditingRate(li.line_item_id); setEditRateValue(String(cRate)); }}
+                                    title="Adjust contractor rate"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 4 }}>
+                                    <Edit3 size={14} />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeView === 'overview' && project && (
           <div style={{ backgroundColor: cardBg, borderRadius: 12, padding: 20, marginBottom: 16, border: `1px solid ${borderColor}`, cursor: 'pointer', transition: 'border-color 0.2s' }}
             onClick={() => { if (setSelectedProjectId) setSelectedProjectId(selectedProjectId); setCurrentPage && setCurrentPage('project-map'); }}
             onMouseOver={(e) => e.currentTarget.style.borderColor = accent}
@@ -460,8 +664,10 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
           </div>
         )}
 
+        )}
+
         {/* Section Breakdown */}
-        {stats.sections.length > 0 && (
+        {activeView === 'overview' && stats.sections.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Section Breakdown</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
@@ -496,7 +702,7 @@ function AdminProjectDashboard({ darkMode, setDarkMode, user, setCurrentPage, se
         )}
 
         {/* Open Issues */}
-        {openIssues.length > 0 && (
+        {activeView === 'overview' && openIssues.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: warningOrange }}>
               <AlertTriangle size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Open Issues ({openIssues.length})

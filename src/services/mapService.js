@@ -11,7 +11,7 @@
  * Gateway: GAS proxy for all Sheets operations
  */
 
-import { STATUS_COLORS } from '../config/mapConfig';
+import { STATUS_COLORS, VEXUS_RATES } from '../config/mapConfig';
 
 // ===== CONFIGURATION =====
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
@@ -30,6 +30,7 @@ const DB = {
   USERS:        '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
   WORK_LOG:     '1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8',
   ISSUES:       '1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g',
+  LINE_ITEMS:   '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses LineItems tab in Segments sheet
 };
 
 // ===== EMPTY FALLBACK DATA (no demo data) =====
@@ -736,6 +737,293 @@ export async function importProject(extractionData, projectId) {
   };
 }
 
+// ===== LINE ITEMS =====
+
+/**
+ * Load all line items for a project.
+ */
+export async function loadLineItems(projectId) {
+  const online = await checkDbConnection();
+  if (!online) return [];
+  try {
+    const rows = await readSheet(DB.LINE_ITEMS, 'LineItems!A1:M5000');
+    const parsed = rowsToObjects(rows);
+    return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
+  } catch (err) {
+    console.error('[mapService] loadLineItems failed:', err);
+    return [];
+  }
+}
+
+/**
+ * Import line items for a project.
+ * Looks up vexus_rate from master rate card, sets contractor_rate to default.
+ */
+export async function importLineItems(projectId, lineItems, rateCardId) {
+  const online = await checkDbConnection();
+  if (!online) return { success: false, error: 'Database offline' };
+
+  const errors = [];
+  let imported = 0;
+
+  for (let i = 0; i < lineItems.length; i++) {
+    const item = lineItems[i];
+    const code = item.code || '';
+    const rateInfo = VEXUS_RATES[code] || {};
+    const vexusRate = rateInfo.vexus || 0;
+    const contractorRate = rateInfo.default_contractor || 0;
+    const margin = vexusRate - contractorRate;
+    const lineItemId = `${projectId}-LI-${String(i + 1).padStart(3, '0')}`;
+
+    try {
+      const row = [[
+        projectId,
+        lineItemId,
+        code,
+        item.description || rateInfo.description || '',
+        item.uom || rateInfo.uom || '',
+        item.quantity || 0,
+        item.segment_id || '',
+        item.structure_id || '',
+        item.splice_id || '',
+        vexusRate,
+        contractorRate,
+        margin,
+        'Not Started',
+      ]];
+      const ok = await appendRow(DB.LINE_ITEMS, row);
+      if (ok) imported++;
+      else errors.push(`Failed: ${code} (${lineItemId})`);
+    } catch (err) {
+      errors.push(`${code}: ${err.message}`);
+    }
+  }
+
+  return { success: errors.length === 0, imported, total: lineItems.length, errors: errors.length > 0 ? errors : undefined };
+}
+
+/**
+ * Get all line items for a project (alias for loadLineItems).
+ */
+export async function getProjectLineItems(projectId) {
+  return loadLineItems(projectId);
+}
+
+/**
+ * Admin adjusts contractor rate for a specific line item.
+ * Recalculates margin = vexus_rate - new contractor_rate.
+ */
+export async function updateLineItemRate(projectId, lineItemId, contractorRate) {
+  const online = await checkDbConnection();
+  if (!online) return false;
+  try {
+    const rows = await readSheet(DB.LINE_ITEMS, 'LineItems!A1:M5000');
+    if (!rows || rows.length < 2) return false;
+    const headers = rows[0];
+    const idCol = headers.indexOf('line_item_id');
+    const contractorRateCol = headers.indexOf('contractor_rate');
+    const marginCol = headers.indexOf('margin');
+    const vexusRateCol = headers.indexOf('vexus_rate');
+    const rowIndex = rows.slice(1).findIndex(r => r[idCol] === lineItemId);
+    if (rowIndex === -1 || contractorRateCol === -1) return false;
+
+    const actualRow = rowIndex + 2;
+    const vexusRate = parseFloat(rows[actualRow - 1][vexusRateCol]) || 0;
+    const margin = vexusRate - contractorRate;
+
+    const crCol = contractorRateCol < 26
+      ? String.fromCharCode(65 + contractorRateCol)
+      : String.fromCharCode(64 + Math.floor(contractorRateCol / 26)) + String.fromCharCode(65 + (contractorRateCol % 26));
+    const mCol = marginCol < 26
+      ? String.fromCharCode(65 + marginCol)
+      : String.fromCharCode(64 + Math.floor(marginCol / 26)) + String.fromCharCode(65 + (marginCol % 26));
+
+    await writeSheet(DB.LINE_ITEMS, `LineItems!${crCol}${actualRow}`, [[contractorRate]]);
+    await writeSheet(DB.LINE_ITEMS, `LineItems!${mCol}${actualRow}`, [[margin]]);
+    return true;
+  } catch (err) {
+    console.error('[mapService] updateLineItemRate failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Import a project from the new EXTRACTION_PROMPT.md JSON format.
+ * Handles unified structures[], line_items[], nested gps { lat, lng }.
+ */
+export async function importProjectFromExtraction(extractionData, projectId) {
+  const online = await checkDbConnection();
+  if (!online) return { success: false, error: 'Database offline' };
+
+  const errors = [];
+  const counts = { project: 0, segments: 0, structures: 0, splicePoints: 0, lineItems: 0 };
+
+  const proj = extractionData.project || {};
+  const segments = extractionData.segments || [];
+  const structures = extractionData.structures || [];
+  const splicePoints = extractionData.splice_points || [];
+  const lineItems = extractionData.line_items || [];
+
+  console.log(`[importProjectFromExtraction] ${segments.length} SEG, ${structures.length} STRUCT, ${splicePoints.length} SP, ${lineItems.length} LI`);
+
+  // 1. Project row
+  try {
+    const row = [[
+      projectId,
+      proj.client || 'Vexus',
+      proj.name || '',
+      proj.work_order_number || '',
+      '', // total_value — computed later
+      proj.date_received || '',
+      '', // completion_date
+      'Active',
+      '', // map_pdf_url
+      '', // work_order_pdf_url
+      proj.rate_card || 'vexus-la-tx-2026',
+      new Date().toISOString(),
+      'matt@lytcomm.com',
+    ]];
+    const ok = await appendRow(DB.PROJECTS, row);
+    if (ok) counts.project = 1;
+    else errors.push('Failed to write project');
+  } catch (err) {
+    errors.push(`Project: ${err.message}`);
+  }
+
+  // 2. Segments
+  for (const seg of segments) {
+    try {
+      const gpsStartLat = seg.gps_start?.lat || '';
+      const gpsStartLng = seg.gps_start?.lng || '';
+      const gpsEndLat = seg.gps_end?.lat || '';
+      const gpsEndLng = seg.gps_end?.lng || '';
+
+      const boreCode = seg.duct_count <= 3 ? `UG${seg.duct_count}` : 'UG16';
+      const row = [[
+        seg.segment_id || `${projectId}-SEG-${counts.segments + 1}`,
+        projectId,
+        '', // contractor_id
+        '', // section
+        '', '', // from/to structure
+        seg.footage || 0,
+        seg.street_name || seg.description || '',
+        gpsStartLat, gpsStartLng,
+        gpsEndLat, gpsEndLng,
+        boreCode,
+        seg.footage || 0,
+        seg.duct_count || 1,
+        'UG4', // pull code
+        seg.footage || 0,
+        seg.cable_type || '',
+        'Not Started',
+        '', '', '', '', '', '', '', '',
+        'Not Started',
+        '', '', '', '', '', '', '', '',
+      ]];
+      const ok = await appendRow(DB.SEGMENTS, row);
+      if (ok) counts.segments++;
+      else errors.push(`Segment ${seg.segment_id}`);
+    } catch (err) {
+      errors.push(`Segment: ${err.message}`);
+    }
+  }
+
+  // 3. Structures — split by type into existing sheets
+  for (const struct of structures) {
+    try {
+      const gpsLat = struct.gps?.lat || '';
+      const gpsLng = struct.gps?.lng || '';
+      const t = struct.type || '';
+
+      if (t === 'handhole') {
+        const row = [[
+          struct.id || `${projectId}-HH-${counts.structures + 1}`,
+          projectId, '', struct.size || '', struct.unit_code || 'UG17',
+          1, '', gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
+        ]];
+        await appendRow(DB.HANDHOLES, row);
+      } else if (t === 'flowerpot') {
+        const row = [[
+          struct.id || `${projectId}-FP-${counts.structures + 1}`,
+          projectId, '', struct.unit_code || 'UG12', 1,
+          gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
+        ]];
+        await appendRow(DB.FLOWERPOTS, row);
+      } else if (t === 'ground_rod') {
+        const row = [[
+          struct.id || `${projectId}-GR-${counts.structures + 1}`,
+          projectId, struct.unit_code || 'UG13', 1, '', new Date().toISOString(),
+        ]];
+        await appendRow(DB.GROUND_RODS, row);
+      } else if (t === 'terminal_box' || t === 'pedestal' || t === 'marker_post' || t === 'aux_ground') {
+        // Store in Handholes sheet with type column
+        const row = [[
+          struct.id || `${projectId}-${t.toUpperCase().replace('_', '')}-${counts.structures + 1}`,
+          projectId, '', t, struct.unit_code || 'UG20',
+          1, '', gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
+        ]];
+        await appendRow(DB.HANDHOLES, row);
+      }
+      counts.structures++;
+    } catch (err) {
+      errors.push(`Structure ${struct.id}: ${err.message}`);
+    }
+  }
+
+  // 4. Splice points
+  for (const sp of splicePoints) {
+    try {
+      const gpsLat = sp.gps?.lat || '';
+      const gpsLng = sp.gps?.lng || '';
+      const row = [[
+        sp.splice_id || `${projectId}-SP-${counts.splicePoints + 1}`,
+        projectId,
+        '', // contractor_id
+        sp.handhole_id || '',
+        '', // handhole_type
+        sp.splice_type || 'ring_cut',
+        '', // position_type
+        sp.fiber_count || 0,
+        1, // tray_count
+        gpsLat, gpsLng,
+        'Not Started',
+        '', '', '', '', '',
+        7, 0, 8, '', 0,
+      ]];
+      const ok = await appendRow(DB.SPLICE_POINTS, row);
+      if (ok) counts.splicePoints++;
+      else errors.push(`Splice ${sp.splice_id}`);
+    } catch (err) {
+      errors.push(`Splice: ${err.message}`);
+    }
+  }
+
+  // 5. Line items
+  if (lineItems.length > 0) {
+    const liResult = await importLineItems(projectId, lineItems, proj.rate_card || 'vexus-la-tx-2026');
+    counts.lineItems = liResult.imported || 0;
+    if (liResult.errors) errors.push(...liResult.errors);
+  }
+
+  console.log(`[importProjectFromExtraction] Done: ${JSON.stringify(counts)}, errors: ${errors.length}`);
+
+  return {
+    success: errors.length === 0,
+    counts,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Load full project including line items.
+ */
+export async function loadFullProjectWithLineItems(projectId) {
+  const base = await loadFullProject(projectId);
+  const lineItems = await loadLineItems(projectId);
+  return { ...base, lineItems };
+}
+
 export { DB };
 
 // v4.0.0 - All billables: handholes, flowerpots, ground_rods, segments, splice_points
+// v4.1.0 - Added LINE_ITEMS support, importProjectFromExtraction, rate card integration
