@@ -6,7 +6,7 @@
   "fluid": true,
   "functions": {
     "api/pdf-import.js": {
-      "maxDuration": 900,
+      "maxDuration": 800,
       "memory": 3008
     }
   },
