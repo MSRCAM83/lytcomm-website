@@ -51,14 +51,17 @@ const JPEG_QUALITY = 0.55;
 function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
   const [workOrderFile, setWorkOrderFile] = useState(null);
   const [mapFile, setMapFile] = useState(null);
+  const [jsonFile, setJsonFile] = useState(null);
   const [rateCardId, setRateCardId] = useState('vexus-la-tx-2026');
   const [processing, setProcessing] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
   const [importResult, setImportResult] = useState(null);
+  const [importSource, setImportSource] = useState(null); // 'pdf' or 'json'
   const [error, setError] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [dragOverWork, setDragOverWork] = useState(false);
   const [dragOverMap, setDragOverMap] = useState(false);
+  const [dragOverJson, setDragOverJson] = useState(false);
 
   const bg = darkMode ? '#0d1b2a' : '#ffffff';
   const cardBg = darkMode ? '#112240' : '#f8fafc';
@@ -441,10 +444,97 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
       };
 
       setImportResult(result);
+      setImportSource('pdf');
       setProgressMsg('');
     } catch (err) {
       setError(`Import failed: ${err.message}`);
       console.error('Import error:', err);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // JSON file import — from LYT Extractor output
+  const handleJsonImport = async () => {
+    if (!jsonFile) return;
+    setProcessing(true);
+    setError(null);
+    setImportResult(null);
+    setProgressMsg('Reading JSON file...');
+
+    try {
+      const text = await jsonFile.text();
+      const data = JSON.parse(text);
+
+      // Validate required keys
+      if (!data.segments || !data.structures) {
+        throw new Error('Invalid extraction JSON — missing segments or structures');
+      }
+
+      // Split structures by type for preview
+      const handholes = (data.structures || []).filter(s => s.type === 'handhole' || s.type === 'terminal_box');
+      const flowerpots = (data.structures || []).filter(s => s.type === 'flowerpot');
+      const groundRods = (data.structures || []).filter(s => s.type === 'ground_rod');
+
+      const totalBore = (data.segments || []).reduce((sum, s) => sum + (s.footage || 0), 0);
+
+      // Build preview result matching the UI shape
+      const jobCode = data.project?.name?.match(/^([A-Z]+\.\d+\.\d+)/)?.[1] || data.reconciliation?.notes?.[0]?.match(/^([A-Z]+\.\d+\.\d+)/)?.[1] || 'UNKNOWN';
+
+      const result = {
+        project: {
+          job_code: jobCode,
+          customer: data.project?.client || 'Vexus',
+          project_name: data.project?.name || '',
+          po_number: data.project?.work_order_number || '',
+          wo_total: 0,
+          rate_card_id: data.project?.rate_card || rateCardId,
+        },
+        // Preview arrays (split from unified structures)
+        handholes: handholes.map(h => ({
+          id: h.id, label: h.size || h.unit_code, type: h.size || '', code: h.unit_code, section: '', street: '',
+        })),
+        flowerpots: flowerpots.map(f => ({
+          id: f.id, label: f.unit_code, code: f.unit_code, section: '', street: '',
+        })),
+        ground_rods: groundRods.map(g => ({
+          id: g.id, label: g.unit_code, code: g.unit_code,
+        })),
+        segments: (data.segments || []).map(s => ({
+          id: s.segment_id, section: '', from_label: '', to_label: '',
+          footage: s.footage, street: s.street_name || '',
+          bore: { code: `UG${s.duct_count}`, duct_count: s.duct_count },
+          pull: { code: 'UG4', cable_type: s.cable_type || '' },
+        })),
+        splice_points: (data.splice_points || []).map(sp => ({
+          id: sp.splice_id, handhole_label: sp.handhole_id || '',
+          splice_type: sp.splice_type, position_type: '',
+          splitter_count: sp.fiber_count || 0, total_photos_required: 0,
+        })),
+        work_order_line_items: (data.line_items || []).map(li => ({
+          code: li.code, description: li.description, qty: li.quantity, uom: li.uom,
+        })),
+        discrepancies: [],
+        sections: [],
+        counts: {
+          handholes: handholes.length,
+          flowerpots: flowerpots.length,
+          ground_rods: groundRods.length,
+          segments: (data.segments || []).length,
+          splice_points: (data.splice_points || []).length,
+          total_bore_footage: totalBore,
+          total_pull_footage: 0,
+        },
+        // Keep the raw extraction data for importProjectFromExtraction
+        _extractionData: data,
+      };
+
+      setImportResult(result);
+      setImportSource('json');
+      setProgressMsg('');
+    } catch (err) {
+      setError(`JSON import failed: ${err.message}`);
+      console.error('JSON import error:', err);
     } finally {
       setProcessing(false);
     }
@@ -456,30 +546,43 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
     setProcessing(true);
     setError(null);
     try {
-      const { importProject } = await import('../services/mapService');
+      if (importSource === 'json' && importResult._extractionData) {
+        // JSON import path — use importProjectFromExtraction
+        const { importProjectFromExtraction } = await import('../services/mapService');
+        const jobCode = importResult.project.job_code;
+        const result = await importProjectFromExtraction(importResult._extractionData, jobCode);
 
-      const jobCode = importResult.project.job_code;
-
-      // Pass the FULL extraction data to importProject
-      // This includes: project, handholes, flowerpots, ground_rods, segments, splice_points
-      const result = await importProject(importResult, jobCode);
-
-      if (result.success) {
-        const c = result.counts;
-        const msg = `Project imported successfully!\n\n` +
-          `✅ Project: ${jobCode}\n` +
-          `✅ Handholes: ${c.handholes || 0}\n` +
-          `✅ Flowerpots: ${c.flowerpots || 0}\n` +
-          `✅ Ground Rods: ${c.groundRods || 0}\n` +
-          `✅ Segments: ${c.segments || 0}\n` +
-          `✅ Splice Points: ${c.splicePoints || 0}\n\n` +
-          `Redirecting to project map...`;
-        alert(msg);
-        if (setCurrentPage) setCurrentPage('project-map');
+        if (result.success) {
+          const c = result.counts;
+          alert(`Project imported successfully!\n\nProject: ${jobCode}\nSegments: ${c.segments || 0}\nStructures: ${c.structures || 0}\nSplice Points: ${c.splicePoints || 0}\nLine Items: ${c.lineItems || 0}\n\nRedirecting to project map...`);
+          if (setCurrentPage) setCurrentPage('project-map');
+        } else {
+          const errMsg = result.errors ? result.errors.join('\n') : 'Unknown error';
+          setError(`Partial import:\n${errMsg}`);
+        }
       } else {
-        const errMsg = result.errors ? result.errors.join('\n') : 'Unknown error';
-        const c = result.counts || {};
-        setError(`Partial import - some items failed:\n${errMsg}\n\nWritten: ${c.handholes || 0} HH, ${c.flowerpots || 0} FP, ${c.groundRods || 0} GR, ${c.segments || 0} SEG, ${c.splicePoints || 0} SP`);
+        // PDF import path — use original importProject
+        const { importProject } = await import('../services/mapService');
+        const jobCode = importResult.project.job_code;
+        const result = await importProject(importResult, jobCode);
+
+        if (result.success) {
+          const c = result.counts;
+          const msg = `Project imported successfully!\n\n` +
+            `Project: ${jobCode}\n` +
+            `Handholes: ${c.handholes || 0}\n` +
+            `Flowerpots: ${c.flowerpots || 0}\n` +
+            `Ground Rods: ${c.groundRods || 0}\n` +
+            `Segments: ${c.segments || 0}\n` +
+            `Splice Points: ${c.splicePoints || 0}\n\n` +
+            `Redirecting to project map...`;
+          alert(msg);
+          if (setCurrentPage) setCurrentPage('project-map');
+        } else {
+          const errMsg = result.errors ? result.errors.join('\n') : 'Unknown error';
+          const c = result.counts || {};
+          setError(`Partial import - some items failed:\n${errMsg}\n\nWritten: ${c.handholes || 0} HH, ${c.flowerpots || 0} FP, ${c.groundRods || 0} GR, ${c.segments || 0} SEG, ${c.splicePoints || 0} SP`);
+        }
       }
     } catch (err) {
       setError(`Save failed: ${err.message}`);
@@ -640,6 +743,67 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
               icon={<Upload size={40} color={accent} />}
             />
           </div>
+
+          {/* OR divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '20px 0' }}>
+            <div style={{ flex: 1, height: '1px', backgroundColor: borderColor }} />
+            <span style={{ color: textMuted, fontSize: '0.85rem', fontWeight: 600 }}>OR</span>
+            <div style={{ flex: 1, height: '1px', backgroundColor: borderColor }} />
+          </div>
+
+          {/* JSON Import */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOverJson(true); }}
+            onDragLeave={() => setDragOverJson(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverJson(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file && file.name.endsWith('.json')) setJsonFile(file);
+              else setError('Only .json files accepted');
+            }}
+            onClick={() => document.getElementById('file-json').click()}
+            style={{
+              border: `2px dashed ${dragOverJson ? accent : jsonFile ? successGreen : borderColor}`,
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              backgroundColor: dragOverJson ? (darkMode ? '#1a2f4a' : '#f0f9ff') : (jsonFile ? (darkMode ? '#0a2a1a' : '#f0fdf4') : cardBg),
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <input
+              id="file-json"
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { setJsonFile(file); setError(null); }
+              }}
+            />
+            {jsonFile ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                <CheckCircle size={24} color={successGreen} />
+                <span style={{ color: successGreen, fontWeight: 600 }}>{jsonFile.name}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setJsonFile(null); }}
+                  style={{ background: 'none', border: 'none', color: errorRed, cursor: 'pointer', padding: '4px' }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ) : (
+              <div>
+                <FileText size={32} color={accent} />
+                <p style={{ color: text, fontWeight: 600, margin: '8px 0 4px' }}>LYT Extractor JSON</p>
+                <p style={{ color: textMuted, fontSize: '0.85rem', margin: 0 }}>
+                  Drop an _extracted.json file from the LYT Extractor tool
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Step 2: Rate Card Selection */}
@@ -689,40 +853,72 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
           </div>
         )}
 
-        {/* Process Button */}
+        {/* Process Buttons */}
         {!importResult && (
-          <button
-            onClick={handleImport}
-            disabled={!workOrderFile || processing}
-            style={{
-              backgroundColor: (!workOrderFile || processing) ? '#6c757d' : accent,
-              color: '#ffffff',
-              border: 'none',
-              padding: '14px 32px',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: (!workOrderFile || processing) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              width: '100%',
-              justifyContent: 'center',
-              marginBottom: '16px',
-            }}
-          >
-            {processing ? (
-              <>
-                <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                {progressMsg || 'Processing...'}
-              </>
-            ) : (
-              <>
-                <Eye size={20} />
-                Extract Project Data (High-Res Tiled Vision AI)
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <button
+              onClick={handleImport}
+              disabled={!workOrderFile || processing}
+              style={{
+                backgroundColor: (!workOrderFile || processing) ? '#6c757d' : accent,
+                color: '#ffffff',
+                border: 'none',
+                padding: '14px 32px',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: (!workOrderFile || processing) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flex: 1,
+                justifyContent: 'center',
+              }}
+            >
+              {processing && !jsonFile ? (
+                <>
+                  <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                  {progressMsg || 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Eye size={20} />
+                  Extract via Vision AI
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleJsonImport}
+              disabled={!jsonFile || processing}
+              style={{
+                backgroundColor: (!jsonFile || processing) ? '#6c757d' : successGreen,
+                color: '#ffffff',
+                border: 'none',
+                padding: '14px 32px',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: (!jsonFile || processing) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flex: 1,
+                justifyContent: 'center',
+              }}
+            >
+              {processing && jsonFile ? (
+                <>
+                  <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                  {progressMsg || 'Loading...'}
+                </>
+              ) : (
+                <>
+                  <FileText size={20} />
+                  Import from Extractor JSON
+                </>
+              )}
+            </button>
+          </div>
         )}
 
         {/* Progress indicator */}
@@ -1099,7 +1295,7 @@ function JobImportPage({ darkMode, setDarkMode, user, setCurrentPage }) {
                 )}
               </button>
               <button
-                onClick={() => { setImportResult(null); setWorkOrderFile(null); setMapFile(null); }}
+                onClick={() => { setImportResult(null); setImportSource(null); setWorkOrderFile(null); setMapFile(null); setJsonFile(null); }}
                 style={{
                   backgroundColor: 'transparent', color: errorRed, border: `1px solid ${errorRed}`,
                   padding: '14px 24px', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer',
