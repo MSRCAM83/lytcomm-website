@@ -34,6 +34,7 @@ import PotholeVerification from './portals/PotholeVerification';
 // Phase 6 - Document Generation
 import DailyWorkSheet from './portals/DailyWorkSheet';
 import InvoiceGenerator from './portals/InvoiceGenerator';
+import DailyStreetSheet from './portals/DailyStreetSheet';
 
 // Phase 7 - Advanced Admin
 import MetricsDashboard from './portals/MetricsDashboard';
@@ -157,6 +158,7 @@ function App() {
     'work-map',
     'potholes',
     'daily-worksheet',
+    'street-sheet',
     'invoices',
     'metrics',
     'activity-log',
@@ -212,6 +214,8 @@ function App() {
         return <PotholeVerification darkMode={darkMode} user={loggedInUser} userType={loggedInUser?.role || 'employee'} setCurrentPage={setCurrentPage} />;
       case 'daily-worksheet':
         return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
+      case 'street-sheet':
+        return <DailyStreetSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} loggedInUser={loggedInUser} />;
       case 'invoices':
         return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'metrics':
@@ -251,7 +255,7 @@ function App() {
   const chatEnabledPages = [
     'employee-dashboard', 'contractor-dashboard', 'admin-dashboard',
     'work-map', 'potholes', 'project-map', 'admin-projects', 'job-import', 'daily-report',
-    'daily-worksheet', 'invoices', 'metrics', 'json-import',
+    'daily-worksheet', 'street-sheet', 'invoices', 'metrics', 'json-import',
   ];
   const showFieldAssist = loggedInUser && chatEnabledPages.includes(currentPage);
 

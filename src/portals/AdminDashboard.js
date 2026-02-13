@@ -210,6 +210,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
     { id: 'divider-field', label: '── Field Operations ──', divider: true },
     { id: 'work-map', label: 'Work Map', icon: MapPin, external: 'work-map' },
     { id: 'potholes', label: 'Pothole Approvals', icon: Shovel, external: 'potholes' },
+    { id: 'street-sheet', label: 'Street Sheets', icon: MapPin, external: 'street-sheet' },
     { id: 'daily-worksheet', label: 'Daily Work Sheets', icon: FileText, external: 'daily-worksheet' },
     { id: 'invoice-gen', label: 'Invoice Generator', icon: DollarSign, external: 'invoices' },
     { id: 'divider-mgmt', label: '── Management ──', divider: true },

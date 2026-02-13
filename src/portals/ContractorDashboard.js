@@ -606,6 +606,15 @@ const ContractorDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, da
       </div>
 
       <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
+        <MapPin size={48} color={accentSecondary} style={{ marginBottom: '16px', opacity: 0.8 }} />
+        <h3 style={{ color: textColor, marginBottom: '8px' }}>Daily Street Sheet</h3>
+        <p style={{ color: mutedColor, marginBottom: '24px' }}>Report where your crews are working today</p>
+        <button onClick={() => setCurrentPage('street-sheet')} style={{ padding: '12px 24px', backgroundColor: accentSecondary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
+          Fill Out Street Sheet
+        </button>
+      </div>
+
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
         <DollarSign size={48} color={mutedColor} style={{ marginBottom: '16px', opacity: 0.5 }} />
         <h3 style={{ color: textColor, marginBottom: '8px' }}>Invoice Submission</h3>
         <p style={{ color: mutedColor, marginBottom: '24px' }}>Submit your invoices using the Metronet-format daily work sheets</p>
