@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserPlus, Briefcase, LogIn, Shield, FileText, ArrowLeft } from 'lucide-react';
+import { UserPlus, Briefcase, LogIn, Shield, FileText, ArrowLeft, ClipboardList } from 'lucide-react';
 import { colors, LYT_INFO } from '../config/constants';
 
 const PortalSelect = ({ setCurrentPage, darkMode }) => {
@@ -183,6 +183,57 @@ const PortalSelect = ({ setCurrentPage, darkMode }) => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Daily Street Sheet — standalone card */}
+          <div
+            onClick={() => setCurrentPage('street-sheet')}
+            style={{
+              marginTop: '32px',
+              backgroundColor: cardBg,
+              borderRadius: '16px',
+              padding: '28px 32px',
+              cursor: 'pointer',
+              border: '2px solid transparent',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = accentSecondary;
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = 'transparent';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
+            }}
+          >
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '14px',
+              backgroundColor: `${accentSecondary}20`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <ClipboardList size={28} color={accentSecondary} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '600', margin: '0 0 4px' }}>
+                Daily Street Sheet
+              </h3>
+              <p style={{ color: colors.gray, margin: 0, fontSize: '0.9rem' }}>
+                Contractors — report where your crews are working today
+              </p>
+            </div>
+            <span style={{
+              padding: '6px 14px', backgroundColor: `${accentSecondary}15`,
+              color: accentSecondary, borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600',
+              whiteSpace: 'nowrap',
+            }}>
+              Access Code Required
+            </span>
           </div>
 
           {/* Admin Login Link */}
