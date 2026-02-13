@@ -1,11 +1,14 @@
-// DailyStreetSheet.js v1.0.0 - Contractor Daily Street Sheet
+// DailyStreetSheet.js v1.1.0 - Contractor Daily Street Sheet
 // Contractors enter company info, crew count, and per-crew location details
+// Access via code (no login required) or auto-unlocked when logged in
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Plus, Trash2, CheckCircle, Loader, Users, MapPin,
-  ClipboardList, Building, ChevronDown, ChevronUp, Send
+  ClipboardList, Building, ChevronDown, ChevronUp, Send, Lock
 } from 'lucide-react';
 import { colors } from '../config/constants';
+
+const ACCESS_CODE = 'lytstreet2026';
 
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
@@ -42,6 +45,21 @@ const DailyStreetSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
   const textColor = darkMode ? '#ffffff' : '#1e293b';
   const mutedColor = darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280';
   const borderColor = darkMode ? '#374151' : '#e5e7eb';
+
+  // Access code gate — skip if already logged in
+  const [unlocked, setUnlocked] = useState(!!currentUser);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState('');
+
+  const handleCodeSubmit = (e) => {
+    e.preventDefault();
+    if (codeInput.trim().toLowerCase() === ACCESS_CODE) {
+      setUnlocked(true);
+      setCodeError('');
+    } else {
+      setCodeError('Invalid access code');
+    }
+  };
 
   const [sheetDate, setSheetDate] = useState(new Date().toISOString().split('T')[0]);
   const [companyName, setCompanyName] = useState(currentUser?.company || '');
@@ -228,6 +246,57 @@ const DailyStreetSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
     else if (role === 'contractor') setCurrentPage('contractor-dashboard');
     else setCurrentPage('employee-dashboard');
   };
+
+  // --- Access Code Screen ---
+  if (!unlocked) {
+    return (
+      <div style={{
+        minHeight: '100vh', backgroundColor: bgColor,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+      }}>
+        <div style={{
+          backgroundColor: cardBg, borderRadius: '16px', padding: '40px',
+          border: `1px solid ${borderColor}`, maxWidth: '400px', width: '100%',
+          textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+        }}>
+          <Lock size={40} style={{ color: accentPrimary, marginBottom: '16px' }} />
+          <h2 style={{ color: textColor, fontSize: '1.3rem', fontWeight: '700', margin: '0 0 8px' }}>
+            Daily Street Sheet
+          </h2>
+          <p style={{ color: mutedColor, fontSize: '0.9rem', margin: '0 0 24px' }}>
+            Enter your access code to continue
+          </p>
+          <form onSubmit={handleCodeSubmit}>
+            <input
+              type="text"
+              value={codeInput}
+              onChange={(e) => { setCodeInput(e.target.value); setCodeError(''); }}
+              placeholder="Access code"
+              autoFocus
+              style={{
+                width: '100%', padding: '14px', border: `1px solid ${codeError ? '#ef4444' : borderColor}`,
+                borderRadius: '10px', backgroundColor: darkMode ? '#1a2332' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#1e293b', fontSize: '1.1rem', textAlign: 'center',
+                letterSpacing: '2px', outline: 'none', marginBottom: '12px',
+                boxSizing: 'border-box',
+              }}
+            />
+            {codeError && <p style={{ color: '#ef4444', fontSize: '0.85rem', margin: '0 0 12px' }}>{codeError}</p>}
+            <button type="submit" style={{
+              width: '100%', padding: '14px', backgroundColor: accentPrimary, color: '#fff',
+              border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '600',
+              cursor: 'pointer',
+            }}>
+              Enter
+            </button>
+          </form>
+          <p style={{ color: mutedColor, fontSize: '0.75rem', marginTop: '20px' }}>
+            Contact your LYT project manager if you don't have a code
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -507,7 +576,7 @@ const DailyStreetSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
           position: 'fixed', bottom: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.5,
           color: textColor, backgroundColor: cardBg, padding: '4px 8px', borderRadius: '4px',
         }}>
-          DailyStreetSheet v1.0.0
+          DailyStreetSheet v1.1.0
         </div>
       )}
 
