@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { colors } from '../config/constants';
 
-const ACCESS_CODE = 'lytstreet2026';
+const ACCESS_CODE = 'lyt';
 
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
