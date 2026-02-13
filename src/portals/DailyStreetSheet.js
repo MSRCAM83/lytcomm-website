@@ -211,6 +211,32 @@ const DailyStreetSheet = ({ darkMode, user, setCurrentPage, loggedInUser }) => {
       const result = JSON.parse(text);
       if (result.success) {
         setMessage({ type: 'success', text: `Street sheet submitted for ${crews.length} crew${crews.length > 1 ? 's' : ''}!` });
+
+        // Send email notification
+        const crewSummary = crews.map(c => {
+          const streets = c.streets.map(s => s.name).filter(Boolean).join(', ');
+          return `  Crew ${c.crewNumber}${c.crewLead ? ` (${c.crewLead})` : ''} — ${c.workType || 'N/A'}\n    Yesterday: ${c.endedYesterday || 'N/A'}\n    Today: ${streets || 'N/A'}`;
+        }).join('\n\n');
+
+        const emailBody = `New Daily Street Sheet submitted:\n\nDate: ${sheetDate}\nCompany: ${companyName}\nContact: ${contactName}${contactPhone ? ` | ${contactPhone}` : ''}\nProject: ${project}\nCrews: ${crews.length}\n\n${crewSummary}`;
+
+        const NOTIFY_EMAILS = ['matt@lytcomm.com', 'donnie@lytcomm.com', 'dayna@lytcomm.com'];
+        NOTIFY_EMAILS.forEach(email => {
+          fetchWithRedirect(GATEWAY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              secret: GATEWAY_SECRET,
+              action: 'gmailSend',
+              params: {
+                to: email,
+                subject: `Street Sheet — ${companyName} — ${sheetDate}`,
+                body: emailBody,
+              }
+            })
+          }).catch(() => {});
+        });
+
         // Reset crews after successful submit
         setCrews([createNewCrew(1)]);
       } else {
