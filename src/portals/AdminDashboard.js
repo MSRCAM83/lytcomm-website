@@ -75,7 +75,7 @@ const parseCSV = (csvText) => {
   return data;
 };
 
-const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode, setDarkMode }) => {
+const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMode, setDarkMode, setReviewContractor }) => {
   // Dynamic colors based on theme
   const accentPrimary = darkMode ? '#667eea' : '#00b4d8';
   const accentSecondary = darkMode ? '#ff6b35' : '#28a745';
@@ -578,11 +578,11 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                 )}
                 {sub.status !== 'Approved' && sub.status !== 'Rejected' && (
                   <>
-                    <button 
+                    <button
                       onClick={() => handleRejectOnboarding(sub)}
-                      style={{ 
-                        padding: '8px 16px', 
-                        borderRadius: '6px', 
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
                         border: `1px solid ${accentError}`,
                         color: accentError,
                         backgroundColor: 'transparent',
@@ -595,23 +595,46 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
                     >
                       <XCircle size={16} /> Reject
                     </button>
-                    <button 
-                      onClick={() => handleApproveOnboarding(sub)}
-                      style={{ 
-                        padding: '8px 16px', 
-                        borderRadius: '6px', 
-                        border: 'none',
-                        color: '#fff',
-                        backgroundColor: accentSecondary,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <CheckCircle size={16} /> Approve
-                    </button>
+                    {sub.type === 'Contractor' ? (
+                      <button
+                        onClick={() => {
+                          if (setReviewContractor) setReviewContractor(sub);
+                          setCurrentPage('contractor-review');
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          color: '#fff',
+                          backgroundColor: accentPrimary,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <CheckCircle size={16} /> Review Checklist
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleApproveOnboarding(sub)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          color: '#fff',
+                          backgroundColor: accentSecondary,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <CheckCircle size={16} /> Approve
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -1184,7 +1207,7 @@ const AdminDashboard = ({ setCurrentPage, loggedInUser, setLoggedInUser, darkMod
           borderRadius: '4px',
           zIndex: 9999
         }}>
-          AdminDashboard v3.6
+          AdminDashboard v3.7
         </div>
       )}
     </div>

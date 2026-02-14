@@ -35,6 +35,7 @@ import PotholeVerification from './portals/PotholeVerification';
 import DailyWorkSheet from './portals/DailyWorkSheet';
 import InvoiceGenerator from './portals/InvoiceGenerator';
 import DailyStreetSheet from './portals/DailyStreetSheet';
+import ContractorReviewChecklist from './portals/ContractorReviewChecklist';
 
 // Phase 7 - Advanced Admin
 import MetricsDashboard from './portals/MetricsDashboard';
@@ -66,6 +67,7 @@ function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [reviewContractor, setReviewContractor] = useState(null);
 
   const bgColor = darkMode ? '#0d1b2a' : '#ffffff';
   const textColor = darkMode ? '#ffffff' : '#1e293b';
@@ -172,6 +174,7 @@ function App() {
     'admin-projects',
     'daily-report',
     'json-import',
+    'contractor-review',
   ];
 
   const isPortalPage = portalPages.includes(currentPage);
@@ -203,7 +206,7 @@ function App() {
       case 'admin-login':
         return <AdminLogin setCurrentPage={handleNavClick} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
       case 'admin-dashboard':
-        return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} />;
+        return <AdminDashboard setCurrentPage={handleNavClick} loggedInUser={loggedInUser} setLoggedInUser={setLoggedInUser} darkMode={darkMode} setDarkMode={setDarkMode} setReviewContractor={setReviewContractor} />;
       case 'admin-users':
         return <AdminUserManagement darkMode={darkMode} currentUser={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'recruiting':
@@ -216,6 +219,8 @@ function App() {
         return <DailyWorkSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'street-sheet':
         return <DailyStreetSheet darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} loggedInUser={loggedInUser} />;
+      case 'contractor-review':
+        return <ContractorReviewChecklist darkMode={darkMode} user={loggedInUser} setCurrentPage={handleNavClick} contractor={reviewContractor} loggedInUser={loggedInUser} />;
       case 'invoices':
         return <InvoiceGenerator darkMode={darkMode} user={loggedInUser} setCurrentPage={setCurrentPage} />;
       case 'metrics':
