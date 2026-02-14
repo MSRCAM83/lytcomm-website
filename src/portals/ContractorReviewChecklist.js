@@ -12,7 +12,7 @@ const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 const CHECKLIST_SHEET_ID = '190HrEUKFVh-qW9xoWBIyjQVvIkQX09gK_iul4JOGO5E';
 const ONBOARDING_SHEET_ID = '1VciM5TqHC5neB7JzpcFkX0qyoyzjBvIS0fKkOXQqnrc';
 
-const NOTIFY_EMAILS = ['matt@lytcomm.com', 'dayna@lytcomm.com'];
+const NOTIFY_EMAILS = ['dayna@lytcomm.com'];
 
 const fetchWithRedirect = async (url, options = {}) => {
   try {
