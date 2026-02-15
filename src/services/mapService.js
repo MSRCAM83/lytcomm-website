@@ -906,7 +906,7 @@ export async function importProjectFromExtraction(extractionData, projectId) {
         projectId,
         '', // contractor_id
         '', // section
-        '', '', // from/to structure
+        seg.from_structure || '', seg.to_structure || '', // from/to structure
         seg.footage || 0,
         seg.street_name || seg.description || '',
         gpsStartLat, gpsStartLng,
