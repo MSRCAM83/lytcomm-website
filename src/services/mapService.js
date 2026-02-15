@@ -4,10 +4,10 @@
  * Updated: 2026-02-03
  * 
  * Data bridge between React frontend and Google Sheets database.
- * Reads/writes project data via Gateway API to separate spreadsheets.
- * Falls back to built-in demo data on network failure.
- * 
- * Database: 8 Google Sheets (one per table)
+ * All project/map data lives in ONE spreadsheet with separate tabs.
+ * Falls back to empty arrays on network failure.
+ *
+ * Tabs: Projects, Segments, SplicePoints, Handholes, Flowerpots, GroundRods, LineItems
  * Gateway: GAS proxy for all Sheets operations
  */
 
@@ -17,20 +17,22 @@ import { STATUS_COLORS, VEXUS_RATES } from '../config/mapConfig';
 const GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyFWHLgFOglJ75Y6AGnyme0P00OjFgE_-qrDN9m0spn4HCgcyBpjvMopsB1_l9MDjIctQ/exec';
 const GATEWAY_SECRET = 'LYTcomm2026ClaudeGatewaySecretKey99';
 
-// Database spreadsheet IDs (one per table)
+// Database spreadsheet IDs
+// All project/map data in ONE spreadsheet with separate tabs
+const MAP_SS = '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg';
 const DB = {
-  PROJECTS:     '1MVtbCNqgE34YpP-auSp96WdhLeXLNVauZJSX1Oalr70',
-  SEGMENTS:     '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg',
-  SPLICE_POINTS:'1lFMlmlyTgbtGkxB0zhJNoa7M2RFH5bd25VPLh_xdCFU',
-  HANDHOLES:    '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses Handholes tab in Segments sheet
-  FLOWERPOTS:   '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses Flowerpots tab in Segments sheet
-  GROUND_RODS:  '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses GroundRods tab in Segments sheet
+  PROJECTS:     MAP_SS,  // Projects tab
+  SEGMENTS:     MAP_SS,  // Segments tab
+  SPLICE_POINTS:MAP_SS,  // SplicePoints tab
+  HANDHOLES:    MAP_SS,  // Handholes tab
+  FLOWERPOTS:   MAP_SS,  // Flowerpots tab
+  GROUND_RODS:  MAP_SS,  // GroundRods tab
+  LINE_ITEMS:   MAP_SS,  // LineItems tab
   ASSIGNMENTS:  '1g2Ml8PFsN0HZA_chLqje2OTnYAZXDPVMZ1trRmKN-qY',
   RATE_CARDS:   '10Py5x0vIUWPzKn1ZeTaIGyaEJonbz-0BHmSYV-20rB4',
   USERS:        '1OjSak2YJJvbXjyX3FSND_GfaQUZ2IQkFiMRgLuNfqVw',
   WORK_LOG:     '1mhO4eZ-07SWM2VOjHcZML7vne9dMyT33O0bSI1DzcC8',
   ISSUES:       '1hPth_lqawUJfX5ik2dROL7j96v1j1i3FA1kkdgqk83g',
-  LINE_ITEMS:   '1tW_3y6OzEMmkPX8JiYIN6m6dgwx291RSwQ2uTN5X8sg', // Uses LineItems tab in Segments sheet
 };
 
 // ===== EMPTY FALLBACK DATA (no demo data) =====
@@ -83,8 +85,8 @@ async function writeSheet(spreadsheetId, range, values) {
   return result.success || false;
 }
 
-async function appendRow(spreadsheetId, values) {
-  const result = await gatewayCall('sheetsAppend', { spreadsheetId, values });
+async function appendRow(spreadsheetId, range, values) {
+  const result = await gatewayCall('sheetsAppend', { spreadsheetId, range, values });
   return result.success || false;
 }
 
@@ -126,7 +128,7 @@ function normalizeSegments(segments) {
 export async function checkDbConnection() {
   if (_dbOnline !== null) return _dbOnline;
   try {
-    const rows = await readSheet(DB.PROJECTS, 'A1:A2');
+    const rows = await readSheet(DB.PROJECTS, 'Projects!A1:A2');
     _dbOnline = rows.length >= 1 && rows[0][0] === 'project_id';
     console.log(`[mapService] DB ${_dbOnline ? 'ONLINE' : 'OFFLINE'} - ${_dbOnline ? 'live data' : 'demo fallback'}`);
     return _dbOnline;
@@ -154,7 +156,7 @@ export async function loadProjects(projectId) {
     return projectId ? projects.filter(p => p.project_id === projectId) : projects;
   }
   try {
-    const rows = await readSheet(DB.PROJECTS, 'A1:M1000');
+    const rows = await readSheet(DB.PROJECTS, 'Projects!A1:M1000');
     const parsed = rowsToObjects(rows);
     return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
   } catch (err) {
@@ -167,7 +169,7 @@ export async function loadSegments(projectId) {
   const online = await checkDbConnection();
   if (!online) return normalizeSegments(DEMO_SEGMENTS);
   try {
-    const rows = await readSheet(DB.SEGMENTS, 'A1:AD5000');
+    const rows = await readSheet(DB.SEGMENTS, 'Segments!A1:AD5000');
     const parsed = rowsToObjects(rows);
     const filtered = projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
     return normalizeSegments(filtered);
@@ -181,7 +183,7 @@ export async function loadSplicePoints(projectId) {
   const online = await checkDbConnection();
   if (!online) return DEMO_SPLICE_POINTS;
   try {
-    const rows = await readSheet(DB.SPLICE_POINTS, 'A1:V5000');
+    const rows = await readSheet(DB.SPLICE_POINTS, 'SplicePoints!A1:V5000');
     const parsed = rowsToObjects(rows);
     return projectId ? parsed.filter(r => r.project_id === projectId) : parsed;
   } catch (err) {
@@ -308,7 +310,7 @@ export async function updateSegmentField(segmentId, field, value) {
     return true;
   }
   try {
-    const rows = await readSheet(DB.SEGMENTS, 'A1:AD5000');
+    const rows = await readSheet(DB.SEGMENTS, 'Segments!A1:AD5000');
     if (!rows || rows.length < 2) return false;
     const headers = rows[0];
     const colIndex = headers.indexOf(field);
@@ -321,7 +323,7 @@ export async function updateSegmentField(segmentId, field, value) {
     const colLetter = colIndex < 26
       ? String.fromCharCode(65 + colIndex)
       : String.fromCharCode(64 + Math.floor(colIndex / 26)) + String.fromCharCode(65 + (colIndex % 26));
-    const cellRange = `${colLetter}${rowIndex + 2}`;
+    const cellRange = `Segments!${colLetter}${rowIndex + 2}`;
     console.log(`[mapService] Writing ${segmentId}.${field} = "${value}" to cell ${cellRange}`);
     return await writeSheet(DB.SEGMENTS, cellRange, [[value]]);
   } catch (err) {
@@ -337,7 +339,7 @@ export async function updateSpliceField(spliceId, field, value) {
     return true;
   }
   try {
-    const rows = await readSheet(DB.SPLICE_POINTS, 'A1:V5000');
+    const rows = await readSheet(DB.SPLICE_POINTS, 'SplicePoints!A1:V5000');
     if (!rows || rows.length < 2) return false;
     const headers = rows[0];
     const colIndex = headers.indexOf(field);
@@ -347,7 +349,7 @@ export async function updateSpliceField(spliceId, field, value) {
     const colLetter = colIndex < 26
       ? String.fromCharCode(65 + colIndex)
       : String.fromCharCode(64 + Math.floor(colIndex / 26)) + String.fromCharCode(65 + (colIndex % 26));
-    return await writeSheet(DB.SPLICE_POINTS, `${colLetter}${rowIndex + 2}`, [[value]]);
+    return await writeSheet(DB.SPLICE_POINTS, `SplicePoints!${colLetter}${rowIndex + 2}`, [[value]]);
   } catch (err) {
     console.error('[mapService] updateSpliceField failed:', err);
     return false;
@@ -361,7 +363,7 @@ export async function logAction(projectId, segmentId, userEmail, action, details
     return true;
   }
   const logId = `LOG-${Date.now()}`;
-  return await appendRow(DB.WORK_LOG, [[
+  return await appendRow(DB.WORK_LOG, 'A:H', [[
     logId,
     new Date().toISOString(),
     projectId || '',
@@ -377,7 +379,7 @@ export async function createIssue(projectId, segmentId, reportedBy, issueType, d
   const online = await checkDbConnection();
   if (!online) return false;
   const issueId = `ISS-${Date.now()}`;
-  return await appendRow(DB.ISSUES, [[
+  return await appendRow(DB.ISSUES, 'A:K', [[
     issueId, projectId || '', segmentId || '', reportedBy || '',
     new Date().toISOString(), issueType || 'Other', description || '',
     '', '', '', 'Open',
@@ -500,7 +502,7 @@ export async function bulkAssignSegments(segmentIds, workType, contractorName, p
   // Also create an assignment record
   try {
     const assignmentId = `ASGN-${Date.now()}`;
-    await appendRow(DB.ASSIGNMENTS, [[
+    await appendRow(DB.ASSIGNMENTS, 'A:L', [[
       assignmentId,
       projectId || '',
       contractorName,
@@ -565,7 +567,7 @@ export async function importProject(extractionData, projectId) {
       new Date().toISOString(),
       projectData.created_by || 'matt@lytcomm.com',
     ]];
-    const ok = await appendRow(DB.PROJECTS, projRow);
+    const ok = await appendRow(DB.PROJECTS, 'Projects!A:M', projRow);
     if (ok) counts.project = 1;
     else errors.push('Failed to write project row');
   } catch (err) {
@@ -588,7 +590,7 @@ export async function importProject(extractionData, projectId) {
         'Not Started',
         new Date().toISOString(),
       ]];
-      const ok = await appendRow(DB.HANDHOLES, row);
+      const ok = await appendRow(DB.HANDHOLES, 'Handholes!A:K', row);
       if (ok) counts.handholes++;
       else errors.push(`Failed to write handhole ${hh.label || hh.id}`);
     } catch (err) {
@@ -610,7 +612,7 @@ export async function importProject(extractionData, projectId) {
         'Not Started',
         new Date().toISOString(),
       ]];
-      const ok = await appendRow(DB.FLOWERPOTS, row);
+      const ok = await appendRow(DB.FLOWERPOTS, 'Flowerpots!A:I', row);
       if (ok) counts.flowerpots++;
       else errors.push(`Failed to write flowerpot ${fp.label || fp.id}`);
     } catch (err) {
@@ -629,7 +631,7 @@ export async function importProject(extractionData, projectId) {
         gr.handhole_id || '',
         new Date().toISOString(),
       ]];
-      const ok = await appendRow(DB.GROUND_RODS, row);
+      const ok = await appendRow(DB.GROUND_RODS, 'GroundRods!A:F', row);
       if (ok) counts.groundRods++;
       else errors.push(`Failed to write ground rod ${gr.id}`);
     } catch (err) {
@@ -668,7 +670,7 @@ export async function importProject(extractionData, projectId) {
         'Not Started',
         '', '', '', '', '', '', '', '',
       ]];
-      const ok = await appendRow(DB.SEGMENTS, row);
+      const ok = await appendRow(DB.SEGMENTS, 'Segments!A:AD', row);
       if (ok) counts.segments++;
       else errors.push(`Failed to write segment ${seg.contractor_id || segmentId}`);
     } catch (err) {
@@ -720,7 +722,7 @@ export async function importProject(extractionData, projectId) {
         pmReadings,
         sp.splitter_count || (spliceType === '1x4' ? 2 : 0),
       ]];
-      const ok = await appendRow(DB.SPLICE_POINTS, row);
+      const ok = await appendRow(DB.SPLICE_POINTS, 'SplicePoints!A:V', row);
       if (ok) counts.splicePoints++;
       else errors.push(`Failed to write splice ${sp.contractor_id || spliceId}`);
     } catch (err) {
@@ -791,7 +793,7 @@ export async function importLineItems(projectId, lineItems, rateCardId) {
         margin,
         'Not Started',
       ]];
-      const ok = await appendRow(DB.LINE_ITEMS, row);
+      const ok = await appendRow(DB.LINE_ITEMS, 'LineItems!A:M', row);
       if (ok) imported++;
       else errors.push(`Failed: ${code} (${lineItemId})`);
     } catch (err) {
@@ -883,7 +885,7 @@ export async function importProjectFromExtraction(extractionData, projectId) {
       new Date().toISOString(),
       'matt@lytcomm.com',
     ]];
-    const ok = await appendRow(DB.PROJECTS, row);
+    const ok = await appendRow(DB.PROJECTS, 'Projects!A:M', row);
     if (ok) counts.project = 1;
     else errors.push('Failed to write project');
   } catch (err) {
@@ -920,7 +922,7 @@ export async function importProjectFromExtraction(extractionData, projectId) {
         'Not Started',
         '', '', '', '', '', '', '', '',
       ]];
-      const ok = await appendRow(DB.SEGMENTS, row);
+      const ok = await appendRow(DB.SEGMENTS, 'Segments!A:AD', row);
       if (ok) counts.segments++;
       else errors.push(`Segment ${seg.segment_id}`);
     } catch (err) {
@@ -941,20 +943,20 @@ export async function importProjectFromExtraction(extractionData, projectId) {
           projectId, '', struct.size || '', struct.unit_code || 'UG17',
           1, '', gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
         ]];
-        await appendRow(DB.HANDHOLES, row);
+        await appendRow(DB.HANDHOLES, 'Handholes!A:K', row);
       } else if (t === 'flowerpot') {
         const row = [[
           struct.id || `${projectId}-FP-${counts.structures + 1}`,
           projectId, '', struct.unit_code || 'UG12', 1,
           gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
         ]];
-        await appendRow(DB.FLOWERPOTS, row);
+        await appendRow(DB.FLOWERPOTS, 'Flowerpots!A:I', row);
       } else if (t === 'ground_rod') {
         const row = [[
           struct.id || `${projectId}-GR-${counts.structures + 1}`,
           projectId, struct.unit_code || 'UG13', 1, '', new Date().toISOString(),
         ]];
-        await appendRow(DB.GROUND_RODS, row);
+        await appendRow(DB.GROUND_RODS, 'GroundRods!A:F', row);
       } else if (t === 'terminal_box' || t === 'pedestal' || t === 'marker_post' || t === 'aux_ground') {
         // Store in Handholes sheet with type column
         const row = [[
@@ -962,7 +964,7 @@ export async function importProjectFromExtraction(extractionData, projectId) {
           projectId, '', t, struct.unit_code || 'UG20',
           1, '', gpsLat, gpsLng, 'Not Started', new Date().toISOString(),
         ]];
-        await appendRow(DB.HANDHOLES, row);
+        await appendRow(DB.HANDHOLES, 'Handholes!A:K', row);
       }
       counts.structures++;
     } catch (err) {
@@ -990,7 +992,7 @@ export async function importProjectFromExtraction(extractionData, projectId) {
         '', '', '', '', '',
         7, 0, 8, '', 0,
       ]];
-      const ok = await appendRow(DB.SPLICE_POINTS, row);
+      const ok = await appendRow(DB.SPLICE_POINTS, 'SplicePoints!A:V', row);
       if (ok) counts.splicePoints++;
       else errors.push(`Splice ${sp.splice_id}`);
     } catch (err) {
@@ -1027,3 +1029,4 @@ export { DB };
 
 // v4.0.0 - All billables: handholes, flowerpots, ground_rods, segments, splice_points
 // v4.1.0 - Added LINE_ITEMS support, importProjectFromExtraction, rate card integration
+// v4.2.0 - Consolidated all project data into single spreadsheet with tab-prefixed ranges, fixed appendRow range parameter
