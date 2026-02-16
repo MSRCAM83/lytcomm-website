@@ -70,15 +70,15 @@ const mapContainerStyle = { width: '100%', height: '100%' };
 const defaultCenter = { lat: 30.2366, lng: -93.3776 }; // Sulphur LA
 
 // Design map overlay bounds (pixel-to-GPS from geo_transform_v8)
-const OVERLAY_BOUNDS = {
+const OVERLAY_BOUNDS_DEFAULT = {
   north: 30.2410947325,
   south: 30.2133827242,
-  east: -93.3566656661,
+  east: -93.36944,
   west: -93.4077672080,
 };
 const OVERLAY_URL = '/overlays/SLPH.01.006.jpg';
 
-function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, onSelectHandhole, filterPhase, darkMode, showFlowerpots, showSplicePoints, showHandholes, showOverlay }) {
+function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, onSelectHandhole, filterPhase, darkMode, showFlowerpots, showSplicePoints, showHandholes, showOverlay, overlayOpacity, overlayBounds }) {
   const [map, setMap] = useState(null);
   const [mapType, setMapType] = useState('roadmap');
 
@@ -208,8 +208,8 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
         {map && showOverlay && (
           <GroundOverlay
             url={OVERLAY_URL}
-            bounds={OVERLAY_BOUNDS}
-            options={{ opacity: 0.7 }}
+            bounds={overlayBounds}
+            options={{ opacity: overlayOpacity }}
           />
         )}
 
@@ -1239,6 +1239,8 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
   const [showSplicePoints, setShowSplicePoints] = useState(true);
   const [showHandholes, setShowHandholes] = useState(true);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.6);
+  const [overlayOffset, setOverlayOffset] = useState({ lat: 0, lng: 0 });
 
   // Dynamic data state - ALL billable items
   const [allSegments, setAllSegments] = useState([]);
@@ -1526,6 +1528,31 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
             }}>
               <Layers size={12} /> Design
             </button>
+            {showOverlay && (
+              <>
+                <input type="range" min="0" max="100" value={overlayOpacity * 100}
+                  onChange={e => setOverlayOpacity(e.target.value / 100)}
+                  style={{ width: 60, cursor: 'pointer' }}
+                  title={`Opacity: ${Math.round(overlayOpacity * 100)}%`}
+                />
+                <div style={{ display: 'flex', gap: 2 }}>
+                  {[
+                    { label: 'N', dl: 0.0001, dn: 0 },
+                    { label: 'S', dl: -0.0001, dn: 0 },
+                    { label: 'W', dl: 0, dn: -0.0001 },
+                    { label: 'E', dl: 0, dn: 0.0001 },
+                  ].map(({ label, dl, dn }) => (
+                    <button key={label} onClick={() => setOverlayOffset(prev => ({ lat: prev.lat + dl, lng: prev.lng + dn }))}
+                      style={{
+                        width: 22, height: 22, padding: 0, border: `1px solid ${borderColor}`, borderRadius: 4,
+                        cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                        background: darkMode ? '#112240' : '#fff', color: textMuted,
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1585,6 +1612,13 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
                 showSplicePoints={showSplicePoints}
                 showHandholes={showHandholes}
                 showOverlay={showOverlay}
+                overlayOpacity={overlayOpacity}
+                overlayBounds={{
+                  north: OVERLAY_BOUNDS_DEFAULT.north + overlayOffset.lat,
+                  south: OVERLAY_BOUNDS_DEFAULT.south + overlayOffset.lat,
+                  east: OVERLAY_BOUNDS_DEFAULT.east + overlayOffset.lng,
+                  west: OVERLAY_BOUNDS_DEFAULT.west + overlayOffset.lng,
+                }}
               />
               {/* Crew GPS Tracker - visible to all logged-in users */}
               {user && (
