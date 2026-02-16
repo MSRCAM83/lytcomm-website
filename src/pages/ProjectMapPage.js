@@ -39,7 +39,7 @@ import { uploadPhotoBatch } from '../services/photoUploadService';
 import CrewTracker from '../components/Map/CrewTracker';
 // eslint-disable-next-line no-unused-vars
 import Toast, { useToast } from '../components/Toast';
-import { GoogleMap, useJsApiLoader, Polyline, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Polyline, OverlayView, GroundOverlay } from '@react-google-maps/api';
 
 // Helper: get status color
 function getStatusColor(status) {
@@ -69,7 +69,16 @@ function StatusIcon({ status, size }) {
 const mapContainerStyle = { width: '100%', height: '100%' };
 const defaultCenter = { lat: 30.2366, lng: -93.3776 }; // Sulphur LA
 
-function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, onSelectHandhole, filterPhase, darkMode, showFlowerpots, showSplicePoints, showHandholes }) {
+// Design map overlay bounds (pixel-to-GPS from geo_transform_v8)
+const OVERLAY_BOUNDS = {
+  north: 30.2410947325,
+  south: 30.2133827242,
+  east: -93.3566656661,
+  west: -93.4077672080,
+};
+const OVERLAY_URL = '/overlays/SLPH.01.006.jpg';
+
+function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selectedSegment, selectedSplice, onSelectSegment, onSelectSplice, onSelectHandhole, filterPhase, darkMode, showFlowerpots, showSplicePoints, showHandholes, showOverlay }) {
   const [map, setMap] = useState(null);
   const [mapType, setMapType] = useState('roadmap');
 
@@ -195,6 +204,15 @@ function ProjectGoogleMap({ segments, splicePoints, handholes, flowerpots, selec
           ],
         }}
       >
+        {/* Design Map Overlay */}
+        {map && showOverlay && (
+          <GroundOverlay
+            url={OVERLAY_URL}
+            bounds={OVERLAY_BOUNDS}
+            options={{ opacity: 0.7 }}
+          />
+        )}
+
         {/* Segment Polylines - only render after map is ready to avoid setAt error */}
         {map && segments.map(seg => {
           const startLat = parseFloat(seg.gps_start_lat);
@@ -1220,6 +1238,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
   const [showFlowerpots, setShowFlowerpots] = useState(true);
   const [showSplicePoints, setShowSplicePoints] = useState(true);
   const [showHandholes, setShowHandholes] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
 
   // Dynamic data state - ALL billable items
   const [allSegments, setAllSegments] = useState([]);
@@ -1500,6 +1519,13 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
             }}>
               <Zap size={12} /> Splice
             </button>
+            <button onClick={() => setShowOverlay(!showOverlay)} style={{
+              padding: '4px 10px', borderRadius: 16, border: `1px solid ${showOverlay ? '#FF6B35' : borderColor}`,
+              cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+              background: showOverlay ? '#FF6B3520' : 'transparent', color: showOverlay ? '#FF6B35' : textMuted,
+            }}>
+              <Layers size={12} /> Design
+            </button>
           </div>
         </div>
       )}
@@ -1558,6 +1584,7 @@ function ProjectMapPage({ darkMode, setDarkMode, user, setCurrentPage, projectId
                 showFlowerpots={showFlowerpots}
                 showSplicePoints={showSplicePoints}
                 showHandholes={showHandholes}
+                showOverlay={showOverlay}
               />
               {/* Crew GPS Tracker - visible to all logged-in users */}
               {user && (
